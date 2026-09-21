@@ -36,6 +36,7 @@ class QuickReservationRepository {
 
   static const String _reservationEndpoint = 'Reservation_InsertReservation';
   static const String _transportEndpoint = 'Transport_Insert';
+  static const String _visaEndpoint = 'Visa_Insert';
 
   // ── Hotel ───────────────────────────────────────────────────────────────────
 
@@ -541,6 +542,67 @@ class QuickReservationRepository {
   /// The extra guests captured alongside a transport member, typed for use.
   List<Map<String, dynamic>> _extraMembersOf(Map<String, dynamic> m) =>
       (m['extraMembers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+
+  // ── Visa ────────────────────────────────────────────────────────────────────
+
+  /// [guests] are every guest on the request, in card order — a visa request has
+  /// no main guest — each a map of `memberId` / `guestName` / `passportFiles`
+  /// (`List<PassportFileBallys>`). Every guest travels on the same [arrivalDate].
+  Future<QuickReservationResult> saveVisaRequest({
+    required List<Map<String, dynamic>> guests,
+    required DateTime arrivalDate,
+    void Function(String label, Object? payload)? log,
+  }) async {
+    final body = await buildVisaBody(guests: guests, arrivalDate: arrivalDate);
+    log?.call('Saving visa request', body);
+    final response = await apiService.post(_visaEndpoint, body);
+    log?.call('Visa request response', response);
+    return _toResult(response, 'Failed to save visa request');
+  }
+
+  Future<Map<String, dynamic>> buildVisaBody({
+    required List<Map<String, dynamic>> guests,
+    required DateTime arrivalDate,
+  }) async {
+    final arrival = DateTime(
+      arrivalDate.year,
+      arrivalDate.month,
+      arrivalDate.day,
+    ).toIso8601String();
+
+    final visaGuests = <Map<String, dynamic>>[];
+    final passportImages = <Map<String, dynamic>>[];
+    for (final g in guests) {
+      visaGuests.add({
+        'BMNumber': g['memberId'],
+        'GuestName': g['guestName'],
+        'ArrivalDate': arrival,
+      });
+      final files =
+          (g['passportFiles'] as List?)?.cast<PassportFileBallys>() ?? const [];
+      for (final f in files) {
+        // A passport is mandatory for a visa, so an unreadable file fails the
+        // save instead of being dropped the way the air ticket upload does.
+        final bytes = await File(f.path).readAsBytes();
+        passportImages.add({
+          'GuestBMNumber': g['memberId'],
+          'FileName': f.fileName,
+          'IsPdf': f.isPdf,
+          'Base64Data': base64Encode(bytes),
+        });
+      }
+    }
+
+    return {
+      ...await _requestEnvelope(),
+      'marketing_code': await StorageUtil.getMarketingCode(),
+      'arrival_date': arrival,
+      'no_of_guests': visaGuests.length,
+      'reservation_status': 'Pending',
+      'guests': visaGuests,
+      'passport_images': passportImages,
+    };
+  }
 
   // ── Shared ──────────────────────────────────────────────────────────────────
 

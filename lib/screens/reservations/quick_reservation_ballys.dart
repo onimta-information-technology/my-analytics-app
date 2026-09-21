@@ -41,7 +41,7 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:intl/intl.dart';
 
-enum _Section { airTicket, hotel, transport }
+enum _Section { airTicket, hotel, transport, visa }
 
 // Transport tab dropdown options.
 const List<String> kCarTypes = [
@@ -91,6 +91,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _hotelFormKey = GlobalKey<FormState>();
   final _airFormKey = GlobalKey<FormState>();
   final _transportFormKey = GlobalKey<FormState>();
+  final _visaFormKey = GlobalKey<FormState>();
 
   /// The Hotel and Air Ticket tabs are two-step forms — who the reservation is
   /// for, then what is being booked — so the guest half gets its own [Form].
@@ -354,6 +355,20 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final List<_ExtraMember> _h_extraMembers = [];
   final List<_ExtraMember> _a_extraMembers = [];
 
+  // ── VISA ────────────────────────────────────────────────────────────────────
+  // A visa request has no main guest: every guest is an equal card, all
+  // arriving on the same date. The tab opens with one card and "Add More Guest"
+  // adds the rest. Each guest needs their passport bio page, so uploads are
+  // held under the card itself — a card's MID can still change after upload.
+  final List<_ExtraMember> _v_guests = [_ExtraMember()];
+  final _v_arrivalCtrl = TextEditingController();
+  DateTime? _v_arrivalDate;
+  final Map<_ExtraMember, List<PassportFileBallys>> _v_passportsByRow = {};
+
+  /// Set by a save that found a guest without a passport, so the missing
+  /// uploaders are outlined in red until something is picked.
+  bool _v_showPassportErrors = false;
+
   /// The guests the hotel / air ticket currently in the form is booked for, by
   /// [_guestKey]. A room or ticket can go to one guest or to several, so this is
   /// a set of ticks rather than a single pick — the same assignment the new
@@ -424,6 +439,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   static const _hotelColor = Color(0xFFE65C00);
   static const _airColor = Color(0xFF0277BD);
   static const _transportColor = Color(0xFF2E7D32);
+  static const _visaColor = Color(0xFF6A1B9A);
 
   // Both steps of a tab are in the tree at once, so each needs a controller of
   // its own — one controller cannot drive two live scroll views.
@@ -432,6 +448,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _airGuestScrollCtrl = ScrollController();
   final _airScrollCtrl = ScrollController();
   final _transportScrollCtrl = ScrollController();
+  final _visaScrollCtrl = ScrollController();
 
   Color get _accentColor {
     switch (_activeSection) {
@@ -441,6 +458,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         return _airColor;
       case _Section.transport:
         return _transportColor;
+      case _Section.visa:
+        return _visaColor;
     }
   }
 
@@ -494,13 +513,19 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _t_noOfVehicles,
       _t_contactNumber,
       _t_flightNoCtrl,
+      _v_arrivalCtrl,
     ]) {
       c.dispose();
     }
     for (final c in _t_passengerCtrls) {
       c.dispose();
     }
-    for (final row in [..._t_extraMembers, ..._h_extraMembers, ..._a_extraMembers]) {
+    for (final row in [
+      ..._t_extraMembers,
+      ..._h_extraMembers,
+      ..._a_extraMembers,
+      ..._v_guests,
+    ]) {
       row.dispose();
     }
     _hotelGuestScrollCtrl.dispose();
@@ -508,6 +533,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _airGuestScrollCtrl.dispose();
     _airScrollCtrl.dispose();
     _transportScrollCtrl.dispose();
+    _visaScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -2295,6 +2321,25 @@ Remarks              : ${m['remarks']}''';
     return buf.toString();
   }
 
+  String _buildVisaText() {
+    final guests = _captureVisaGuests();
+    final buf = StringBuffer('*Visa Request*\n');
+    for (var i = 0; i < guests.length; i++) {
+      final g = guests[i];
+      final files = (g['passportFiles'] as List<PassportFileBallys>)
+          .map((f) => f.fileName)
+          .join(', ');
+      buf.write('''
+Guest ${i + 1}
+Membership No  : ${g['memberId']}
+Guest Name     : ${g['guestName']}
+Passport File/s: ${files.isEmpty ? 'None' : files}
+''');
+    }
+    buf.write('Arrival Date   : ${_v_arrivalCtrl.text}');
+    return buf.toString();
+  }
+
   String _buildTransportText() {
     final current = _captureCurrentTransportMember();
     if (_transportMembers.isEmpty) return _singleTransportText(current);
@@ -2343,6 +2388,9 @@ Remarks              : ${m['remarks']}''';
         break;
       case _Section.transport:
         _copyToClipboard(_buildTransportText());
+        break;
+      case _Section.visa:
+        _copyToClipboard(_buildVisaText());
         break;
     }
   }
@@ -2459,6 +2507,9 @@ Remarks              : ${m['remarks']}''';
       case _Section.transport:
         await _saveTransportSection();
         break;
+      case _Section.visa:
+        await _saveVisaSection();
+        break;
     }
   }
 
@@ -2532,7 +2583,89 @@ Remarks              : ${m['remarks']}''';
     );
   }
 
-  /// Shared tail of the three saves: clear the tab and confirm, or say why not.
+  // ── VISA ────────────────────────────────────────────────────────────────────
+
+  /// Every guest on the visa request, in card order, as the maps the
+  /// repository builds the body from.
+  List<Map<String, dynamic>> _captureVisaGuests() {
+    return [
+      for (final row in _v_guests)
+        {
+          'memberId': row.fullMid(numericOnly: _isNumericOnlyLocation),
+          'guestName': row.nameController.text.trim(),
+          'passportFiles': _v_passportsByRow[row] ?? const <PassportFileBallys>[],
+        },
+    ];
+  }
+
+  void _removeVisaGuest(int index) {
+    _v_passportsByRow.remove(_v_guests[index]);
+    _removeExtraMember(_v_guests, index);
+  }
+
+  void _clearAllVisaForm() {
+    setState(() {
+      _clearExtraMembers(_v_guests);
+      _v_guests.add(
+          _ExtraMember(prefix: _isNumericOnlyLocation ? '' : _selectedPrefix));
+      _v_passportsByRow.clear();
+      _v_showPassportErrors = false;
+      _v_arrivalDate = null;
+      _v_arrivalCtrl.clear();
+    });
+  }
+
+  /// Every field on the visa tab is mandatory: each guest's Membership No,
+  /// Guest Name and passport, plus the arrival date. Unlike the other tabs, a
+  /// blank guest card is an error rather than skipped.
+  Future<void> _saveVisaSection() async {
+    FocusScope.of(context).unfocus();
+    if (!(_visaFormKey.currentState?.validate() ?? false)) return;
+
+    final guests = _captureVisaGuests();
+    final seen = <String>{};
+    for (var i = 0; i < guests.length; i++) {
+      final g = guests[i];
+      if ((g['memberId'] as String).isEmpty ||
+          (g['guestName'] as String).isEmpty) {
+        _showSaveErrorSnack(
+            'Guest ${i + 1}: both Membership No and Guest Name are required');
+        return;
+      }
+      if (!seen.add(g['memberId'] as String)) {
+        _showSaveErrorSnack('${g['memberId']} is already added to this request');
+        return;
+      }
+    }
+
+    final missing = guests.indexWhere(
+        (g) => (g['passportFiles'] as List).isEmpty);
+    if (missing != -1) {
+      setState(() => _v_showPassportErrors = true);
+      _showSaveErrorSnack(
+          'Guest ${missing + 1}: please upload the passport bio data page');
+      return;
+    }
+
+    final arrival = _v_arrivalDate;
+    if (arrival == null) {
+      _showSaveErrorSnack('Arrival Date is required');
+      return;
+    }
+
+    final result = await _quickNotifier.saveVisaRequest(
+      guests: guests,
+      arrivalDate: arrival,
+      log: _logLong,
+    );
+    _handleSaveResult(
+      result,
+      onSuccess: _clearAllVisaForm,
+      successFallback: 'Visa request saved successfully',
+    );
+  }
+
+  /// Shared tail of the saves: clear the tab and confirm, or say why not.
   void _handleSaveResult(
     QuickReservationResult result, {
     required VoidCallback onSuccess,
@@ -2770,6 +2903,12 @@ Remarks              : ${m['remarks']}''';
                         Icons.directions_car_rounded,
                         'Transport',
                       ),
+                      const SizedBox(width: 8),
+                      _sectionTab(
+                        _Section.visa,
+                        Icons.badge_rounded,
+                        'Visa',
+                      ),
                     ],
                   ),
                 ),
@@ -2783,6 +2922,8 @@ Remarks              : ${m['remarks']}''';
                         _AirForm(key: const ValueKey('air'), state: this),
                       _Section.transport => _TransportForm(
                           key: const ValueKey('transport'), state: this),
+                      _Section.visa =>
+                        _VisaForm(key: const ValueKey('visa'), state: this),
                     },
                   ),
                 ),
@@ -3312,6 +3453,18 @@ Widget _extraMemberCard(
   /// Transport requests are not billed against a package, so their extra guests
   /// only carry who they are.
   bool showPackageAmount = true,
+
+  /// Replaces the plain row removal, for a tab that keeps more per row — the
+  /// visa tab drops the row's passport uploads with it.
+  VoidCallback? onRemove,
+
+  /// Added to the row index for the number on the card. The other tabs start
+  /// at 2 because guest 1 is the form guest; the visa tab has none and starts
+  /// at 1.
+  int numberOffset = 2,
+
+  /// Hides the remove button — the visa tab's last card cannot go.
+  bool canRemove = true,
 }) {
   final row = rows[index];
 
@@ -3334,12 +3487,15 @@ Widget _extraMemberCard(
                 radius: 14,
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
-                child: Text('${index + 2}', style: const TextStyle(fontSize: 13)),
+                child: Text('${index + numberOffset}',
+                    style: const TextStyle(fontSize: 13)),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Guest ${index + 2} — $subtitle',
+                  subtitle.isEmpty
+                      ? 'Guest ${index + numberOffset}'
+                      : 'Guest ${index + numberOffset} — $subtitle',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -3347,12 +3503,14 @@ Widget _extraMemberCard(
                   ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () => state._removeExtraMember(rows, index),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+              if (canRemove)
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed:
+                      onRemove ?? () => state._removeExtraMember(rows, index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -6712,6 +6870,137 @@ class _TransportForm extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _VisaForm extends StatelessWidget {
+  final _QuickReservationBallysScreenState state;
+  const _VisaForm({super.key, required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = _QuickReservationBallysScreenState._visaColor;
+    return Form(
+      key: state._visaFormKey,
+      // A Column rather than a lazy ListView, so every validator is mounted
+      // when the form is validated — see [_TransportForm].
+      child: SingleChildScrollView(
+        controller: state._visaScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Guests — every one an equal card ──────────────────────────────
+            for (int i = 0; i < state._v_guests.length; i++) ...[
+              _extraMemberCard(
+                state,
+                state._v_guests,
+                i,
+                accent,
+                subtitle: '',
+                numberOffset: 1,
+                canRemove: state._v_guests.length > 1,
+                showPackageAmount: false,
+                onRemove: () => state._removeVisaGuest(i),
+              ),
+              _passportBox(
+                accent: accent,
+                missing: state._v_showPassportErrors &&
+                    (state._v_passportsByRow[state._v_guests[i]] ?? const [])
+                        .isEmpty,
+                child: PassportUploadWidgetBallys(
+                  key: ObjectKey(state._v_guests[i]),
+                  title: 'Passport Bio Data Page — Guest ${i + 1} *',
+                  initialFiles:
+                      state._v_passportsByRow[state._v_guests[i]] ?? const [],
+                  onFilesChanged: (files) => state.setState(() => state
+                      ._v_passportsByRow[state._v_guests[i]] = List.from(files)),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            _addMoreGuestButton(
+              accent: accent,
+              onPressed: () => state._addExtraMember(state._v_guests),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Arrival date ──────────────────────────────────────────────────
+            _dateField(
+              context,
+              'Arrival Date *',
+              state._v_arrivalCtrl,
+              accent,
+              () async {
+                final now = DateTime.now();
+                final d = await state._pickDate(
+                  context,
+                  label: 'Select Arrival Date',
+                  initial: state._v_arrivalDate,
+                  minDate: DateTime(now.year, now.month, now.day),
+                );
+                if (d != null) {
+                  state.setState(() {
+                    state._v_arrivalDate = d;
+                    state._v_arrivalCtrl.text = state._fmt(d);
+                  });
+                }
+              },
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Arrival Date is required';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: state._onSave,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.save_alt),
+                label: const Text(
+                  'Submit Visa Request',
+                  style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The white card each passport uploader sits in, outlined in red once a
+  /// save has found it empty.
+  Widget _passportBox({
+    required Color accent,
+    required bool missing,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: missing ? Colors.red.shade700 : accent.withOpacity(0.35),
+          width: missing ? 1.4 : 1,
+        ),
+      ),
+      child: child,
     );
   }
 }

@@ -7,11 +7,13 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
+import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/app_notifications_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
@@ -60,6 +62,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Silent thread updates (an edit, a reaction) carry no new message — the
   // chat is refetched when it is next opened, so nothing is stored or counted.
   if (NotificationStore.isSilentThreadUpdate(message)) return;
+
+  // Call pushes: the incoming ring is a visible alert the OS already showed,
+  // and the rest only matter to a live call screen — none are unread items.
+  if (CallPushType.isCallPush(message.data)) return;
 
   // Keep non-chat notifications in local history so the home screen bell shows
   // them the next time the app is opened.
@@ -245,6 +251,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logPushMessage('foreground', message);
+
+      // Calls get their own full-screen UI instead of a banner, and never
+      // count towards the badge or the notification history.
+      if (CallPushType.isCallPush(message.data)) {
+        CallManager.instance.handleForegroundPush(message);
+        return;
+      }
+
       _recordNotification(message);
 
       final msgType = message.data['msg_type']?.toString();
@@ -319,6 +333,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // already sitting on /login, so dropping the tap leaves the user there.
     if (!await StorageUtil.hasActiveSession()) {
       print('PUSH tap ignored — no active session, staying on login flow');
+      return;
+    }
+
+    // ─── Incoming Call (msg_type: 20) ───────────────────────────────────────
+    if (CallPushType.isCallPush(message.data)) {
+      // Give the app a moment to finish launching so the call screen has a
+      // navigator to land on.
+      Future.delayed(const Duration(milliseconds: 500), () {
+        CallManager.instance.handleNotificationTap(message);
+      });
       return;
     }
 

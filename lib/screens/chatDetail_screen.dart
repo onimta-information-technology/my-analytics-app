@@ -12,7 +12,10 @@ import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/voice_message_bubble.dart';
 import 'package:ballys_reservation_app/components/typing_indicator_bubble.dart';
 import 'package:ballys_reservation_app/components/voice_recorder_widgets.dart';
+import 'package:ballys_reservation_app/data/services/call_api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:ballys_reservation_app/data/services/typing_service.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
@@ -258,6 +261,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   /// avatar url of its own.
   String? _avatarUrl;
 
+  /// A call still ringing or ongoing in this chat, offered as a "Join"
+  /// banner. Null when there is none, or when it is the call we are on.
+  CallInfo? _activeCall;
+
   // ── @mentions ──
   /// Group roster, used both to suggest names while typing and to highlight
   /// mentions in bubbles. Empty for 1:1 chats.
@@ -403,10 +410,13 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _watchTyping();
     _messageFocusNode.addListener(_onFocusChange);
     BadgeService().clearBadge();
+    _checkActiveCall();
+    CallManager.instance.active.addListener(_checkActiveCall);
   }
 
   @override
   void dispose() {
+    CallManager.instance.active.removeListener(_checkActiveCall);
     _readStatusPollTimer?.cancel();
     _highlightTimer?.cancel();
     _foregroundMessageSubscription?.cancel();
@@ -458,7 +468,90 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     if (state == AppLifecycleState.resumed) {
       _fetchMessagesFromApi(silent: true);
       BadgeService().clearBadge();
+      _checkActiveCall();
     }
+  }
+
+  // ─── Calls ─────────────────────────────────────────────────────────────────
+
+  Future<void> _checkActiveCall() async {
+    try {
+      final call = await CallApiService.activeCall(widget.contact.chatUuid);
+      if (!mounted) return;
+      final onIt = call != null &&
+          CallManager.instance.current?.callId == call.callId;
+      setState(() => _activeCall = onIt ? null : call);
+    } catch (e) {
+      // Calling is optional server-side; no banner is the right fallback.
+      print('active-call check failed: $e');
+    }
+  }
+
+  void _startCall(CallMedia media) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    CallManager.instance.startCall(
+      chatId: widget.contact.chatUuid,
+      title: widget.contact.name,
+      avatarUrl: _headerAvatarUrl,
+      media: media,
+      isGroup: widget.isGroup,
+    );
+  }
+
+  void _joinActiveCall() {
+    final call = _activeCall;
+    if (call == null) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    CallManager.instance.joinExisting(
+      call: call,
+      title: widget.contact.name,
+      avatarUrl: _headerAvatarUrl,
+    );
+  }
+
+  Widget _buildActiveCallBanner(FontSettings fontSettings) {
+    final call = _activeCall!;
+    final kind = call.media == CallMedia.video ? 'video' : 'voice';
+    final label = call.status == 'ringing'
+        ? '${call.callerName.isEmpty ? 'Someone' : call.callerName} is calling'
+        : 'Ongoing $kind call';
+    return Material(
+      color: ChatColors.accent,
+      child: InkWell(
+        onTap: _joinActiveCall,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                call.media == CallMedia.video ? Icons.videocam : Icons.call,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fontSettings.fontSize - 2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                'JOIN',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: fontSettings.fontSize - 2,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ─── Setup ─────────────────────────────────────────────────────────────────
@@ -644,6 +737,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           message.data['ChatId'] ??
           message.data['Chat_Id'];
       final msgType = message.data['msg_type'] ?? message.data['type'];
+      // Call pushes also carry `Details`, but say nothing about the thread —
+      // only whether this chat has a call to join.
+      if (NotificationStore.isCallMessage(message)) {
+        _checkActiveCall();
+        return;
+      }
       final bool isChatMessage =
           msgType == '11' ||
           msgType == 'chat' ||
@@ -6056,30 +6155,48 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                         ],
                       ),
                     ),
+                    // Group info and refresh live in the overflow menu, which
+                    // leaves room for the call buttons.
                     actions: [
-                      if (widget.isGroup)
-                        IconButton(
-                          icon: const Icon(Icons.info_outline),
-                          tooltip: 'Group info',
-                          onPressed: _openGroupInfo,
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.videocam_outlined),
+                        tooltip: 'Video call',
+                        onPressed: () => _startCall(CallMedia.video),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.call_outlined),
+                        tooltip: 'Voice call',
+                        onPressed: () => _startCall(CallMedia.audio),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.search),
                         tooltip: 'Search messages',
                         onPressed: _openSearch,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: () => _fetchMessagesFromApi(silent: false),
-                      ),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert),
                         tooltip: 'More',
                         onSelected: (value) {
-                          if (value == 'chat_settings') _openChatSettings();
+                          switch (value) {
+                            case 'group_info':
+                              _openGroupInfo();
+                            case 'refresh':
+                              _fetchMessagesFromApi(silent: false);
+                            case 'chat_settings':
+                              _openChatSettings();
+                          }
                         },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
+                        itemBuilder: (context) => [
+                          if (widget.isGroup)
+                            const PopupMenuItem(
+                              value: 'group_info',
+                              child: Text('Group info'),
+                            ),
+                          const PopupMenuItem(
+                            value: 'refresh',
+                            child: Text('Refresh'),
+                          ),
+                          const PopupMenuItem(
                             value: 'chat_settings',
                             child: Text('Chat settings'),
                           ),
@@ -6097,6 +6214,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                         ChatColors.primary,
                       ),
                     ),
+                  if (_activeCall != null)
+                    _buildActiveCallBanner(fontSettings),
                   if (_isUploading)
                     Container(
                       padding: const EdgeInsets.symmetric(

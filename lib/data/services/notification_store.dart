@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:ballys_reservation_app/models/app_notification.dart';
+import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -63,8 +64,13 @@ class NotificationStore {
     return false;
   }
 
+  /// Call signalling (`msg_type` 20–25) — handled by the call screen, never
+  /// listed in history.
+  static bool isCallMessage(RemoteMessage message) =>
+      CallPushType.isCallPush(message.data);
+
   static AppNotification? fromRemoteMessage(RemoteMessage message) {
-    if (isChatMessage(message)) return null;
+    if (isChatMessage(message) || isCallMessage(message)) return null;
 
     final data = message.data;
     final title =

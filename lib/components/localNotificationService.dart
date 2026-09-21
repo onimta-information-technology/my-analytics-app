@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
+import 'package:ballys_reservation_app/screens/call/call_screen.dart';
 import 'package:ballys_reservation_app/utils/chat_notification_sound.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -310,8 +311,15 @@ class NotificationService {
   /// a `go` swaps the pages underneath it and the user keeps looking at the
   /// same conversation. Drop those routes first so a notification tap really
   /// lands on the screen it points at.
+  ///
+  /// A call screen is pageless too, but it is never dropped: it would strand
+  /// the call with no way back to its controls. The navigation then happens
+  /// underneath it.
   static void popPagelessRoutes() {
-    navigatorKey.currentState?.popUntil((route) => route.settings is Page);
+    navigatorKey.currentState?.popUntil(
+      (route) =>
+          route.settings is Page || route.settings.name == CallScreen.routeName,
+    );
   }
 
   @pragma("vm:entry-point")

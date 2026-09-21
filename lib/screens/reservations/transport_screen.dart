@@ -59,8 +59,10 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   @override
   void initState() {
     super.initState();
-    _tabController =
-        TabController(length: TransportStatus.values.length + 1, vsync: this);
+    _tabController = TabController(
+      length: TransportStatus.values.length + 1,
+      vsync: this,
+    );
     _highlightMasterId = _normaliseMasterId(widget.highlightMasterId);
     _loadAccessSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -119,7 +121,9 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   bool _isVisibleToUser(TransportReservation reservation) {
     if (_canSeeAllRequests) return true;
     final loggedInUser = (_userName ?? '').trim().toLowerCase();
-    print('Logged-in user: $loggedInUser, Reservation user: ${reservation.userName.trim().toLowerCase()}');
+    print(
+      'Logged-in user: $loggedInUser, Reservation user: ${reservation.userName.trim().toLowerCase()}',
+    );
     if (loggedInUser.isEmpty) return false;
     return reservation.userName.trim().toLowerCase() == loggedInUser;
   }
@@ -360,13 +364,17 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
           TabBarView(
             controller: _tabController,
             children: [
-              _buildTransportList(reservations,
-                  status: null,
-                  isLoading: transportState.isLoading || !_accessLoaded),
+              _buildTransportList(
+                reservations,
+                status: null,
+                isLoading: transportState.isLoading || !_accessLoaded,
+              ),
               for (final status in TransportStatus.values)
-                _buildTransportList(byStatus[status]!,
-                    status: status,
-                    isLoading: transportState.isLoading || !_accessLoaded),
+                _buildTransportList(
+                  byStatus[status]!,
+                  status: status,
+                  isLoading: transportState.isLoading || !_accessLoaded,
+                ),
             ],
           ),
           if (transportState.isLoading)
@@ -445,7 +453,8 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
 
     // The request a notification pointed us at wears a gold border and a warm
     // tint until the highlight times out.
-    final isHighlighted = _highlightMasterId != null &&
+    final isHighlighted =
+        _highlightMasterId != null &&
         reservation.masterId == _highlightMasterId;
     // The same request also appears in the "All" tab; a GlobalKey can only be
     // mounted once, so only the status-tab card carries it (used for reveal).
@@ -463,13 +472,14 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
         side: isHighlighted
             ? const BorderSide(color: Constants.kPrimaryColor, width: 2)
             : showStatusBorder
-                ? BorderSide(
-                    color: _getStatusColor(reservation.status), width: 2)
-                : BorderSide.none,
+            ? BorderSide(color: _getStatusColor(reservation.status), width: 2)
+            : BorderSide.none,
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -589,92 +599,93 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
             ],
 
             const SizedBox(height: 8),
-            Row(
+            // Wrap instead of Row so the status chip is never squeezed into an
+            // ellipsis — the pax chip drops to the next line when space runs out.
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
-              //   if (reservation.hasAmendments) ...[
-                  // Container(
-                  //   padding: const EdgeInsets.symmetric(
-                  //     horizontal: 8,
-                  //     vertical: 4,
-                  //   ),
-                  //   decoration: BoxDecoration(
-                  //     color: Colors.deepOrange,
-                  //     borderRadius: BorderRadius.circular(12),
-                  //   ),
-                    // child: Row(
-                    //   mainAxisSize: MainAxisSize.min,
-                      // children: [
-                      //   const Icon(
-                      //     Icons.edit_note,
-                      //     size: 14,
-                      //     color: Colors.white,
-                      //   ),
-                      //   const SizedBox(width: 2),
-                      //   Text(
-                      //     '${reservation.amendments.length}',
-                      //     style: TextStyle(
-                      //       fontSize: fontSettings.fontSize,
-                      //       color: Colors.white,
-                      //       fontWeight: FontWeight.bold,
-                      //     ),
-                      //   ),
-                      // ],
-                  //   ),
-                  // ),
+                //   if (reservation.hasAmendments) ...[
+                // Container(
+                //   padding: const EdgeInsets.symmetric(
+                //     horizontal: 8,
+                //     vertical: 4,
+                //   ),
+                //   decoration: BoxDecoration(
+                //     color: Colors.deepOrange,
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                // child: Row(
+                //   mainAxisSize: MainAxisSize.min,
+                // children: [
+                //   const Icon(
+                //     Icons.edit_note,
+                //     size: 14,
+                //     color: Colors.white,
+                //   ),
+                //   const SizedBox(width: 2),
+                //   Text(
+                //     '${reservation.amendments.length}',
+                //     style: TextStyle(
+                //       fontSize: fontSettings.fontSize,
+                //       color: Colors.white,
+                //       fontWeight: FontWeight.bold,
+                //     ),
+                //   ),
+                // ],
+                //   ),
+                // ),
                 //   const SizedBox(width: 8),
                 // ],
-                Flexible(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(reservation.status),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getStatusIcon(reservation.status),
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 2),
-                        Flexible(
-                          child: Text(
-                            reservation.status.label,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: fontSettings.fontSize,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(reservation.status),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getStatusIcon(reservation.status),
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 2),
+                      Flexible(
+                        child: Text(
+                          reservation.status.label,
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      // '${reservation.details.length/2} '
-                      // '${reservation.details.length == 1 ? 'trip' : 'trips'} · '
-                      // '${reservation.totalVehicles} veh · '
-                      '${reservation.totalPassengers} pax',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: fontSettings.fontSize,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    // '${reservation.details.length/2} '
+                    // '${reservation.details.length == 1 ? 'trip' : 'trips'} · '
+                    // '${reservation.totalVehicles} veh · '
+                    '${reservation.totalPassengers} pax',
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

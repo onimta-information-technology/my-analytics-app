@@ -24,6 +24,26 @@ class TransportNotifierBallys extends StateNotifier<TransportStateBallys> {
     }
   }
 
+  /// Checks, approves or rejects a request, then reloads the list so it moves
+  /// to its new tab.
+  Future<TransportStatusUpdateResult> updateStatus({
+    required String masterId,
+    required String status,
+    required String remark,
+  }) async {
+    try {
+      final result = await repository.updateStatus(
+        masterId: masterId,
+        status: status,
+        remark: remark,
+      );
+      if (result.success) await getTransportReservations();
+      return result;
+    } catch (e) {
+      return TransportStatusUpdateResult(success: false, message: e.toString());
+    }
+  }
+
   void resetData() {
     state = TransportStateBallys();
   }

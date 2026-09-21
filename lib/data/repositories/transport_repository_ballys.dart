@@ -1,5 +1,6 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation_ballys.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
 class TransportRepositoryBallys {
@@ -9,6 +10,7 @@ class TransportRepositoryBallys {
 
   /// Resolved against the current CRM base URL.
   static const String _listEndpoint = 'TransportReservation/Get';
+  static const String _updateStatusEndpoint = 'TransportReservation/UpdateStatus';
 
   /// GET `{baseUrl}/TransportReservation/Get` — `{ success, count,
   /// transport_reservations }`.
@@ -49,4 +51,36 @@ class TransportRepositoryBallys {
 
     return reservations;
   }
+
+  /// POST `{baseUrl}/TransportReservation/UpdateStatus` — moves a request to
+  /// `Checked`, `Approved` or `Rejected`.
+  Future<TransportStatusUpdateResult> updateStatus({
+    required String masterId,
+    required String status,
+    required String remark,
+  }) async {
+    final body = <String, Object?>{
+      'master_id': masterId,
+      'reservation_status': status,
+      'user_name': await StorageUtil.getUserName() ?? '',
+      'remark': remark,
+      'device_id': await DeviceId.get(),
+    };
+    print('Transport UpdateStatus payload → $body');
+    final response = await apiService.post(_updateStatusEndpoint, body);
+    print('Transport UpdateStatus result → $response');
+
+    return TransportStatusUpdateResult(
+      success: response['success'] == true || response['Status'] == true,
+      message: (response['message'] ?? response['Message'])?.toString(),
+    );
+  }
+}
+
+/// Outcome of a `TransportReservation/UpdateStatus` call.
+class TransportStatusUpdateResult {
+  final bool success;
+  final String? message;
+
+  const TransportStatusUpdateResult({required this.success, this.message});
 }

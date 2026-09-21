@@ -81,6 +81,14 @@ class _TransportBallysScreenState extends ConsumerState<TransportBallysScreen>
     await ref.read(transportProviderBallys.notifier).getTransportReservations();
   }
 
+  /// The add screen pops `true` after a successful save.
+  Future<void> _openAddTransport() async {
+    final saved = await context.push<bool>(
+      '/reservationMain/transport-ballys/transport-add',
+    );
+    if (saved == true && mounted) _loadTransportData();
+  }
+
   String _formatDateTime(DateTime? dt) {
     if (dt == null) return 'N/A';
     final day = dt.day.toString().padLeft(2, '0');
@@ -150,6 +158,11 @@ class _TransportBallysScreenState extends ConsumerState<TransportBallysScreen>
                 }
               });
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, size: 30),
+            tooltip: 'Add Transport',
+            onPressed: _openAddTransport,
           ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),

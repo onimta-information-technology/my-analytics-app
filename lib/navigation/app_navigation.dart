@@ -73,6 +73,7 @@ import 'package:ballys_reservation_app/screens/reservations/reservation_screen_b
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/reservation_view_screen_ballys.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_ballys_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/transport_add_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_add_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_view_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_screen.dart';
@@ -784,6 +785,22 @@ class AppNavigation {
             fullscreenDialog: false,
             key: state.pageKey,
             child: const TransportViewBallysScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+        // Own screen, same form and TransportReservation/Insert call as the
+        // Quick Reservation transport tab.
+        GoRoute(
+          path: 'transport-add',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const TransportAddBallysScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

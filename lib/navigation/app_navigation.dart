@@ -78,6 +78,7 @@ import 'package:ballys_reservation_app/screens/reservations/transport_add_screen
 import 'package:ballys_reservation_app/screens/reservations/transport_view_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_view_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/visa_add_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/visa_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/visa_view_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/settings_screen.dart';
@@ -835,6 +836,22 @@ class AppNavigation {
             fullscreenDialog: false,
             key: state.pageKey,
             child: const VisaViewBallysScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+        // Own screen, same form and VisaRequest/Insert call as the Quick
+        // Reservation visa tab.
+        GoRoute(
+          path: 'visa-add',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const VisaAddBallysScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

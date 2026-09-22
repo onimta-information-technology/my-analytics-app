@@ -80,6 +80,13 @@ class _VisaBallysScreenState extends ConsumerState<VisaBallysScreen>
     await ref.read(visaProviderBallys.notifier).getVisaRequests();
   }
 
+  Future<void> _openAddVisa() async {
+    final saved = await context.push<bool>(
+      '/reservationMain/visa-ballys/visa-add',
+    );
+    if (saved == true && mounted) _loadVisaData();
+  }
+
   String _formatDate(DateTime? dt) {
     if (dt == null) return 'N/A';
     final day = dt.day.toString().padLeft(2, '0');
@@ -155,6 +162,11 @@ class _VisaBallysScreenState extends ConsumerState<VisaBallysScreen>
                 }
               });
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, size: 30),
+            tooltip: 'Add Visa Request',
+            onPressed: _openAddVisa,
           ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),

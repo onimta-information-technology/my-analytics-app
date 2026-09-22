@@ -78,6 +78,8 @@ import 'package:ballys_reservation_app/screens/reservations/transport_add_screen
 import 'package:ballys_reservation_app/screens/reservations/transport_view_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_screen.dart';
 import 'package:ballys_reservation_app/screens/reservations/transport_view_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/visa_ballys_screen.dart';
+import 'package:ballys_reservation_app/screens/reservations/visa_view_ballys_screen.dart';
 import 'package:ballys_reservation_app/screens/settings_screen.dart';
 import 'package:ballys_reservation_app/screens/support_screen.dart';
 import 'package:ballys_reservation_app/screens/viewBirthdayGiftRequest.dart';
@@ -801,6 +803,38 @@ class AppNavigation {
             fullscreenDialog: false,
             key: state.pageKey,
             child: const TransportAddBallysScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        ),
+      ],
+    ),
+
+    // Visa (Ballys) — list and view off VisaRequest/Get.
+    GoRoute(
+      path: 'visa-ballys',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        fullscreenDialog: false,
+        key: state.pageKey,
+        child: const VisaBallysScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+            child: child,
+          );
+        },
+      ),
+      routes: [
+        GoRoute(
+          path: 'visa-view',
+          pageBuilder: (context, state) => CustomTransitionPage(
+            fullscreenDialog: false,
+            key: state.pageKey,
+            child: const VisaViewBallysScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),

@@ -2,8 +2,9 @@
 // chat can have many calls over its lifetime, each with its own `callId` and
 // its own LiveKit room.
 
-/// `msg_type` values the chat server uses for call pushes. Only [incoming] is
-/// a visible alert; the rest arrive silent/data-only.
+/// `msg_type` values the chat server uses for call pushes. Every one of them
+/// arrives silent/data-only — even [incoming] carries no FCM `notification`,
+/// so the OS never shows anything by itself and ringing is the app's job.
 class CallPushType {
   const CallPushType._();
 
@@ -161,6 +162,222 @@ class CallSnapshot {
         .map((p) => CallParticipantInfo.fromJson(p.cast<String, dynamic>()))
         .toList(),
   );
+}
+
+/// The fields of an incoming-call push (`msg_type` 20). FCM data payloads
+/// are string-only, so `isGroupCall` arrives as `"true"`/`"false"`. The iOS
+/// VoIP push carries the same names with real JSON types, which [fromMap]
+/// accepts too.
+class IncomingCallPush {
+  final String callId;
+  final String callerId;
+  final String callerName;
+  final CallMedia media;
+  final bool isGroupCall;
+
+  /// Group name; empty for a 1:1 call.
+  final String chatTitle;
+
+  /// Ready-to-display title and body the server composed for the ring.
+  final String alertTitle;
+  final String alertBody;
+
+  /// Not in the ring payload today — filled in when a lookup supplies it.
+  final String chatId;
+
+  const IncomingCallPush({
+    required this.callId,
+    required this.callerId,
+    required this.callerName,
+    required this.media,
+    required this.isGroupCall,
+    required this.chatTitle,
+    required this.alertTitle,
+    required this.alertBody,
+    this.chatId = '',
+  });
+
+  /// Who is calling, as the ringing UI should name it: the group for a group
+  /// call, the caller otherwise.
+  String get displayTitle {
+    if (isGroupCall && chatTitle.isNotEmpty) return chatTitle;
+    if (alertTitle.isNotEmpty) return alertTitle;
+    if (callerName.isNotEmpty) return callerName;
+    return 'Incoming call';
+  }
+
+  String get displayBody {
+    if (alertBody.isNotEmpty) return alertBody;
+    final kind = media == CallMedia.video ? 'video' : 'voice';
+    return isGroupCall
+        ? '${callerName.isEmpty ? 'Someone' : callerName} · group $kind call'
+        : 'Incoming $kind call';
+  }
+
+  static IncomingCallPush? fromMap(Map<dynamic, dynamic> raw) {
+    final data = raw.map((k, v) => MapEntry(k.toString(), v));
+    final callId = data['callId']?.toString() ?? '';
+    if (callId.isEmpty) return null;
+    String str(String key) => data[key]?.toString() ?? '';
+    return IncomingCallPush(
+      callId: callId,
+      callerId: str('callerId'),
+      callerName: str('callerName'),
+      media: CallMedia.parse(data['callType']),
+      isGroupCall:
+          data['isGroupCall'] == true || str('isGroupCall') == 'true',
+      chatTitle: str('chatTitle'),
+      alertTitle: str('alertTitle'),
+      alertBody: str('alertBody'),
+      chatId: str('chatId'),
+    );
+  }
+
+  /// Flat string map — what the CallKit plugin carries in `extra` and hands
+  /// back on accept/decline, so [fromMap] rebuilds this on the other side.
+  Map<String, String> toMap() => {
+    'callId': callId,
+    'callerId': callerId,
+    'callerName': callerName,
+    'callType': media.wire,
+    'isGroupCall': isGroupCall.toString(),
+    'chatTitle': chatTitle,
+    'alertTitle': alertTitle,
+    'alertBody': alertBody,
+    'chatId': chatId,
+  };
+}
+
+/// One row of `GET /calls/history/:userId` — the cross-chat "Recents" list.
+class CallHistoryEntry {
+  final String callId;
+  final String chatId;
+  final CallMedia media;
+  final bool isGroupCall;
+
+  /// `outgoing` when this user started the call, `incoming` otherwise.
+  final bool isOutgoing;
+
+  /// `completed`, `missed`, `declined`, or — for a call still in progress —
+  /// `ringing`/`ongoing`.
+  final String status;
+  final DateTime? createdAt;
+  final DateTime? answeredAt;
+  final DateTime? endedAt;
+
+  /// Set for a 1:1 call.
+  final CallHistoryPeer? otherParticipant;
+
+  /// Set for a group call.
+  final String groupName;
+  final String groupAvatarUrl;
+
+  const CallHistoryEntry({
+    required this.callId,
+    required this.chatId,
+    required this.media,
+    required this.isGroupCall,
+    required this.isOutgoing,
+    required this.status,
+    this.createdAt,
+    this.answeredAt,
+    this.endedAt,
+    this.otherParticipant,
+    this.groupName = '',
+    this.groupAvatarUrl = '',
+  });
+
+  bool get isMissed => status == 'missed';
+  bool get isDeclined => status == 'declined';
+  bool get isLive => status == 'ringing' || status == 'ongoing';
+
+  String get title {
+    if (isGroupCall) return groupName.isNotEmpty ? groupName : 'Group call';
+    final peer = otherParticipant;
+    if (peer == null) return 'Unknown';
+    if (peer.name.isNotEmpty) return peer.name;
+    return peer.firstName.isNotEmpty ? peer.firstName : 'Unknown';
+  }
+
+  String? get avatarUrl {
+    final url = isGroupCall ? groupAvatarUrl : otherParticipant?.profileImageUrl;
+    return (url == null || url.isEmpty) ? null : url;
+  }
+
+  /// Talk time, for a call someone answered.
+  Duration? get duration {
+    final from = answeredAt;
+    final to = endedAt;
+    if (from == null || to == null || to.isBefore(from)) return null;
+    return to.difference(from);
+  }
+
+  factory CallHistoryEntry.fromJson(Map<String, dynamic> json) {
+    final peer = (json['otherParticipant'] as Map?)?.cast<String, dynamic>();
+    return CallHistoryEntry(
+      callId: json['callId']?.toString() ?? '',
+      chatId: json['chatId']?.toString() ?? '',
+      media: CallMedia.parse(json['callType']),
+      isGroupCall: json['isGroupCall'] == true,
+      isOutgoing: json['direction']?.toString() == 'outgoing',
+      status: json['status']?.toString() ?? '',
+      createdAt: _date(json['createdAt']),
+      answeredAt: _date(json['answeredAt']),
+      endedAt: _date(json['endedAt']),
+      otherParticipant: peer == null ? null : CallHistoryPeer.fromJson(peer),
+      groupName: json['groupName']?.toString() ?? '',
+      groupAvatarUrl: json['groupAvatarUrl']?.toString() ?? '',
+    );
+  }
+}
+
+class CallHistoryPeer {
+  final String userUuid;
+  final int appType;
+  final String name;
+  final String firstName;
+  final String profileImageUrl;
+
+  const CallHistoryPeer({
+    required this.userUuid,
+    required this.appType,
+    required this.name,
+    required this.firstName,
+    required this.profileImageUrl,
+  });
+
+  factory CallHistoryPeer.fromJson(Map<String, dynamic> json) =>
+      CallHistoryPeer(
+        userUuid: json['userUuid']?.toString() ?? '',
+        appType: int.tryParse(json['appType']?.toString() ?? '') ?? 0,
+        name: json['name']?.toString() ?? '',
+        firstName: json['firstName']?.toString() ?? '',
+        profileImageUrl: json['profileImageUrl']?.toString() ?? '',
+      );
+}
+
+class CallHistoryPage {
+  final List<CallHistoryEntry> calls;
+  final bool hasMore;
+
+  /// Pass back as `before` for the next page.
+  final int? nextCursor;
+
+  const CallHistoryPage({
+    required this.calls,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  factory CallHistoryPage.fromJson(Map<String, dynamic> json) =>
+      CallHistoryPage(
+        calls: ((json['calls'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((c) => CallHistoryEntry.fromJson(c.cast<String, dynamic>()))
+            .toList(),
+        hasMore: json['hasMore'] == true,
+        nextCursor: int.tryParse(json['nextCursor']?.toString() ?? ''),
+      );
 }
 
 DateTime? _date(Object? raw) =>

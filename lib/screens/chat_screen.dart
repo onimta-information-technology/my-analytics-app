@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
+import 'package:ballys_reservation_app/screens/call/call_history_screen.dart';
 import 'package:ballys_reservation_app/screens/chatDetail_screen.dart';
 import 'package:ballys_reservation_app/screens/chat_settings_screen.dart';
 import 'package:ballys_reservation_app/screens/new_chat_screen.dart';
@@ -1907,6 +1908,14 @@ if (message.data['msg_type'] == '35') {
                   _fetchChatsFromApi();
                   _fetchGroups();
                 },
+              ),
+              IconButton(
+                icon: const Icon(Icons.call_outlined),
+                tooltip: 'Calls',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+                ),
               ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),

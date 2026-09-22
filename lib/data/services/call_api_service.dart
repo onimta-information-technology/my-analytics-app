@@ -83,6 +83,35 @@ class CallApiService {
     return call == null ? null : CallInfo.fromJson({...call, 'chatId': chatId});
   }
 
+  /// Every call this user was invited to, across all chats, newest first.
+  /// [before] is the previous page's [CallHistoryPage.nextCursor].
+  static Future<CallHistoryPage> history({int limit = 30, int? before}) async {
+    final userId = await DeviceId.get();
+    final query = {
+      'appType': '${FirebaseApiService.appType}',
+      'limit': '$limit',
+      if (before != null) 'before': '$before',
+    };
+    final body = await _send(
+      'GET',
+      '/api/calls/history/$userId?${Uri(queryParameters: query).query}',
+    );
+    return CallHistoryPage.fromJson(body);
+  }
+
+  /// iOS only: the PushKit token — not the FCM token — that the server sends
+  /// VoIP pushes to, so a call rings even when the app has been killed.
+  static Future<void> updateVoipToken(String voipToken) async {
+    await _send('POST', '/api/users/update-voip-token', {
+      ...await _identity(),
+      'voipToken': voipToken,
+    });
+  }
+
+  static Future<void> removeVoipToken() async {
+    await _send('POST', '/api/users/remove-voip-token', await _identity());
+  }
+
   // ---------------------------------------------------------------------------
 
   static Future<Map<String, dynamic>> _identity({bool withName = false}) async {

@@ -1,8 +1,10 @@
 import AVFoundation
 import Flutter
+import PushKit
 import UIKit
 import FirebaseCore
 import FirebaseMessaging
+import flutter_callkit_incoming
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -19,6 +21,15 @@ import FirebaseMessaging
     }
 
     GeneratedPluginRegistrant.register(with: self)
+
+    // VoIP pushes: the only push iOS delivers to a killed app reliably. The
+    // server sends one per incoming call, straight through APNs, to the
+    // PushKit token (not the FCM token) that Dart registers with
+    // /api/users/update-voip-token. See pushRegistry(_:didReceiveIncomingPushWith:).
+    let registry = PKPushRegistry(queue: DispatchQueue.main)
+    registry.delegate = self
+    registry.desiredPushTypes = [.voIP]
+    voipRegistry = registry
 
     // firebase_messaging raises `onTokenRefresh` in Dart only from its own
     // MessagingDelegate callback, but it never installs itself as the delegate.
@@ -127,6 +138,10 @@ import FirebaseMessaging
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  /// Held for the app's lifetime — a released registry stops delivering VoIP
+  /// pushes and token updates.
+  private var voipRegistry: PKPushRegistry?
+
   /// The delegate that was in place before this class took it back, so its
   /// notifications and action taps keep being handled.
   private weak var delegateBehind: UNUserNotificationCenterDelegate?
@@ -142,7 +157,7 @@ import FirebaseMessaging
   
   // CRITICAL: Register APNS token with Firebase
   override func application(_ application: UIApplication, 
-                            didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+                            didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Foundation.Data) {
     print("📱 Device registered for remote notifications")
     
     // Set APNs token for Firebase
@@ -318,6 +333,101 @@ import FirebaseMessaging
     }
 
     completionHandler()
+  }
+}
+
+// MARK: - VoIP push (PushKit → CallKit)
+
+extension AppDelegate: PKPushRegistryDelegate {
+  func pushRegistry(_ registry: PKPushRegistry,
+                    didUpdate credentials: PKPushCredentials,
+                    for type: PKPushType) {
+    guard type == .voIP else { return }
+    let token = credentials.token.map { String(format: "%02x", $0) }.joined()
+    print("📞 VoIP token: \(token)")
+    // Dart reads it with getDevicePushTokenVoIP() and hears about changes
+    // through the DidUpdateDevicePushTokenVoip event, then syncs it upstream.
+    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP(token)
+  }
+
+  func pushRegistry(_ registry: PKPushRegistry,
+                    didInvalidatePushTokenFor type: PKPushType) {
+    guard type == .voIP else { return }
+    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP("")
+  }
+
+  /// Apple requires every VoIP push to be reported to CallKit right away,
+  /// before any other work — an app that doesn't gets its VoIP pushes
+  /// throttled and can lose the entitlement. So nothing here waits on the
+  /// network or on Dart: the payload is turned straight into a CallKit call.
+  ///
+  /// The payload's fields mirror the FCM incoming-call push (`callId`,
+  /// `callerName`, `callType`, `isGroupCall`, `chatTitle`, …); `extra`
+  /// carries them in the same flat string form Dart's
+  /// `IncomingCallPush.fromMap` reads back on accept/decline.
+  func pushRegistry(_ registry: PKPushRegistry,
+                    didReceiveIncomingPushWith payload: PKPushPayload,
+                    for type: PKPushType,
+                    completion: @escaping () -> Void) {
+    guard type == .voIP else {
+      completion()
+      return
+    }
+    let p = payload.dictionaryPayload
+    func str(_ key: String) -> String {
+      guard let value = p[key] else { return "" }
+      return value as? String ?? String(describing: value)
+    }
+
+    let callId = str("callId")
+    let callerName = str("callerName")
+    let chatTitle = str("chatTitle")
+    let isVideo = str("callType").lowercased() == "video"
+    let isGroup = (p["isGroupCall"] as? Bool) ?? (str("isGroupCall") == "true")
+
+    let title = isGroup && !chatTitle.isEmpty
+      ? chatTitle
+      : (callerName.isEmpty ? "Incoming call" : callerName)
+    let kind = isVideo ? "video" : "voice"
+    let body = isGroup
+      ? "\(callerName.isEmpty ? "Someone" : callerName) · group \(kind) call"
+      : (isVideo ? "🎥 Incoming video call" : "📞 Incoming voice call")
+
+    // CallKit keys calls by UUID. The server's callId is one, which is what
+    // lets the FCM push for the same call land on this entry instead of
+    // ringing a second time; anything else still has to be reported.
+    let uuid = UUID(uuidString: callId)?.uuidString ?? UUID().uuidString
+
+    let data = flutter_callkit_incoming.Data(
+      id: uuid, nameCaller: title, handle: body, type: isVideo ? 1 : 0)
+    data.appName = "My Analytics"
+    data.duration = 60000
+    data.handleType = "generic"
+    data.supportsVideo = isVideo
+    data.maximumCallGroups = 1
+    data.maximumCallsPerCallGroup = 1
+    data.supportsDTMF = false
+    data.supportsHolding = false
+    data.supportsGrouping = false
+    data.supportsUngrouping = false
+    data.includesCallsInRecents = false
+    data.audioSessionMode = "voiceChat"
+    data.extra = [
+      "callId": callId,
+      "callerId": str("callerId"),
+      "callerName": callerName,
+      "callType": isVideo ? "video" : "audio",
+      "isGroupCall": isGroup ? "true" : "false",
+      "chatTitle": chatTitle,
+      "alertTitle": title,
+      "alertBody": body,
+      "chatId": str("chatId"),
+    ]
+
+    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(
+      data, fromPushKit: true) {
+      completion()
+    }
   }
 }
 

@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/components/badge_service.dart';
 import 'package:ballys_reservation_app/components/developer_banner.dart';
 import 'package:ballys_reservation_app/components/localNotificationService.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
@@ -54,6 +55,7 @@ void _logPushMessage(String source, RemoteMessage message) {
   print('======================================');
 }
 
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
 
@@ -63,9 +65,14 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // chat is refetched when it is next opened, so nothing is stored or counted.
   if (NotificationStore.isSilentThreadUpdate(message)) return;
 
-  // Call pushes: the incoming ring is a visible alert the OS already showed,
-  // and the rest only matter to a live call screen — none are unread items.
-  if (CallPushType.isCallPush(message.data)) return;
+  // Call pushes are data-only, so nothing rings unless this raises it: the
+  // incoming ring goes to the OS call UI, and the rest take that ring down
+  // again once the call is answered elsewhere, declined or over. None of them
+  // are unread items.
+  if (CallPushType.isCallPush(message.data)) {
+    await _handleBackgroundCallPush(message.data);
+    return;
+  }
 
   // Keep non-chat notifications in local history so the home screen bell shows
   // them the next time the app is opened.
@@ -100,6 +107,25 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
+Future<void> _handleBackgroundCallPush(Map<String, dynamic> data) async {
+  final type = data['msg_type']?.toString();
+  final callId = data['callId']?.toString() ?? '';
+  if (callId.isEmpty) return;
+  switch (type) {
+    case CallPushType.incoming:
+      final push = IncomingCallPush.fromMap(data);
+      if (push != null) await CallKitService.showIncoming(push);
+    case CallPushType.answered:
+      // In a group call someone else joining leaves our ring standing.
+      if (data['isGroupCall']?.toString() != 'true') {
+        await CallKitService.dismiss(callId);
+      }
+    case CallPushType.declined:
+    case CallPushType.ended:
+      await CallKitService.dismiss(callId);
+  }
+}
+
 late ProviderContainer globalContainer;
 
 void main() async {
@@ -118,6 +144,10 @@ void main() async {
 
   // Initialize badge service
   await BadgeService().initialize();
+
+  // Hooks the OS incoming-call UI (CallKit / Android full-screen ring) up to
+  // the call manager, before any of its events can arrive.
+  await CallKitService.init();
 
   globalContainer = ProviderContainer();
 
@@ -182,6 +212,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _setupFirebaseListenersOnly();
+
+    // A call answered from the lock screen / while the app was killed was
+    // accepted before anything here was listening — join it once the
+    // navigator can show the call screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 800), () async {
+        if (await StorageUtil.hasActiveSession()) {
+          await CallKitService.resumeAcceptedCall();
+        }
+      });
+    });
   }
 
   @override
@@ -198,6 +239,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // A startup sync that failed (no network yet, token not ready) otherwise
       // stays broken until the app is killed and reopened.
       unawaited(FcmTokenService.resync());
+      unawaited(CallKitService.syncVoipToken());
+      unawaited(CallKitService.resumeAcceptedCall());
       _syncBadgeIfLoggedIn();
       _reloadNotificationHistory();
     } else if (state == AppLifecycleState.paused) {
@@ -248,6 +291,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Repairs a row the backend is holding from an earlier run.
     unawaited(FcmTokenService.resync());
+    unawaited(CallKitService.syncVoipToken());
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logPushMessage('foreground', message);

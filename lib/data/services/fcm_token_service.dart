@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -66,6 +67,10 @@ class FcmTokenService {
 
   /// Post-login registration. Fire-and-forget: never blocks navigation.
   static Future<void> registerAfterLogin() async {
+    // iOS: the PushKit token rides along, so calls ring with the app killed.
+    unawaited(CallKitService.syncVoipToken(force: true));
+    // Android 14+: lets an incoming call ring full-screen over the lock screen.
+    unawaited(CallKitService.requestAndroidPermissions());
     try {
       final token = await getTokenWithRetry();
       if (token == null) return; // onTokenRefresh will deliver it.
@@ -101,6 +106,7 @@ class FcmTokenService {
   /// Drops this device's row on the backend. Call before clearing user data —
   /// the request needs the auth token and property url still in prefs.
   static Future<void> clearOnLogout() async {
+    await CallKitService.clearVoipToken();
     try {
       await FirebaseApiService.removeFcmToken();
     } catch (e) {

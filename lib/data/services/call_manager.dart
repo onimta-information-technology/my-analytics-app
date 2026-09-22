@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
 import 'package:ballys_reservation_app/models/call_session.dart';
@@ -44,6 +46,10 @@ class CallController extends ChangeNotifier {
   final bool isGroupCall;
   final bool isOutgoing;
 
+  /// Answered from the OS call UI (CallKit / Android's full-screen ring),
+  /// which then holds a system call entry that has to be released with it.
+  final bool viaSystem;
+
   CallPhase phase;
   String? endReason;
   DateTime? connectedAt;
@@ -67,6 +73,7 @@ class CallController extends ChangeNotifier {
     required this.isOutgoing,
     required this.phase,
     this.avatarUrl,
+    this.viaSystem = false,
   });
 
   bool get isVideo => media == CallMedia.video;
@@ -205,6 +212,43 @@ class CallManager {
     await _acceptInto(c);
   }
 
+  /// The user tapped Accept on the system incoming-call UI. The app may have
+  /// been launched just for this, so the call is opened straight into
+  /// connecting — there is nothing left to ring.
+  Future<void> acceptFromSystem(IncomingCallPush push) async {
+    final current = _current;
+    if (current != null && current.callId == push.callId) {
+      if (current.phase == CallPhase.incoming) return accept();
+      if (current.phase != CallPhase.ended) return _bringToFront();
+    }
+    if (isBusy) {
+      _toast('You are already on a call');
+      unawaited(CallKitService.dismiss(push.callId));
+      return;
+    }
+    final c = CallController(
+      callId: push.callId,
+      chatId: push.chatId,
+      title: push.displayTitle,
+      media: push.media,
+      isGroupCall: push.isGroupCall,
+      isOutgoing: false,
+      phase: CallPhase.connecting,
+      viaSystem: true,
+    );
+    _open(c);
+    await _acceptInto(c);
+  }
+
+  /// Hung up from the system UI (iOS call bar, lock screen, Android's
+  /// ongoing-call notification).
+  Future<void> hangUpFromSystem(String callId) async {
+    final c = _current;
+    if (c == null || c.callId != callId || c.phase == CallPhase.ended) return;
+    if (c.phase == CallPhase.incoming) return decline();
+    await _hangUp(c, reason: 'hangup');
+  }
+
   // ─── User actions from the call screen ───────────────────────────────────
 
   Future<void> accept() async {
@@ -292,11 +336,36 @@ class CallManager {
     print('call push $type for $callId');
 
     if (type == CallPushType.incoming) {
-      return _offerIncoming(message, details);
+      final push = IncomingCallPush.fromMap(details);
+      if (push == null) return;
+      // iOS rings through CallKit in every app state: the server's VoIP push
+      // is reported there natively, and both land on the same CallKit entry
+      // (keyed by callId), so ringing in-app as well would double up.
+      if (Platform.isIOS) {
+        if (isBusy && _current!.callId != callId) {
+          unawaited(
+            CallApiService.decline(callId)
+                .catchError((e) => print('busy decline: $e')),
+          );
+          return;
+        }
+        return CallKitService.showIncoming(push);
+      }
+      return _offerIncoming(push);
     }
 
+    // A ring still showing in the system UI rather than in-app stops once the
+    // call is answered elsewhere (1:1), declined, or over.
+    final systemRingOver = switch (type) {
+      CallPushType.answered => details['isGroupCall']?.toString() != 'true',
+      CallPushType.declined || CallPushType.ended => true,
+      _ => false,
+    };
     final c = _current;
-    if (c == null || c.callId != callId) return;
+    if (c == null || c.callId != callId) {
+      if (systemRingOver) unawaited(CallKitService.dismiss(callId));
+      return;
+    }
     switch (type) {
       case CallPushType.answered:
         // For a 1:1 callee still ringing, someone answering means it was
@@ -335,23 +404,23 @@ class CallManager {
         _toast('Missed call from ${snap.call.callerName}');
         return;
       }
-      await _offerIncoming(message, {
+      final push = IncomingCallPush.fromMap({
         ...details,
         'callType': snap.call.media.wire,
         'isGroupCall': snap.call.isGroupCall,
         'callerName': snap.call.callerName,
         'chatId': snap.call.chatId,
       });
+      if (push != null) await _offerIncoming(push);
     } catch (e) {
       print('call tap lookup failed: $e');
     }
   }
 
-  Future<void> _offerIncoming(
-    RemoteMessage message,
-    Map<String, dynamic> details,
-  ) async {
-    final callId = details['callId'].toString();
+  /// Rings in-app — Android with the app in the foreground. Background and
+  /// killed states ring through [CallKitService] instead.
+  Future<void> _offerIncoming(IncomingCallPush push) async {
+    final callId = push.callId;
     if (isBusy) {
       if (_current!.callId == callId) return;
       // Already on another call: treat it as busy rather than ringing over
@@ -362,20 +431,12 @@ class CallManager {
       return;
     }
 
-    final isGroup = details['isGroupCall'] == true ||
-        details['isGroupCall']?.toString() == 'true';
-    final title = (isGroup ? details['chatTitle']?.toString() : null) ??
-        details['callerName']?.toString() ??
-        message.data['title']?.toString() ??
-        message.notification?.title ??
-        'Incoming call';
-
     final c = CallController(
       callId: callId,
-      chatId: details['chatId']?.toString() ?? '',
-      title: title,
-      media: CallMedia.parse(details['callType']),
-      isGroupCall: isGroup,
+      chatId: push.chatId,
+      title: push.displayTitle,
+      media: push.media,
+      isGroupCall: push.isGroupCall,
       isOutgoing: false,
       phase: CallPhase.incoming,
     );
@@ -464,6 +525,7 @@ class CallManager {
         c.phase = CallPhase.connected;
         c.connectedAt = DateTime.now();
       }
+      if (c.viaSystem) unawaited(CallKitService.markConnected(info.callId));
       c.update();
       unawaited(_refreshNames(c));
     } catch (e) {
@@ -501,6 +563,10 @@ class CallManager {
     _stopRinging();
     _pollTimer?.cancel();
     _timeoutTimer?.cancel();
+    final callId = c.callId;
+    if (c.viaSystem && callId != null) {
+      unawaited(CallKitService.release(callId));
+    }
 
     final listener = _roomListener;
     final room = c.room;

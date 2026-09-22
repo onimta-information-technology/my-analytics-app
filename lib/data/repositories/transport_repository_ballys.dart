@@ -15,20 +15,23 @@ class TransportRepositoryBallys {
   /// GET `{baseUrl}/TransportReservation/Get` — `{ success, count,
   /// transport_reservations }`.
   ///
-  /// Sales code AD001 sees every request, so it queries by sales code;
-  /// everyone else is scoped to their own marketing code.
+  /// Sales code AD001 and users with the `ResApp` / `ResChk` permission see
+  /// every request, so they call it without query parameters; everyone else
+  /// is scoped to their own marketing code.
   Future<List<TransportReservationBallys>> getTransportReservations() async {
-    final String query;
-    if (await StorageUtil.isAdminSalesCode()) {
-      final salesCode = (await StorageUtil.getSalesCode())!.trim();
-      query = 'salesCode=${Uri.encodeQueryComponent(salesCode)}';
-    } else {
+    final isAdmin = await StorageUtil.isAdminSalesCode();
+    final resApp = await StorageUtil.getResApp() == true;
+    final resChk = await StorageUtil.getResChk() == true;
+
+    String endpoint = _listEndpoint;
+    if (!isAdmin && !resApp && !resChk) {
       final marketingCode = await StorageUtil.getMarketingCode();
       if (marketingCode == null) return [];
-      query = 'marketingCode=${Uri.encodeQueryComponent(marketingCode)}';
+      endpoint =
+          '$_listEndpoint?marketingCode=${Uri.encodeQueryComponent(marketingCode)}';
     }
 
-    final response = await apiService.get('$_listEndpoint?$query');
+    final response = await apiService.get(endpoint);
 
     if (response['success'] != true) return [];
 

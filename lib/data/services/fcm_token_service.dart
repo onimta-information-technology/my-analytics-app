@@ -95,6 +95,10 @@ class FcmTokenService {
       if (token == null) return;
 
       await prefs.setString(_tokenKey, token);
+      // Printed so a push that the server reports as "sent" can be checked
+      // against the token this install is actually listening on — the server
+      // holding an older device's token looks exactly like a lost push.
+      print('FCM token (this device): $token');
       if (token == prefs.getString(_syncedTokenKey)) return; // already current
 
       await _syncIfLoggedIn(token);

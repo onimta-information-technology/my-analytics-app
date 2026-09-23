@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
@@ -37,6 +38,7 @@ class QuickReservationRepository {
   static const String _reservationEndpoint = 'Reservation_InsertReservation';
   static const String _transportEndpoint = 'TransportReservation/Insert';
   static const String _visaEndpoint = 'VisaRequest/Insert';
+  static const String _airportServiceEndpoint = 'AirportServiceRequest/Insert';
 
   // ── Hotel ───────────────────────────────────────────────────────────────────
 
@@ -601,6 +603,73 @@ class QuickReservationRepository {
       'reservation_status': 'Pending',
       'guests': visaGuests,
       'passport_images': passportImages,
+    };
+  }
+
+  // ── Airport service ─────────────────────────────────────────────────────────
+
+  /// A Silk / Gold Route meet-and-greet for one guest on one flight. The
+  /// screen has already checked that the guest's package covers [service] and
+  /// that [flightDateTime] leaves the airport its lead time.
+  ///
+  /// This tab asks for no approver — the request is routed by the service the
+  /// guest's package entitles them to, not by who signs it off.
+  Future<QuickReservationResult> saveAirportServiceRequest({
+    required String memberId,
+    required String guestName,
+    required String packageAmount,
+    required String service,
+    required String legType,
+    required DateTime flightDateTime,
+    required String flightNo,
+    void Function(String label, Object? payload)? log,
+  }) async {
+    final body = await buildAirportServiceBody(
+      memberId: memberId,
+      guestName: guestName,
+      packageAmount: packageAmount,
+      service: service,
+      legType: legType,
+      flightDateTime: flightDateTime,
+      flightNo: flightNo,
+    );
+    log?.call('Saving airport service request', body);
+    final response = await apiService.post(_airportServiceEndpoint, body);
+    log?.call('Airport service request response', response);
+    return _toResult(response, 'Failed to save airport service request');
+  }
+
+  Future<Map<String, dynamic>> buildAirportServiceBody({
+    required String memberId,
+    required String guestName,
+    required String packageAmount,
+    required String service,
+    required String legType,
+    required DateTime flightDateTime,
+    required String flightNo,
+  }) async {
+    // The flight goes out both whole and split: the timestamp is what the
+    // request is ordered by, the date and time are what the airport reads.
+    return {
+      ...await _requestEnvelope(),
+      'marketing_code': await StorageUtil.getMarketingCode(),
+      'MID': memberId,
+      'guest_name': guestName,
+      'package_amount': packageAmountToInt(packageAmount),
+      'currency_type': packageAmountCurrency(packageAmount),
+      'service_type': service,
+      'flight_type': legType,
+      'flight_date_time': flightDateTime.toIso8601String(),
+      'flight_date': DateTime(
+        flightDateTime.year,
+        flightDateTime.month,
+        flightDateTime.day,
+      ).toIso8601String(),
+      'flight_time': DateFormat('hh:mm a').format(flightDateTime),
+      'flight_no': flightNo,
+      // Kept for shape, always empty: this request carries no approver.
+      'approve_person': approvePersonJson(null),
+      'reservation_status': 'Pending',
     };
   }
 

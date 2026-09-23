@@ -38,10 +38,11 @@ import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/quick_reservation_provider_ballys.dart';
 // import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:intl/intl.dart';
 
-enum _Section { airTicket, hotel, transport, visa }
+enum _Section { airTicket, hotel, transport, visa, airportService }
 
 // Transport tab dropdown options.
 const List<String> kCarTypes = [
@@ -66,6 +67,31 @@ const List<String> kGateRoutes = [
   'Silk Route',
   'Gold Route',
 ];
+
+// ── Airport Service tab ─────────────────────────────────────────────────────
+/// The airport services that can be requested. Which of them a guest may pick
+/// is decided by their package amount — see [kAirportServiceMinAmounts].
+const List<String> kAirportServices = [
+  'Silk Route',
+  'Gold Route',
+];
+
+/// The package amount a guest has to be on before a service is open to them,
+/// per currency. A currency with no entry here has no agreed threshold, so the
+/// service stays closed rather than being granted on an amount nobody has
+/// priced — add the currency here when one is agreed.
+///
+/// `IND` (how the package amount API spells it) is normalised to `INR` before
+/// the lookup, see [_QuickReservationBallysScreenState._as_currency].
+const Map<String, Map<String, double>> kAirportServiceMinAmounts = {
+  'Silk Route': {'INR': 2500000, 'USD': 10000},
+  'Gold Route': {'INR': 10000000, 'USD': 50000},
+};
+
+/// How far ahead of the flight an airport service has to be requested: the
+/// airport needs the lead time to arrange the meet-and-greet, so a flight
+/// closer than this cannot be booked from here.
+const Duration kAirportServiceLeadTime = Duration(hours: 6);
 
 // Digit count allowed in the contact number, excluding the country code.
 const int kMinContactDigits = 9;
@@ -92,6 +118,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _airFormKey = GlobalKey<FormState>();
   final _transportFormKey = GlobalKey<FormState>();
   final _visaFormKey = GlobalKey<FormState>();
+  final _airportServiceFormKey = GlobalKey<FormState>();
 
   /// The Hotel and Air Ticket tabs are two-step forms — who the reservation is
   /// for, then what is being booked — so the guest half gets its own [Form].
@@ -369,6 +396,30 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// uploaders are outlined in red until something is picked.
   bool _v_showPassportErrors = false;
 
+  // ── AIRPORT SERVICE ─────────────────────────────────────────────────────────
+  // A meet-and-greet at the airport for one guest: which service they are on,
+  // which leg it is for, and the flight it has to meet. The guest, their name
+  // and their package amount are the shared fields every other tab uses, since
+  // the package amount is what decides which services they may pick at all.
+  final _as_flightNoCtrl = TextEditingController();
+  final _as_flightDateCtrl = TextEditingController();
+  final _as_flightTimeCtrl = TextEditingController();
+  DateTime? _as_flightDate;
+  TimeOfDay? _as_flightTime;
+
+  /// The picked service, one of [kAirportServices]. Cleared whenever the
+  /// package amount moves below what it needs — see [_as_syncServiceWithAmount].
+  String? _as_service;
+
+  /// Which leg the service is for. Only asked for once a service is picked,
+  /// the way the air ticket tab asks for its Silk / Gold Route leg.
+  String _as_legType = 'Arrival';
+
+  /// The package amount picker holds the shown value in its own state, so
+  /// emptying the controller after a save is not enough to clear it — bumping
+  /// this rebuilds the picker against the now-empty controller.
+  Key _as_packageAmountKey = UniqueKey();
+
   /// The guests the hotel / air ticket currently in the form is booked for, by
   /// [_guestKey]. A room or ticket can go to one guest or to several, so this is
   /// a set of ticks rather than a single pick — the same assignment the new
@@ -440,6 +491,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   static const _airColor = Color(0xFF0277BD);
   static const _transportColor = Color(0xFF2E7D32);
   static const _visaColor = Color(0xFF6A1B9A);
+  static const _airportServiceColor = Color(0xFF00695C);
 
   // Both steps of a tab are in the tree at once, so each needs a controller of
   // its own — one controller cannot drive two live scroll views.
@@ -449,6 +501,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   final _airScrollCtrl = ScrollController();
   final _transportScrollCtrl = ScrollController();
   final _visaScrollCtrl = ScrollController();
+  final _airportServiceScrollCtrl = ScrollController();
 
   Color get _accentColor {
     switch (_activeSection) {
@@ -460,6 +513,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         return _transportColor;
       case _Section.visa:
         return _visaColor;
+      case _Section.airportService:
+        return _airportServiceColor;
     }
   }
 
@@ -467,6 +522,11 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   void initState() {
     super.initState();
     _quickNotifier = ref.read(quickReservationBallysProvider.notifier);
+    // The Airport Service tab reads the package amount to decide which
+    // services are open, and the picker writes straight into the controller
+    // without going through this widget — so the tab is told by the controller
+    // itself rather than being left showing a stale set of options.
+    _sharedPackageAmount.addListener(_onSharedPackageAmountChanged);
     // Deferred past the first frame: these loaders write provider state, and
     // [loadAirlines] does so before its first await — a provider modified while
     // the tree is still building throws, which left the airline list empty.
@@ -483,6 +543,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   @override
   void dispose() {
+    _sharedPackageAmount.removeListener(_onSharedPackageAmountChanged);
     for (final c in [
       _sharedMemberId,
       _sharedMidNumber,
@@ -514,6 +575,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _t_contactNumber,
       _t_flightNoCtrl,
       _v_arrivalCtrl,
+      _as_flightNoCtrl,
+      _as_flightDateCtrl,
+      _as_flightTimeCtrl,
     ]) {
       c.dispose();
     }
@@ -534,6 +598,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _airScrollCtrl.dispose();
     _transportScrollCtrl.dispose();
     _visaScrollCtrl.dispose();
+    _airportServiceScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -1942,6 +2007,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     String label = 'Select Time',
     TimeOfDay? initial,
     TimeOfDay? minTime,
+    String minTimeMessage = 'Pickup time cannot be in the past',
   }) async {
     final now = DateTime.now();
     DateTime picked = DateTime(
@@ -2024,10 +2090,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
                           picked.hour * 60 + picked.minute;
                       if (pickedInMinutes < minInMinutes) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content:
-                                Text('Pickup time cannot be in the past'),
-                          ),
+                          SnackBar(content: Text(minTimeMessage)),
                         );
                         return;
                       }
@@ -2392,6 +2455,9 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
       case _Section.visa:
         _copyToClipboard(_buildVisaText());
         break;
+      case _Section.airportService:
+        _copyToClipboard(_buildAirportServiceText());
+        break;
     }
   }
 
@@ -2509,6 +2575,9 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
         break;
       case _Section.visa:
         await _saveVisaSection();
+        break;
+      case _Section.airportService:
+        await _saveAirportServiceSection();
         break;
     }
   }
@@ -2662,6 +2731,158 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
       result,
       onSuccess: _clearAllVisaForm,
       successFallback: 'Visa request saved successfully',
+    );
+  }
+
+  // ── AIRPORT SERVICE ─────────────────────────────────────────────────────────
+
+  /// The picker writes the amount straight into the controller, so this is
+  /// where the Airport Service tab hears about it: a service the new amount no
+  /// longer covers is dropped rather than left picked and saved.
+  void _onSharedPackageAmountChanged() {
+    if (!mounted) return;
+    final service = _as_service;
+    setState(() {
+      if (service != null && !_as_serviceIsAvailable(service)) {
+        _as_service = null;
+      }
+    });
+  }
+
+  /// The currency the picked package amount is in, as the thresholds spell it.
+  /// The amounts API says `IND` where the thresholds say `INR`; they are the
+  /// same currency, so one is read as the other.
+  String get _as_currency {
+    final currency = packageAmountCurrency(_sharedPackageAmount.text);
+    return currency == 'IND' ? 'INR' : currency;
+  }
+
+  /// The picked package amount as a number, or null when nothing is picked.
+  double? get _as_amountValue {
+    final digits = packageAmountToInt(_sharedPackageAmount.text);
+    return digits.isEmpty ? null : double.tryParse(digits);
+  }
+
+  /// Whether the guest's package amount reaches what [service] asks for. An
+  /// amount in a currency the service has no threshold for does not qualify —
+  /// there is no agreed figure to measure it against.
+  bool _as_serviceIsAvailable(String service) {
+    final amount = _as_amountValue;
+    if (amount == null) return false;
+    final minimum = kAirportServiceMinAmounts[service]?[_as_currency];
+    if (minimum == null) return false;
+    return amount >= minimum;
+  }
+
+  /// What a service asks for, in the words the dropdown shows under a locked
+  /// option: `INR 2,500,000 or USD 10,000 and above`.
+  String _as_requirementText(String service) {
+    final thresholds = kAirportServiceMinAmounts[service] ?? const {};
+    final formatter = NumberFormat('#,##0');
+    final parts = thresholds.entries
+        .map((e) => '${e.key} ${formatter.format(e.value)}')
+        .join(' or ');
+    return '$parts and above';
+  }
+
+  /// The flight the service has to meet, date and time as one moment. Null
+  /// until both halves are picked.
+  DateTime? get _as_flightDateTime {
+    final date = _as_flightDate;
+    final time = _as_flightTime;
+    if (date == null || time == null) return null;
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  /// The earliest flight this tab can still book a service for: the lead time
+  /// the airport needs, counted from now.
+  DateTime get _as_earliestFlight => DateTime.now().add(kAirportServiceLeadTime);
+
+  /// How the lead time reads in a message: `6 hours`.
+  String get _as_leadTimeText => '${kAirportServiceLeadTime.inHours} hours';
+
+  void _resetAirportServiceFields() {
+    _sharedPackageAmount.clear();
+    _sharedPackageShared = false;
+    _as_packageAmountKey = UniqueKey();
+    _as_service = null;
+    _as_legType = 'Arrival';
+    _as_flightDate = null;
+    _as_flightTime = null;
+    _as_flightDateCtrl.clear();
+    _as_flightTimeCtrl.clear();
+    _as_flightNoCtrl.clear();
+  }
+
+  void _clearAllAirportServiceForm() {
+    setState(() {
+      _resetSharedGuest();
+      _resetAirportServiceFields();
+    });
+  }
+
+  String _buildAirportServiceText() {
+    return '''*AIRPORT SERVICE REQUEST*
+Membership No      : ${_sharedMemberId.text}
+Guest Name         : ${_sharedGuestName.text}
+Package Amount     : ${_sharedPackageAmount.text}
+Service            : ${_as_service ?? ''}
+Arrival/ Departure : $_as_legType
+Flight Date        : ${_as_flightDateCtrl.text}
+Flight Number      : ${_as_flightNoCtrl.text}
+Flight Time        : ${_as_flightTimeCtrl.text}''';
+  }
+
+  /// Every field on this tab is mandatory, and two of them are checked again
+  /// here rather than only in a validator: the service against the package
+  /// amount it needs, and the flight against the lead time the airport needs.
+  /// Both depend on values a validator cannot see from its own field alone.
+  Future<void> _saveAirportServiceSection() async {
+    FocusScope.of(context).unfocus();
+    if (!(_airportServiceFormKey.currentState?.validate() ?? false)) return;
+
+    if (_sharedGuestName.text.trim().isEmpty) {
+      _showSaveErrorSnack('Guest Name is required');
+      return;
+    }
+
+    final service = _as_service;
+    if (service == null) {
+      _showSaveErrorSnack('Please select a service');
+      return;
+    }
+    if (!_as_serviceIsAvailable(service)) {
+      _showSaveErrorSnack(
+          '$service needs a package amount of ${_as_requirementText(service)}');
+      return;
+    }
+
+    final flight = _as_flightDateTime;
+    if (flight == null) {
+      _showSaveErrorSnack('Flight Date and Flight Time are required');
+      return;
+    }
+    if (flight.isBefore(_as_earliestFlight)) {
+      _showSaveErrorSnack(
+          'An airport service has to be requested at least $_as_leadTimeText '
+          'before the flight');
+      return;
+    }
+
+    final result = await _quickNotifier.saveAirportServiceRequest(
+      memberId: _sharedMemberId.text.trim(),
+      guestName: _sharedGuestName.text.trim(),
+      packageAmount: _sharedPackageAmount.text.trim(),
+      service: service,
+      legType: _as_legType,
+      flightDateTime: flight,
+      flightNo: _as_flightNoCtrl.text.trim(),
+      log: _logLong,
+    );
+    _handleSaveResult(
+      result,
+      onSuccess: _clearAllAirportServiceForm,
+      successFallback: 'Airport service request saved successfully',
     );
   }
 
@@ -2909,6 +3130,12 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
                         Icons.badge_rounded,
                         'Visa',
                       ),
+                      const SizedBox(width: 8),
+                      _sectionTab(
+                        _Section.airportService,
+                        Icons.connecting_airports_rounded,
+                        'Airport Service',
+                      ),
                     ],
                   ),
                 ),
@@ -2924,6 +3151,8 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
                           key: const ValueKey('transport'), state: this),
                       _Section.visa =>
                         _VisaForm(key: const ValueKey('visa'), state: this),
+                      _Section.airportService => _AirportServiceForm(
+                          key: const ValueKey('airportService'), state: this),
                     },
                   ),
                 ),
@@ -2959,10 +3188,17 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
             children: [
               Icon(icon, size: 20, color: active ? _accentColor : Colors.white),
               const SizedBox(height: 4),
+              // Five tabs share the row, so the longer labels ("Air Ticket",
+              // "Airport Service") are given a second line rather than being
+              // clipped on a narrow screen.
               Text(
                 label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
+                  height: 1.15,
                   fontWeight: FontWeight.w600,
                   color: active ? _accentColor : Colors.white,
                 ),
@@ -7001,6 +7237,357 @@ class _VisaForm extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Airport Service — the meet-and-greet a guest is walked through the airport on
+// ─────────────────────────────────────────────────────────────────────────────
+/// One guest, one service, one flight. The package amount is asked for before
+/// the service because it is what decides which services are open at all: Silk
+/// Route and Gold Route each have a floor (see [kAirportServiceMinAmounts]),
+/// and an option the guest's amount does not reach is shown locked, with what
+/// it would take, rather than hidden — the user can then see why it is out of
+/// reach instead of wondering where it went.
+class _AirportServiceForm extends StatelessWidget {
+  final _QuickReservationBallysScreenState state;
+  const _AirportServiceForm({super.key, required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = _QuickReservationBallysScreenState._airportServiceColor;
+    return Form(
+      key: state._airportServiceFormKey,
+      // A Column rather than a lazy ListView, so every validator is mounted
+      // when the form is validated — see [_TransportForm].
+      child: SingleChildScrollView(
+        controller: state._airportServiceScrollCtrl,
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _guestIdentityRow(
+              context: context,
+              memberIdCtrl: state._sharedMemberId,
+              memberIdNumberCtrl: state._sharedMidNumber,
+              memberNameCtrl: state._sharedGuestName,
+              accent: accent,
+              midLabel: 'Membership No *',
+              nameLabel: 'Guest Name *',
+              onSearchById: () => state._openGuestSearch(
+                iid: 8002,
+                onCardVisible: () =>
+                    state.setState(() => state._sharedGuestCardVisible = true),
+              ),
+              onSearchByName: () => state._openGuestSearch(
+                iid: 8003,
+                onCardVisible: () =>
+                    state.setState(() => state._sharedGuestCardVisible = true),
+              ),
+              onProfileTap: () => state._navigateToProfile(
+                state._sharedMemberId.text,
+                state._sharedGuestName.text,
+              ),
+              profileEnabled: state._sharedGuestCardVisible,
+              isNumericOnly: state._isNumericOnlyLocation,
+              prefixes: state._prefixes,
+              selectedPrefix: state._selectedPrefix,
+              onPrefixChanged: (v) {
+                state._quickNotifier.selectPrefix(v);
+                state.setState(() {
+                  state._sharedMemberId.text = '$v${state._sharedMidNumber.text}';
+                });
+              },
+              memberIdValidator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Membership No is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            if (state._sharedGuestCardVisible &&
+                state._sharedMemberId.text.isNotEmpty &&
+                state._sharedGuestName.text.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GuestDisplayCardSpecialGiftview(
+                  memberIdText: state._sharedMemberId.text,
+                  memberNameText: state._sharedGuestName.text,
+                  showCard: true,
+                  showLastVisitDate: true,
+                ),
+              ),
+
+            // ── Package amount — what the service list is decided on ──────────
+            // No "Shared" tick here: the amount is the entitlement being
+            // checked, so this tab always needs one of the guest's own.
+            PackageAmountFieldBallys(
+              key: state._as_packageAmountKey,
+              controller: state._sharedPackageAmount,
+              textStyle: kInputTextStyle,
+              accent: accent,
+              decoration: _fieldDeco(
+                'Package Amount *',
+                icon: Icons.currency_rupee,
+                accent: accent,
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Package Amount is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // ── Services ──────────────────────────────────────────────────────
+            _servicesDropdown(accent),
+            const SizedBox(height: 12),
+
+            // ── The rest of the request only makes sense once a service is
+            //    picked, so it is asked for after one is. ───────────────────────
+            if (state._as_service != null) ...[
+              _LegSelector(
+                label: 'Service For *',
+                value: state._as_legType,
+                accent: accent,
+                onChanged: (v) => state.setState(() => state._as_legType = v),
+              ),
+              const SizedBox(height: 12),
+              _dateField(
+                context,
+                'Flight Date *',
+                state._as_flightDateCtrl,
+                accent,
+                () async {
+                  final earliest = state._as_earliestFlight;
+                  final d = await state._pickDate(
+                    context,
+                    label: 'Select Flight Date',
+                    initial: state._as_flightDate,
+                    minDate:
+                        DateTime(earliest.year, earliest.month, earliest.day),
+                  );
+                  if (d == null) return;
+                  state.setState(() {
+                    state._as_flightDate = d;
+                    state._as_flightDateCtrl.text = state._fmt(d);
+                    // A time picked for a later day can fall inside the lead
+                    // time once the date moves back, so it is dropped rather
+                    // than left standing as a flight that can no longer be met.
+                    final flight = state._as_flightDateTime;
+                    if (flight != null && flight.isBefore(earliest)) {
+                      state._as_flightTime = null;
+                      state._as_flightTimeCtrl.clear();
+                    }
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Flight Date is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: state._as_flightNoCtrl,
+                style: kInputTextStyle,
+                textCapitalization: TextCapitalization.characters,
+                decoration: _fieldDeco(
+                  'Flight Number *',
+                  icon: Icons.flight_rounded,
+                  accent: accent,
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Flight Number is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              _flightTimeField(context, accent),
+              const SizedBox(height: 6),
+              Text(
+                'An airport service has to be requested at least '
+                '${state._as_leadTimeText} before the flight.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: state._onSave,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.save_alt),
+                label: const Text(
+                  'Submit Airport Service',
+                  style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The service picker. Every service is listed whatever the guest is on;
+  /// the ones their package does not reach are locked and say what they need.
+  Widget _servicesDropdown(Color accent) {
+    final hasAmount = state._as_amountValue != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          value: state._as_service,
+          style: kInputTextStyle,
+          isExpanded: true,
+          decoration: _fieldDeco(
+            'Services *',
+            icon: Icons.room_service_outlined,
+            accent: accent,
+          ),
+          // The closed field shows the picked service alone — the locked rows'
+          // second line belongs in the open menu, not under the label.
+          selectedItemBuilder: (_) => kAirportServices
+              .map((service) => Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(service, style: kInputTextStyle),
+                  ))
+              .toList(),
+          items: kAirportServices.map((service) {
+            final available = state._as_serviceIsAvailable(service);
+            return DropdownMenuItem<String>(
+              value: service,
+              enabled: available,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (!available)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Icon(Icons.lock_outline,
+                              size: 16, color: Colors.grey.shade600),
+                        ),
+                      Flexible(
+                        child: Text(
+                          service,
+                          overflow: TextOverflow.ellipsis,
+                          style: kInputTextStyle.copyWith(
+                            color: available ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (!available)
+                    Text(
+                      state._as_requirementText(service),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (v) => state.setState(() => state._as_service = v),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Service is required';
+            }
+            return null;
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Text(
+            hasAmount
+                ? 'Silk Route from ${state._as_requirementText('Silk Route')}, '
+                    'Gold Route from ${state._as_requirementText('Gold Route')}.'
+                : 'Pick the package amount first — it decides which services '
+                    'are available.',
+            style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Flight time, restricted to what still leaves the airport its lead time.
+  /// The date is picked first, so the restriction only has to bite on the
+  /// earliest bookable day — every later day is clear of it.
+  Widget _flightTimeField(BuildContext context, Color accent) {
+    return TextFormField(
+      key: ValueKey('as_time|${state._as_flightTimeCtrl.text}'),
+      controller: state._as_flightTimeCtrl,
+      readOnly: true,
+      style: kInputTextStyle,
+      decoration: _fieldDeco(
+        'Flight Time *',
+        icon: Icons.access_time_rounded,
+        accent: accent,
+      ).copyWith(suffixIcon: Icon(Icons.arrow_drop_down, color: accent)),
+      onTap: () async {
+        final date = state._as_flightDate;
+        if (date == null) {
+          state._showSaveErrorSnack('Please select the Flight Date first');
+          return;
+        }
+        final earliest = state._as_earliestFlight;
+        final isEarliestDay = date.year == earliest.year &&
+            date.month == earliest.month &&
+            date.day == earliest.day;
+        final t = await state._pickTime(
+          context,
+          label: 'Select Flight Time',
+          initial: state._as_flightTime,
+          minTime: isEarliestDay
+              ? TimeOfDay(hour: earliest.hour, minute: earliest.minute)
+              : null,
+          minTimeMessage:
+              'The flight has to be at least ${state._as_leadTimeText} from now',
+        );
+        if (t != null) {
+          state.setState(() {
+            state._as_flightTime = t;
+            state._as_flightTimeCtrl.text = state._fmtTime(t);
+          });
+        }
+      },
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Flight Time is required';
+        }
+        final flight = state._as_flightDateTime;
+        if (flight != null && flight.isBefore(state._as_earliestFlight)) {
+          return 'At least ${state._as_leadTimeText} before the flight is needed';
+        }
+        return null;
+      },
     );
   }
 }

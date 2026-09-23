@@ -292,6 +292,28 @@ class QuickReservationBallysNotifier
         ));
   }
 
+  Future<QuickReservationResult> saveAirportServiceRequest({
+    required String memberId,
+    required String guestName,
+    required String packageAmount,
+    required String service,
+    required String legType,
+    required DateTime flightDateTime,
+    required String flightNo,
+    void Function(String label, Object? payload)? log,
+  }) {
+    return _guarded(() => reservationRepository.saveAirportServiceRequest(
+          memberId: memberId,
+          guestName: guestName,
+          packageAmount: packageAmount,
+          service: service,
+          legType: legType,
+          flightDateTime: flightDateTime,
+          flightNo: flightNo,
+          log: log,
+        ));
+  }
+
   /// Runs a save with the busy flag raised, turning a thrown error into a
   /// failed [QuickReservationResult] so callers have one thing to check. The
   /// flag is lowered even when the notifier has been disposed mid-request,

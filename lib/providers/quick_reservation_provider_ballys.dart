@@ -293,23 +293,23 @@ class QuickReservationBallysNotifier
   }
 
   Future<QuickReservationResult> saveAirportServiceRequest({
-    required String memberId,
-    required String guestName,
-    required String packageAmount,
-    required String service,
+    required List<Map<String, dynamic>> guests,
+    required int totalPax,
     required String legType,
     required DateTime flightDateTime,
     required String flightNo,
+    String remarks = '',
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveAirportServiceRequest(
-          memberId: memberId,
-          guestName: guestName,
-          packageAmount: packageAmount,
-          service: service,
+          guests: guests,
+          totalPax: totalPax,
           legType: legType,
           flightDateTime: flightDateTime,
           flightNo: flightNo,
+          remarks: remarks,
+          approver: approver,
           log: log,
         ));
   }

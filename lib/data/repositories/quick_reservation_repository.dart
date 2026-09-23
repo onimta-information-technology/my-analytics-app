@@ -608,30 +608,33 @@ class QuickReservationRepository {
 
   // ── Airport service ─────────────────────────────────────────────────────────
 
-  /// A Silk / Gold Route meet-and-greet for one guest on one flight. The
-  /// screen has already checked that the guest's package covers [service] and
-  /// that [flightDateTime] leaves the airport its lead time.
+  /// A Silk / Gold Route meet-and-greet on one flight. [guests] are everyone
+  /// walked through, the guest the request was raised for first, each with the
+  /// service they are on — granted on their own package amount, so one request
+  /// can carry two different routes — and the wife / children / friends
+  /// walking through with them. [totalPax] is every head the airport has to
+  /// meet, guests and companions together.
   ///
-  /// This tab asks for no approver — the request is routed by the service the
-  /// guest's package entitles them to, not by who signs it off.
+  /// The screen has already checked every guest's service against their own
+  /// package and that [flightDateTime] leaves the airport its lead time.
   Future<QuickReservationResult> saveAirportServiceRequest({
-    required String memberId,
-    required String guestName,
-    required String packageAmount,
-    required String service,
+    required List<Map<String, dynamic>> guests,
+    required int totalPax,
     required String legType,
     required DateTime flightDateTime,
     required String flightNo,
+    String remarks = '',
+    AuthorizationLevel? approver,
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildAirportServiceBody(
-      memberId: memberId,
-      guestName: guestName,
-      packageAmount: packageAmount,
-      service: service,
+      guests: guests,
+      totalPax: totalPax,
       legType: legType,
       flightDateTime: flightDateTime,
       flightNo: flightNo,
+      remarks: remarks,
+      approver: approver,
     );
     log?.call('Saving airport service request', body);
     final response = await apiService.post(_airportServiceEndpoint, body);
@@ -640,24 +643,29 @@ class QuickReservationRepository {
   }
 
   Future<Map<String, dynamic>> buildAirportServiceBody({
-    required String memberId,
-    required String guestName,
-    required String packageAmount,
-    required String service,
+    required List<Map<String, dynamic>> guests,
+    required int totalPax,
     required String legType,
     required DateTime flightDateTime,
     required String flightNo,
+    String remarks = '',
+    AuthorizationLevel? approver,
   }) async {
+    final primary = guests.first;
+    final packageAmount = primary['packageAmount'] as String? ?? '';
     // The flight goes out both whole and split: the timestamp is what the
     // request is ordered by, the date and time are what the airport reads.
     return {
       ...await _requestEnvelope(),
       'marketing_code': await StorageUtil.getMarketingCode(),
-      'MID': memberId,
-      'guest_name': guestName,
+      'MID': primary['memberId'],
+      'guest_name': primary['guestName'],
       'package_amount': packageAmountToInt(packageAmount),
       'currency_type': packageAmountCurrency(packageAmount),
-      'service_type': service,
+      // The request is headed by the first guest's service; each guest's own
+      // is on their row, since two members on one flight can be on different
+      // routes.
+      'service_type': primary['service'] ?? '',
       'flight_type': legType,
       'flight_date_time': flightDateTime.toIso8601String(),
       'flight_date': DateTime(
@@ -667,9 +675,35 @@ class QuickReservationRepository {
       ).toIso8601String(),
       'flight_time': DateFormat('hh:mm a').format(flightDateTime),
       'flight_no': flightNo,
-      // Kept for shape, always empty: this request carries no approver.
-      'approve_person': approvePersonJson(null),
+      'no_of_guests': guests.length,
+      'total_pax': totalPax,
+      'remarks': remarks,
+      'guests': guests.map(airportServiceGuestOf).toList(),
+      'approve_person': approvePersonJson(approver),
       'reservation_status': 'Pending',
+    };
+  }
+
+  /// One guest on an airport service request: who they are and who walks
+  /// through with them.
+  Map<String, dynamic> airportServiceGuestOf(Map<String, dynamic> g) {
+    final children = g['noOfChildren'] as int? ?? 0;
+    final friends = g['noOfFriends'] as int? ?? 0;
+    final wife = g['hasWife'] as bool? ?? false;
+    final packageAmount = g['packageAmount'] as String? ?? '';
+    return {
+      'MID': g['memberId'],
+      'guest_name': g['guestName'],
+      'package_amount': packageAmountToInt(packageAmount),
+      'currency_type': packageAmountCurrency(packageAmount),
+      'service_type': g['service'] ?? '',
+      'has_accompanying_members': g['hasCompanions'] as bool? ?? false,
+      'has_wife': wife,
+      'no_of_children': children,
+      'no_of_friends': friends,
+      // The guest plus everyone they bring, so a row reads as a head count on
+      // its own.
+      'no_of_pax': 1 + (wife ? 1 : 0) + children + friends,
     };
   }
 

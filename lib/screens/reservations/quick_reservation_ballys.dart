@@ -415,6 +415,21 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// the way the air ticket tab asks for its Silk / Gold Route leg.
   String _as_legType = 'Arrival';
 
+  /// Guests walked through on the SAME service, each with their own
+  /// companions. The first guest is the form's shared one — they carry the
+  /// package amount the service is granted on — and these are the rest.
+  final List<_ExtraMember> _as_extraMembers = [];
+
+  /// Who walks through with the form's own guest, the counterpart of the
+  /// [_ExtraMember.hasCompanions] block on every added card.
+  bool _as_hasCompanions = false;
+  bool _as_hasWife = false;
+  final _as_childrenCtrl = TextEditingController(text: '0');
+  final _as_friendsCtrl = TextEditingController(text: '0');
+
+  final _as_remarksCtrl = TextEditingController();
+  AuthorizationLevel? _as_approver;
+
   /// The package amount picker holds the shown value in its own state, so
   /// emptying the controller after a save is not enough to clear it — bumping
   /// this rebuilds the picker against the now-empty controller.
@@ -578,6 +593,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _as_flightNoCtrl,
       _as_flightDateCtrl,
       _as_flightTimeCtrl,
+      _as_childrenCtrl,
+      _as_friendsCtrl,
+      _as_remarksCtrl,
     ]) {
       c.dispose();
     }
@@ -589,6 +607,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       ..._h_extraMembers,
       ..._a_extraMembers,
       ..._v_guests,
+      ..._as_extraMembers,
     ]) {
       row.dispose();
     }
@@ -1378,6 +1397,20 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         'packageAmount': row.packageAmountController.text.trim(),
         'sharedPackage': row.sharedPackage,
         'hasFamilyMembers': row.hasFamilyMembers,
+        // Only the Airport Service tab asks for these; the other tabs' bodies
+        // never read them, so an untouched row simply reports nobody.
+        // A guest whose tick is off brings nobody, whatever the counts behind
+        // it were last left on.
+        'hasCompanions': row.hasCompanions,
+        'hasWife': row.hasCompanions && row.hasWife,
+        'noOfChildren': row.hasCompanions
+            ? (int.tryParse(row.childrenCountController.text) ?? 0)
+            : 0,
+        'noOfFriends': row.hasCompanions
+            ? (int.tryParse(row.friendsCountController.text) ?? 0)
+            : 0,
+        'companionCount': row.companionCount,
+        'service': row.airportService ?? '',
       });
     }
     return out;
@@ -2738,38 +2771,58 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
 
   /// The picker writes the amount straight into the controller, so this is
   /// where the Airport Service tab hears about it: a service the new amount no
-  /// longer covers is dropped rather than left picked and saved.
-  void _onSharedPackageAmountChanged() {
+  /// longer covers is dropped rather than left picked and saved. Every guest's
+  /// amount is watched this way — the form's own and each added card's.
+  void _onSharedPackageAmountChanged() =>
+      _dropServiceIfUnaffordable(_sharedPackageAmount.text, () => _as_service,
+          (value) => _as_service = value);
+
+  /// Watches an added guest's amount the same way, so their own service
+  /// dropdown follows their own package rather than the form guest's.
+  void _watchRowPackageAmount(_ExtraMember row) {
+    row.packageAmountController.addListener(() => _dropServiceIfUnaffordable(
+          row.packageAmountController.text,
+          () => row.airportService,
+          (value) => row.airportService = value,
+        ));
+  }
+
+  void _dropServiceIfUnaffordable(
+    String packageAmount,
+    String? Function() read,
+    void Function(String?) write,
+  ) {
     if (!mounted) return;
-    final service = _as_service;
+    final service = read();
     setState(() {
-      if (service != null && !_as_serviceIsAvailable(service)) {
-        _as_service = null;
+      if (service != null && !_as_serviceIsAvailable(service, packageAmount)) {
+        write(null);
       }
     });
   }
 
-  /// The currency the picked package amount is in, as the thresholds spell it.
-  /// The amounts API says `IND` where the thresholds say `INR`; they are the
-  /// same currency, so one is read as the other.
-  String get _as_currency {
-    final currency = packageAmountCurrency(_sharedPackageAmount.text);
+  /// The currency a package amount is in, as the thresholds spell it. The
+  /// amounts API says `IND` where the thresholds say `INR`; they are the same
+  /// currency, so one is read as the other.
+  String _as_currencyOf(String packageAmount) {
+    final currency = packageAmountCurrency(packageAmount);
     return currency == 'IND' ? 'INR' : currency;
   }
 
-  /// The picked package amount as a number, or null when nothing is picked.
-  double? get _as_amountValue {
-    final digits = packageAmountToInt(_sharedPackageAmount.text);
+  /// A package amount as a number, or null when there is none.
+  double? _as_amountValueOf(String packageAmount) {
+    final digits = packageAmountToInt(packageAmount);
     return digits.isEmpty ? null : double.tryParse(digits);
   }
 
-  /// Whether the guest's package amount reaches what [service] asks for. An
-  /// amount in a currency the service has no threshold for does not qualify —
-  /// there is no agreed figure to measure it against.
-  bool _as_serviceIsAvailable(String service) {
-    final amount = _as_amountValue;
+  /// Whether [packageAmount] reaches what [service] asks for. An amount in a
+  /// currency the service has no threshold for does not qualify — there is no
+  /// agreed figure to measure it against.
+  bool _as_serviceIsAvailable(String service, String packageAmount) {
+    final amount = _as_amountValueOf(packageAmount);
     if (amount == null) return false;
-    final minimum = kAirportServiceMinAmounts[service]?[_as_currency];
+    final minimum =
+        kAirportServiceMinAmounts[service]?[_as_currencyOf(packageAmount)];
     if (minimum == null) return false;
     return amount >= minimum;
   }
@@ -2801,6 +2854,14 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
   /// How the lead time reads in a message: `6 hours`.
   String get _as_leadTimeText => '${kAirportServiceLeadTime.inHours} hours';
 
+  /// Adds a guest to the airport service request and starts watching their
+  /// package amount, so their own service list follows it the way the form
+  /// guest's does.
+  void _addAirportServiceGuest() {
+    _addExtraMember(_as_extraMembers);
+    _watchRowPackageAmount(_as_extraMembers.last);
+  }
+
   void _resetAirportServiceFields() {
     _sharedPackageAmount.clear();
     _sharedPackageShared = false;
@@ -2812,31 +2873,91 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
     _as_flightDateCtrl.clear();
     _as_flightTimeCtrl.clear();
     _as_flightNoCtrl.clear();
+    _as_hasCompanions = false;
+    _as_hasWife = false;
+    _as_childrenCtrl.text = '0';
+    _as_friendsCtrl.text = '0';
+    _as_remarksCtrl.clear();
+    _clearExtraMembers(_as_extraMembers);
   }
 
   void _clearAllAirportServiceForm() {
     setState(() {
       _resetSharedGuest();
       _resetAirportServiceFields();
+      // The request is saved, so its approver goes with it.
+      _as_approver = null;
     });
   }
 
-  String _buildAirportServiceText() {
-    return '''*AIRPORT SERVICE REQUEST*
-Membership No      : ${_sharedMemberId.text}
-Guest Name         : ${_sharedGuestName.text}
-Package Amount     : ${_sharedPackageAmount.text}
-Service            : ${_as_service ?? ''}
-Arrival/ Departure : $_as_legType
-Flight Date        : ${_as_flightDateCtrl.text}
-Flight Number      : ${_as_flightNoCtrl.text}
-Flight Time        : ${_as_flightTimeCtrl.text}''';
+  /// Everyone on the request, the form's guest first and the added cards
+  /// after, each with the companions walked through with them. Only the first
+  /// carries a package amount — it is the one the service was granted on.
+  List<Map<String, dynamic>> _captureAirportServiceGuests() {
+    return [
+      {
+        'memberId': _sharedMemberId.text.trim(),
+        'guestName': _sharedGuestName.text.trim(),
+        'packageAmount': _sharedPackageAmount.text.trim(),
+        'hasCompanions': _as_hasCompanions,
+        'hasWife': _as_hasCompanions && _as_hasWife,
+        'noOfChildren': _as_hasCompanions ? _as_childrenCount : 0,
+        'noOfFriends': _as_hasCompanions ? _as_friendsCount : 0,
+        'companionCount': _as_companionCount,
+        'service': _as_service ?? '',
+      },
+      ..._captureExtraMembers(_as_extraMembers),
+    ];
   }
 
-  /// Every field on this tab is mandatory, and two of them are checked again
-  /// here rather than only in a validator: the service against the package
-  /// amount it needs, and the flight against the lead time the airport needs.
-  /// Both depend on values a validator cannot see from its own field alone.
+  int get _as_childrenCount => int.tryParse(_as_childrenCtrl.text) ?? 0;
+  int get _as_friendsCount => int.tryParse(_as_friendsCtrl.text) ?? 0;
+
+  /// Everyone walking through with the form's own guest, themselves excluded.
+  int get _as_companionCount {
+    if (!_as_hasCompanions) return 0;
+    return (_as_hasWife ? 1 : 0) + _as_childrenCount + _as_friendsCount;
+  }
+
+  /// Heads the airport has to meet: every guest on the request plus everyone
+  /// each of them brings.
+  int _as_totalPax(List<Map<String, dynamic>> guests) => guests.fold(
+        0,
+        (total, g) => total + 1 + (g['companionCount'] as int? ?? 0),
+      );
+
+  String _buildAirportServiceText() {
+    final guests = _captureAirportServiceGuests();
+    final buf = StringBuffer()
+      ..writeln('*AIRPORT SERVICE REQUEST*')
+      ..writeln('Arrival/ Departure : $_as_legType')
+      ..writeln('Flight Date        : ${_as_flightDateCtrl.text}')
+      ..writeln('Flight Number      : ${_as_flightNoCtrl.text}')
+      ..writeln('Flight Time        : ${_as_flightTimeCtrl.text}')
+      ..writeln('Total Pax          : ${_as_totalPax(guests)}');
+    for (var i = 0; i < guests.length; i++) {
+      final g = guests[i];
+      buf
+        ..writeln('*Guest ${i + 1}*')
+        ..writeln('Membership No      : ${g['memberId']}')
+        ..writeln('Guest Name         : ${g['guestName']}')
+        ..writeln('Package Amount     : ${g['packageAmount']}')
+        ..writeln('Service            : ${g['service']}');
+      buf.writeln(
+          'Wife               : ${(g['hasWife'] as bool? ?? false) ? 'Yes' : 'No'}');
+      buf
+        ..writeln('No of Children     : ${g['noOfChildren']}')
+        ..writeln('No of Friends      : ${g['noOfFriends']}');
+    }
+    buf.write('Remarks            : ${_as_remarksCtrl.text}');
+    return buf.toString();
+  }
+
+  /// Every field on this tab is mandatory, and two things are checked again
+  /// here rather than only in a validator: each guest's service against the
+  /// package amount it is granted on, and the flight against the lead time the
+  /// airport needs. Both depend on values a validator cannot see from its own
+  /// field alone.
   Future<void> _saveAirportServiceSection() async {
     FocusScope.of(context).unfocus();
     if (!(_airportServiceFormKey.currentState?.validate() ?? false)) return;
@@ -2846,15 +2967,31 @@ Flight Time        : ${_as_flightTimeCtrl.text}''';
       return;
     }
 
-    final service = _as_service;
-    if (service == null) {
-      _showSaveErrorSnack('Please select a service');
+    // The added cards are guests in their own right, so a half-filled or
+    // duplicated one is refused the same way the other tabs refuse theirs —
+    // and each carries the package amount their own service is granted on.
+    if (!_validateExtraMembers(
+      _as_extraMembers,
+      primaryMid: _sharedMemberId.text.trim(),
+    )) {
       return;
     }
-    if (!_as_serviceIsAvailable(service)) {
-      _showSaveErrorSnack(
-          '$service needs a package amount of ${_as_requirementText(service)}');
-      return;
+
+    // Each guest is walked through on their own service, so each is checked
+    // against their own amount and named in the complaint.
+    final guests = _captureAirportServiceGuests();
+    for (var i = 0; i < guests.length; i++) {
+      final g = guests[i];
+      final picked = (g['service'] as String? ?? '').trim();
+      if (picked.isEmpty) {
+        _showSaveErrorSnack('Guest ${i + 1}: please select a service');
+        return;
+      }
+      if (!_as_serviceIsAvailable(picked, g['packageAmount'] as String? ?? '')) {
+        _showSaveErrorSnack('Guest ${i + 1}: $picked needs a package amount '
+            'of ${_as_requirementText(picked)}');
+        return;
+      }
     }
 
     final flight = _as_flightDateTime;
@@ -2870,13 +3007,13 @@ Flight Time        : ${_as_flightTimeCtrl.text}''';
     }
 
     final result = await _quickNotifier.saveAirportServiceRequest(
-      memberId: _sharedMemberId.text.trim(),
-      guestName: _sharedGuestName.text.trim(),
-      packageAmount: _sharedPackageAmount.text.trim(),
-      service: service,
+      guests: guests,
+      totalPax: _as_totalPax(guests),
       legType: _as_legType,
       flightDateTime: flight,
       flightNo: _as_flightNoCtrl.text.trim(),
+      remarks: _as_remarksCtrl.text.trim(),
+      approver: _as_approver,
       log: _logLong,
     );
     _handleSaveResult(
@@ -3686,6 +3823,14 @@ Widget _extraMemberCard(
   /// new reservation screen's member card. Transport has no such field.
   bool showFamilyMembers = false,
 
+  /// The Airport Service tab asks each guest who walks through with them, so
+  /// its cards carry the wife tick and the children / friends counts.
+  bool showCompanions = false,
+
+  /// The Airport Service tab picks a service per guest, granted on that
+  /// guest's own package amount — so the card carries the picker too.
+  bool showAirportService = false,
+
   /// Transport requests are not billed against a package, so their extra guests
   /// only carry who they are.
   bool showPackageAmount = true,
@@ -3830,6 +3975,37 @@ Widget _extraMemberCard(
               checked: row.hasFamilyMembers,
               onChanged: (value) =>
                   state.setState(() => row.hasFamilyMembers = value),
+            ),
+          ],
+          if (showAirportService) ...[
+            const SizedBox(height: 12),
+            _airportServiceDropdown(
+              state: state,
+              packageAmount: row.packageAmountController.text,
+              value: row.airportService,
+              accent: accent,
+              // A card nobody has touched is dropped from the save, so it is
+              // not asked for a service either.
+              required: row.midNumberController.text.trim().isNotEmpty ||
+                  row.nameController.text.trim().isNotEmpty ||
+                  row.packageAmountController.text.trim().isNotEmpty,
+              onChanged: (value) =>
+                  state.setState(() => row.airportService = value),
+            ),
+          ],
+          if (showCompanions) ...[
+            const SizedBox(height: 12),
+            _companionsCard(
+              accent: accent,
+              included: row.hasCompanions,
+              onIncludedChanged: (value) =>
+                  state.setState(() => row.hasCompanions = value),
+              hasWife: row.hasWife,
+              onWifeChanged: (value) =>
+                  state.setState(() => row.hasWife = value),
+              childrenCtrl: row.childrenCountController,
+              friendsCtrl: row.friendsCountController,
+              onCountChanged: () => state.setState(() {}),
             ),
           ],
         ],
@@ -4307,6 +4483,212 @@ Widget _addMoreGuestButton({
 
 /// "Family Members Included" tick, styled to sit alongside the other cards on
 /// this screen. Mirrors the same field on the new reservation screen.
+/// Who walks through the airport with a guest: the wife, the children and the
+/// friends on the same service. Asked per guest — the airport is told how many
+/// people to meet, and that is a count per person walked through, not per
+/// request. The counts stay behind the tick so a guest travelling alone
+/// answers one question and no more.
+/// The airport service picker for one guest. Every service is listed whatever
+/// they are on; the ones [packageAmount] does not reach are locked and say what
+/// they would need, so a user can see why a route is out of reach instead of
+/// wondering where it went.
+Widget _airportServiceDropdown({
+  required _QuickReservationBallysScreenState state,
+  required String packageAmount,
+  required String? value,
+  required Color accent,
+  required ValueChanged<String?> onChanged,
+  String label = 'Services *',
+
+  /// False on a card nobody has filled in yet: an untouched extra guest is
+  /// dropped from the save, so it must not hold the form up over a service it
+  /// was never going to need.
+  bool required = true,
+}) {
+  final hasAmount = state._as_amountValueOf(packageAmount) != null;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      DropdownButtonFormField<String>(
+        value: value,
+        style: kInputTextStyle,
+        isExpanded: true,
+        decoration: _fieldDeco(
+          label,
+          icon: Icons.room_service_outlined,
+          accent: accent,
+        ),
+        // The closed field shows the picked service alone — the locked rows'
+        // second line belongs in the open menu, not under the label.
+        selectedItemBuilder: (_) => kAirportServices
+            .map((service) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(service, style: kInputTextStyle),
+                ))
+            .toList(),
+        items: kAirportServices.map((service) {
+          final available = state._as_serviceIsAvailable(service, packageAmount);
+          return DropdownMenuItem<String>(
+            value: service,
+            enabled: available,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (!available)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Icon(Icons.lock_outline,
+                            size: 16, color: Colors.grey.shade600),
+                      ),
+                    Flexible(
+                      child: Text(
+                        service,
+                        overflow: TextOverflow.ellipsis,
+                        style: kInputTextStyle.copyWith(
+                          color: available ? Colors.black : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (!available)
+                  Text(
+                    state._as_requirementText(service),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        validator: (picked) {
+          if (required && (picked == null || picked.trim().isEmpty)) {
+            return 'Service is required';
+          }
+          return null;
+        },
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 6, left: 4),
+        child: Text(
+          hasAmount
+              ? 'Silk Route from ${state._as_requirementText('Silk Route')}, '
+                  'Gold Route from ${state._as_requirementText('Gold Route')}.'
+              : 'Pick this guest\'s package amount first — it decides which '
+                  'services are available.',
+          style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _companionsCard({
+  required Color accent,
+  required bool included,
+  required ValueChanged<bool> onIncludedChanged,
+  required bool hasWife,
+  required ValueChanged<bool> onWifeChanged,
+  required TextEditingController childrenCtrl,
+  required TextEditingController friendsCtrl,
+  VoidCallback? onCountChanged,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      InkWell(
+        onTap: () => onIncludedChanged(!included),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: included ? accent : Colors.grey.shade300,
+              width: included ? 1.6 : 1,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(4, 2, 12, 2),
+          child: Row(
+            children: [
+              Checkbox(
+                value: included,
+                activeColor: accent,
+                onChanged: (value) => onIncludedChanged(value ?? false),
+              ),
+              Icon(Icons.family_restroom, size: 20, color: accent),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Family Members / Friends Included',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      if (included) ...[
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: () => onWifeChanged(!hasWife),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: hasWife ? accent : Colors.grey.shade300,
+                width: hasWife ? 1.6 : 1,
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(4, 2, 12, 2),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: hasWife,
+                  activeColor: accent,
+                  onChanged: (value) => onWifeChanged(value ?? false),
+                ),
+                Icon(Icons.favorite_outline, size: 20, color: accent),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Wife',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _rowPair(
+          _StepperField(
+            controller: childrenCtrl,
+            label: 'Children',
+            icon: Icons.child_care_outlined,
+            accent: accent,
+            min: 0,
+            onChanged: onCountChanged,
+          ),
+          _StepperField(
+            controller: friendsCtrl,
+            label: 'Friends',
+            icon: Icons.groups_outlined,
+            accent: accent,
+            min: 0,
+            onChanged: onCountChanged,
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
 Widget _familyMembersTick({
   required Color accent,
   required bool checked,
@@ -7342,12 +7724,63 @@ class _AirportServiceForm extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // ── Services ──────────────────────────────────────────────────────
-            _servicesDropdown(accent),
+            // ── Guest 1's service ─────────────────────────────────────────────
+            // Every added guest picks theirs on their own card, against their
+            // own package amount — two members on one flight can be on
+            // different routes.
+            _airportServiceDropdown(
+              state: state,
+              packageAmount: state._sharedPackageAmount.text,
+              value: state._as_service,
+              accent: accent,
+              label: 'Services — Guest 1 *',
+              onChanged: (v) => state.setState(() => state._as_service = v),
+            ),
             const SizedBox(height: 12),
 
-            // ── The rest of the request only makes sense once a service is
-            //    picked, so it is asked for after one is. ───────────────────────
+            // ── Who walks through with guest 1 ────────────────────────────────
+            _companionsCard(
+              accent: accent,
+              included: state._as_hasCompanions,
+              onIncludedChanged: (v) =>
+                  state.setState(() => state._as_hasCompanions = v),
+              hasWife: state._as_hasWife,
+              onWifeChanged: (v) => state.setState(() => state._as_hasWife = v),
+              childrenCtrl: state._as_childrenCtrl,
+              friendsCtrl: state._as_friendsCtrl,
+              onCountChanged: () => state.setState(() {}),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Guests on the SAME flight ─────────────────────────────────────
+            // Each carries their own package amount, their own service and
+            // their own family and friends.
+            ...List.generate(
+              state._as_extraMembers.length,
+              (i) => _extraMemberCard(
+                state,
+                state._as_extraMembers,
+                i,
+                accent,
+                subtitle: 'Same Flight',
+                // Their own package amount, because it is what their own
+                // service is granted on.
+                showPackageAmount: true,
+                showAirportService: true,
+                showCompanions: true,
+              ),
+            ),
+            _addMoreGuestButton(
+              accent: accent,
+              onPressed: state._addAirportServiceGuest,
+            ),
+            const SizedBox(height: 12),
+            _paxSummary(accent),
+            const SizedBox(height: 12),
+
+            // ── The flight everyone on this request is met off ────────────────
+            // Only worth asking once guest 1 is on a service; until then there
+            // is no request to meet a flight for.
             if (state._as_service != null) ...[
               _LegSelector(
                 label: 'Service For *',
@@ -7422,7 +7855,30 @@ class _AirportServiceForm extends StatelessWidget {
               const SizedBox(height: 12),
             ],
 
-            const SizedBox(height: 4),
+            // ── Remarks ───────────────────────────────────────────────────────
+            TextFormField(
+              controller: state._as_remarksCtrl,
+              style: kInputTextStyle,
+              maxLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: _fieldDeco(
+                'Remarks',
+                icon: Icons.notes_rounded,
+                accent: accent,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Request Approval From ─────────────────────────────────────────
+            _approverDropdown(
+              value: state._as_approver,
+              levels: state._quick.authorizationLevels,
+              loading: state._quick.authorizationLevelsLoading,
+              accent: accent,
+              onChanged: (v) => state.setState(() => state._as_approver = v),
+            ),
+
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -7450,90 +7906,36 @@ class _AirportServiceForm extends StatelessWidget {
     );
   }
 
-  /// The service picker. Every service is listed whatever the guest is on;
-  /// the ones their package does not reach are locked and say what they need.
-  Widget _servicesDropdown(Color accent) {
-    final hasAmount = state._as_amountValue != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DropdownButtonFormField<String>(
-          value: state._as_service,
-          style: kInputTextStyle,
-          isExpanded: true,
-          decoration: _fieldDeco(
-            'Services *',
-            icon: Icons.room_service_outlined,
-            accent: accent,
-          ),
-          // The closed field shows the picked service alone — the locked rows'
-          // second line belongs in the open menu, not under the label.
-          selectedItemBuilder: (_) => kAirportServices
-              .map((service) => Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(service, style: kInputTextStyle),
-                  ))
-              .toList(),
-          items: kAirportServices.map((service) {
-            final available = state._as_serviceIsAvailable(service);
-            return DropdownMenuItem<String>(
-              value: service,
-              enabled: available,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (!available)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Icon(Icons.lock_outline,
-                              size: 16, color: Colors.grey.shade600),
-                        ),
-                      Flexible(
-                        child: Text(
-                          service,
-                          overflow: TextOverflow.ellipsis,
-                          style: kInputTextStyle.copyWith(
-                            color: available ? Colors.black : Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (!available)
-                    Text(
-                      state._as_requirementText(service),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                ],
+  /// The heads the airport is being asked to meet, so the count the request
+  /// goes out on is visible before it is sent rather than only in the payload.
+  Widget _paxSummary(Color accent) {
+    final guests = state._captureAirportServiceGuests();
+    final total = state._as_totalPax(guests);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.groups_2_outlined, size: 20, color: accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Total pax to be met: $total '
+              '(${guests.length} ${guests.length == 1 ? 'guest' : 'guests'} '
+              '+ ${total - guests.length} accompanying)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: accent,
               ),
-            );
-          }).toList(),
-          onChanged: (v) => state.setState(() => state._as_service = v),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Service is required';
-            }
-            return null;
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 6, left: 4),
-          child: Text(
-            hasAmount
-                ? 'Silk Route from ${state._as_requirementText('Silk Route')}, '
-                    'Gold Route from ${state._as_requirementText('Gold Route')}.'
-                : 'Pick the package amount first — it decides which services '
-                    'are available.',
-            style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -7615,6 +8017,20 @@ class _ExtraMember {
   /// air ticket tabs, matching the new reservation screen's member card.
   bool hasFamilyMembers;
 
+  /// Who walks through the airport with THIS guest, asked for on the Airport
+  /// Service tab: the airport is told how many people to expect, so the wife
+  /// tick and the two counts are kept per guest rather than per request.
+  bool hasCompanions;
+  bool hasWife;
+  final TextEditingController childrenCountController;
+  final TextEditingController friendsCountController;
+
+  /// The airport service THIS guest is walked through on. Picked per guest
+  /// because it is granted on their own package amount, so two members on one
+  /// request can be on different routes. Null until one is picked, and dropped
+  /// again if their amount stops covering it.
+  String? airportService;
+
   _ExtraMember({
     this.prefix = 'BM',
     String midNumber = '',
@@ -7622,9 +8038,22 @@ class _ExtraMember {
     String packageAmount = '',
     this.sharedPackage = false,
     this.hasFamilyMembers = false,
+    this.hasCompanions = false,
+    this.hasWife = false,
   })  : midNumberController = TextEditingController(text: midNumber),
         nameController = TextEditingController(text: name),
-        packageAmountController = TextEditingController(text: packageAmount);
+        packageAmountController = TextEditingController(text: packageAmount),
+        childrenCountController = TextEditingController(text: '0'),
+        friendsCountController = TextEditingController(text: '0');
+
+  /// Everyone this guest brings along, the guest themselves excluded. Zero
+  /// while the tick is off, whatever the counts were left on.
+  int get companionCount {
+    if (!hasCompanions) return 0;
+    final children = int.tryParse(childrenCountController.text) ?? 0;
+    final friends = int.tryParse(friendsCountController.text) ?? 0;
+    return (hasWife ? 1 : 0) + children + friends;
+  }
 
   /// The member ID as the API expects it: prefixed everywhere except the
   /// numeric-only locations, which have no prefix dropdown at all.
@@ -7638,6 +8067,8 @@ class _ExtraMember {
     midNumberController.dispose();
     nameController.dispose();
     packageAmountController.dispose();
+    childrenCountController.dispose();
+    friendsCountController.dispose();
   }
 }
 

@@ -88,6 +88,9 @@ dependencies:
   just_audio: ^0.10.6
   livekit_client: ^2.3.1+hotfix.1
   flutter_ringtone_player: ^4.0.0+4
+  # Only for the ringback tone's Android audio attributes; already
+  # present as a just_audio dependency.
+  audio_session: ^0.2.4
   flutter_webrtc: ^0.12.12+hotfix.1
   flutter_callkit_incoming: ^3.1.6
 dev_dependencies:
@@ -181,6 +184,7 @@ flutter:
     - assets/icon/menu_screen/followMembers.json
     - assets/icon/menu_screen/Followed.json
     - assets/sounds/messageReceiveNotification.mp3
+    - assets/sounds/callRingback.wav
  
 
   fonts:

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:audio_session/audio_session.dart'
+    show AndroidAudioAttributes, AndroidAudioContentType, AndroidAudioUsage;
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
 import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -12,6 +14,7 @@ import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -117,6 +120,11 @@ class CallManager {
   Timer? _timeoutTimer;
   bool _ringing = false;
 
+  /// Plays the ringback tone to whoever placed the call. Null when nothing is
+  /// ringing out.
+  AudioPlayer? _ringback;
+  StreamSubscription<PlayerState>? _ringbackWatch;
+
   CallController? get current => _current;
 
   /// A call that has ended but is still showing its closing message does not
@@ -176,6 +184,10 @@ class CallManager {
       return;
     }
     c.callId = info.callId;
+    // It is really ringing on the other side now, so the caller hears the
+    // tone. It carries on through the LiveKit connect below, and stops the
+    // moment somebody picks up.
+    unawaited(_startRingback());
     await _connect(c, info);
     if (c.phase == CallPhase.outgoing) {
       _startPolling(c);
@@ -483,6 +495,7 @@ class CallManager {
     listener
       ..on<ParticipantConnectedEvent>((_) {
         if (c.phase == CallPhase.outgoing) {
+          _stopRingback();
           c.phase = CallPhase.connected;
           c.connectedAt = DateTime.now();
           _timeoutTimer?.cancel();
@@ -522,6 +535,7 @@ class CallManager {
       if (c.phase == CallPhase.connecting ||
           (c.phase == CallPhase.outgoing &&
               room.remoteParticipants.isNotEmpty)) {
+        _stopRingback();
         c.phase = CallPhase.connected;
         c.connectedAt = DateTime.now();
       }
@@ -561,6 +575,7 @@ class CallManager {
     c.update();
 
     _stopRinging();
+    _stopRingback();
     _pollTimer?.cancel();
     _timeoutTimer?.cancel();
     final callId = c.callId;
@@ -675,6 +690,105 @@ class CallManager {
     _ringing = false;
     FlutterRingtonePlayer().stop().ignore();
   }
+
+  /// The tone the caller hears while the other side rings — 440+480 Hz, two
+  /// seconds on and four off, the cadence a phone line uses. Played from the
+  /// app rather than left to the system: neither LiveKit nor the ring push
+  /// makes any sound on this side, so without it placing a call is silent.
+  ///
+  /// It has to keep going until the call is answered or dropped, which is why
+  /// the asset itself holds a full minute of that cadence rather than one
+  /// six-second round: loop mode is asked for as well, but it is not honoured
+  /// on every platform, and a tone that rings once and goes quiet sounds like
+  /// the call failed. A minute outlasts [_outgoingTimeout]; [_ringbackWatch]
+  /// restarts or resumes it in the case it stops anyway.
+  ///
+  /// The player is told to keep out of the audio session because the call owns
+  /// it: on Android WebRTC takes audio focus while the room connects, and
+  /// just_audio's default is to pause whatever it is playing when focus is
+  /// lost. iOS is the other way round: there the session has to be activated
+  /// or the tone plays silently, so only interruption handling is turned off.
+  ///
+  /// Android also needs the tone on the *voice call* stream
+  /// ([AndroidAudioUsage.voiceCommunicationSignalling]) rather than the media
+  /// one. The caller is in the LiveKit room from the moment the call is placed,
+  /// so the device is already in `MODE_IN_COMMUNICATION` by the second ring —
+  /// and in that mode media output is what a phone routes away or drops, which
+  /// is why the tone was heard once and no more. On the call stream it follows
+  /// the call's own routing (earpiece, or speaker once that is on) and lasts as
+  /// long as the ringing does.
+  ///
+  /// Deliberately not [FlutterRingtonePlayer]: that plays the phone's own
+  /// ringtone at ring volume, which is the sound of a call coming *in*.
+  Future<void> _startRingback() async {
+    if (_ringback != null) return;
+    final player = AudioPlayer(
+      handleInterruptions: false,
+      androidApplyAudioAttributes: false,
+      handleAudioSessionActivation: !Platform.isAndroid,
+    );
+    _ringback = player;
+    try {
+      if (Platform.isAndroid) {
+        await player.setAndroidAudioAttributes(
+          const AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.sonification,
+            usage: AndroidAudioUsage.voiceCommunicationSignalling,
+          ),
+        );
+      }
+      await player.setAsset(_ringbackAsset);
+      await player.setLoopMode(LoopMode.one);
+      // The call stream carries its own volume setting, so the tone is not
+      // held back on Android the way it is against media volume on iOS.
+      await player.setVolume(Platform.isAndroid ? 1.0 : 0.5);
+      // Answered (or hung up) while the asset was loading.
+      if (!identical(_ringback, player)) return;
+      // Anything that stops the tone while the call is still ringing — the
+      // asset running out, or something pausing the player from underneath —
+      // starts it again.
+      _ringbackWatch = player.playerStateStream.listen((state) {
+        if (state.playing) return;
+        if (state.processingState != ProcessingState.ready &&
+            state.processingState != ProcessingState.completed) {
+          return;
+        }
+        if (!identical(_ringback, player)) return;
+        unawaited(() async {
+          try {
+            if (state.processingState == ProcessingState.completed) {
+              await player.seek(Duration.zero);
+            }
+            player.play().ignore();
+          } catch (e) {
+            print('ringback restart failed: $e');
+          }
+        }());
+      });
+      player.play().ignore();
+    } catch (e) {
+      print('ringback failed: $e');
+    }
+  }
+
+  void _stopRingback() {
+    final player = _ringback;
+    if (player == null) return;
+    _ringback = null;
+    final watch = _ringbackWatch;
+    _ringbackWatch = null;
+    unawaited(() async {
+      await watch?.cancel();
+      try {
+        await player.stop();
+      } catch (e) {
+        print('ringback stop failed: $e');
+      }
+      await player.dispose();
+    }());
+  }
+
+  static const _ringbackAsset = 'assets/sounds/callRingback.wav';
 
   static Future<String> _myIdentity() async =>
       '${await DeviceId.get()}|${FirebaseApiService.appType}';

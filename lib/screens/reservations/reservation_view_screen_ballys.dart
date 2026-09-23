@@ -2401,13 +2401,14 @@ class _ReservationViewScreenBallysState
                       ),
                   ],
 
-                  // ── Pending: Amendment ───────────────────────────────
+                  // ── Approved: Amendment ──────────────────────────────
                   //
-                  // Only a pending reservation can still be amended; once it is
-                  // checked/approved/rejected the workflow has moved on. With
-                  // neither hotels nor air tickets on the reservation there is
-                  // nothing to amend, so the button stays hidden too.
-                  if (selectedReservation?.requestStatus != 'Rejected' &&
+                  // Only an approved reservation can be amended: while it is
+                  // still pending/checked the request itself can be updated,
+                  // and a rejected one has nowhere to go. With neither hotels
+                  // nor air tickets on the reservation there is nothing to
+                  // amend, so the button stays hidden too.
+                  if (selectedReservation?.requestStatus == 'Approved' &&
                       (selectedHotels.isNotEmpty ||
                           selectedFlights.isNotEmpty)) ...[
                     SizedBox(

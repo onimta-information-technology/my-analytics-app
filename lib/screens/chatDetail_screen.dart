@@ -5506,63 +5506,137 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       event == 'call_declined';
 
   /// A finished call, as the server logs it into the thread: "📞 Voice call ·
-  /// 5:32", "🎥 Missed video call". The text is what's shown; the event only
-  /// picks the icon and colours a missed call red. The leading emoji gives way
-  /// to a real icon so the two don't sit side by side.
+  /// 5:32", "🎥 Missed video call".
+  ///
+  /// WhatsApp draws these as a bubble on the caller's side rather than as a
+  /// centered notice, so they read as part of the conversation: a round status
+  /// icon, what kind of call it was, when it happened and how long it ran, and
+  /// a button to call back. The server sentence carries the wording and the
+  /// duration after the "·"; the event only says how the call ended, which
+  /// picks the icon and turns an unanswered call red.
   Widget _buildCallLogMessage(
     ChatMessage message,
     String text,
     FontSettings fontSettings,
   ) {
-    final isVideo = text.startsWith('🎥') || text.toLowerCase().contains('video');
+    final isVideo =
+        text.startsWith('🎥') || text.toLowerCase().contains('video');
     final isMissed = message.systemEvent == 'call_missed';
     final isDeclined = message.systemEvent == 'call_declined';
-    final label = text.replaceFirst(RegExp(r'^(📞|🎥)\s*'), '');
-    final color = isMissed ? Colors.red[700]! : ChatColors.systemPillText;
-    final icon = isMissed
+    // Nobody talked: the icon goes red and there is no duration to show.
+    final unanswered = isMissed || isDeclined;
+
+    // "📞 Voice call · 0:48" → "Voice call" and "0:48". The leading emoji gives
+    // way to a real icon so the two don't sit side by side.
+    final parts = text
+        .replaceFirst(RegExp(r'^(📞|🎥)\s*'), '')
+        .split('·')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final title = parts.isEmpty ? text.trim() : parts.first;
+    final duration = parts.length > 1 ? parts[1] : null;
+
+    final statusColor = unanswered ? _callMissedRed : ChatColors.primary;
+    final statusIcon = isMissed
         ? (isVideo ? Icons.missed_video_call : Icons.phone_missed)
         : isDeclined
-        ? Icons.call_end
-        : (isVideo ? Icons.videocam : Icons.call);
-    final time = DateFormat('h:mm a').format(message.timestamp);
+        ? Icons.phone_disabled
+        : isVideo
+        ? Icons.videocam
+        // An answered voice call keeps the arrow, so who rang whom is readable
+        // at a glance the way it is in a call log.
+        : (message.isMe ? Icons.call_made : Icons.call_received);
 
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: ChatColors.systemPill,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: fontSettings.fontSize, color: color),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: color,
-                  fontSize: fontSettings.fontSize - 4,
-                  fontWeight: FontWeight.w500,
+    final media = isVideo ? CallMedia.video : CallMedia.audio;
+    final subtitle = [
+      _formatTime(message.timestamp),
+      if (duration != null) duration,
+    ].join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: message.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        children: [
+          Flexible(
+            child: Material(
+              color: message.isMe
+                  ? ChatColors.outgoingBubble
+                  : ChatColors.incomingBubble,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                // Same as WhatsApp: the whole row calls back, in the medium
+                // the logged call used.
+                onTap: () => _startCall(media),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(statusIcon, size: 18, color: statusColor),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title,
+                              style: TextStyle(
+                                color: ChatColors.bubbleText,
+                                fontSize: fontSettings.fontSize,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: ChatColors.bubbleMeta,
+                                fontSize: fontSettings.fontSize - 4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(
+                          isVideo ? Icons.videocam_outlined : Icons.call_outlined,
+                          color: ChatColors.primary,
+                          size: 20,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(6),
+                        tooltip: isVideo ? 'Video call back' : 'Call back',
+                        onPressed: () => _startCall(media),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              time,
-              style: TextStyle(
-                color: ChatColors.systemPillText.withValues(alpha: 0.7),
-                fontSize: fontSettings.fontSize - 6,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  /// WhatsApp's red for a call nobody took.
+  static const Color _callMissedRed = Color(0xFFEA0038);
 
   /// Last resort when the backend sent the event but no sentence for it:
   /// `member_added` reads as "Member added" rather than as raw slug.

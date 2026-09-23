@@ -51,9 +51,14 @@ class GroupReservationRepository {
   /// GET `{baseUrl}/GroupReservation/Get` — saved group reservations, newest
   /// first.
   ///
+  /// Scoped the same way the reservation list is: AD001 and anyone holding
+  /// R_Chk / R_App see every group, everybody else only the groups saved under
+  /// their own code (`GroupReservation/Get?salesCode=<code>`).
+  ///
   /// The response is `{ success, count, group_reservations: [...] }`.
   Future<List<GroupReservationRecord>> getGroupReservations() async {
-    final response = await apiService.get(_listEndpoint);
+    final endpoint = await _scopedListEndpoint();
+    final response = await apiService.get(endpoint);
 
     if (response['success'] != true) return [];
 
@@ -75,6 +80,28 @@ class GroupReservationRepository {
     });
 
     return reservations;
+  }
+
+  /// [_listEndpoint], with `?salesCode=` appended when the logged-in user may
+  /// only see their own groups.
+  ///
+  /// Unrestricted are the admin sales code AD001 and any user whose login
+  /// carried R_Chk or R_App — the checkers and approvers, who have to see
+  /// other people's groups to action them.
+  Future<String> _scopedListEndpoint() async {
+    if (await StorageUtil.isAdminSalesCode()) return _listEndpoint;
+
+    if (await StorageUtil.getResChk() == true ||
+        await StorageUtil.getResApp() == true) {
+      return _listEndpoint;
+    }
+
+    // Same code `saveGroupReservation` writes into `sales_code`, so the filter
+    // matches the rows this user created.
+    final code = await StorageUtil.getMarketingCode();
+    if (code == null || code.trim().isEmpty) return _listEndpoint;
+
+    return '$_listEndpoint?salesCode=${Uri.encodeQueryComponent(code.trim())}';
   }
 
   static const String _updateStatusEndpoint = 'GroupReservation/UpdateStatus';

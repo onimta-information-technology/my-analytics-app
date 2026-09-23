@@ -16,11 +16,12 @@ class TransportRepository {
   /// Any other user is scoped to their own sales code via `?salesCode=`.
   Future<List<TransportReservation>> getTransportData() async {
     final salesCode = (await StorageUtil.getSalesCode())?.trim() ?? '';
+     final marketingCode = (await StorageUtil.getMarketingCode())?.trim() ?? '';
     final isAdmin = salesCode.toUpperCase() == 'AD001';
 
     final endpoint = (isAdmin || salesCode.isEmpty)
         ? 'Transport_Get_Data'
-        : 'Transport_Get_Data?salesCode=${Uri.encodeQueryComponent(salesCode)}';
+        : 'Transport_Get_Data?salesCode=${Uri.encodeQueryComponent(marketingCode)}';
 
     final response = await apiService.get(endpoint);
 

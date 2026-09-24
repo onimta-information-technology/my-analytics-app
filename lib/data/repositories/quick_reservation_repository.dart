@@ -38,7 +38,7 @@ class QuickReservationRepository {
   static const String _reservationEndpoint = 'Reservation_InsertReservation';
   static const String _transportEndpoint = 'TransportReservation/Insert';
   static const String _visaEndpoint = 'VisaRequest/Insert';
-  static const String _airportServiceEndpoint = 'AirportServiceRequest/Insert';
+  static const String _airportServiceEndpoint = 'AirportService/Insert';
 
   // ── Hotel ───────────────────────────────────────────────────────────────────
 

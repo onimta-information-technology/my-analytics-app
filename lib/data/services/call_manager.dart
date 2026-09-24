@@ -331,7 +331,21 @@ class CallManager {
     if (c == null) return;
     c.speakerOn = !c.speakerOn;
     c.update();
-    await Hardware.instance.setSpeakerphoneOn(c.speakerOn);
+    await _applySpeaker(c);
+  }
+
+  /// Routes call audio to the loudspeaker or the earpiece per
+  /// [CallController.speakerOn]. LiveKit ignores the request (it only logs)
+  /// until a local audio track is published, and Android can move audio back
+  /// to the earpiece once remote audio starts — so this is re-run after
+  /// connecting and whenever a remote audio track arrives.
+  Future<void> _applySpeaker(CallController c) async {
+    if (!_isLive(c) || c.room == null) return;
+    try {
+      await Hardware.instance.setSpeakerphoneOn(c.speakerOn);
+    } catch (e) {
+      print('speaker switch failed: $e');
+    }
   }
 
   Future<void> switchCamera() async {
@@ -521,6 +535,12 @@ class CallManager {
     );
     c.room = room;
     room.addListener(c.update);
+    // LiveKit prefers the loudspeaker on iOS by default, and while it does,
+    // setSpeakerphoneOn is a no-op — the speaker button could never switch
+    // to the earpiece. Routing is driven by [CallController.speakerOn].
+    if (Platform.isIOS) {
+      await Hardware.instance.setPreferSpeakerOutput(false);
+    }
     final listener = room.createListener();
     _roomListener = listener;
     listener
@@ -534,6 +554,9 @@ class CallManager {
         }
         c.update();
         unawaited(_refreshNames(c));
+      })
+      ..on<TrackSubscribedEvent>((e) {
+        if (e.track is RemoteAudioTrack) unawaited(_applySpeaker(c));
       })
       ..on<ParticipantDisconnectedEvent>((_) {
         // A 1:1 call is over the moment the other side leaves; a group call
@@ -560,7 +583,7 @@ class CallManager {
       if (c.isVideo) {
         await room.localParticipant?.setCameraEnabled(true);
       }
-      await Hardware.instance.setSpeakerphoneOn(c.speakerOn);
+      await _applySpeaker(c);
       // Joining a call someone is already in: no ParticipantConnectedEvent
       // fires for them, so the call counts as connected straight away.
       if (c.phase == CallPhase.connecting ||

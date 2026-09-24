@@ -54,6 +54,11 @@ class CallController extends ChangeNotifier {
   final bool viaSystem;
 
   CallPhase phase;
+
+  /// Outgoing only: a callee's device confirmed it is showing its ring
+  /// (`msg_type` 26). Until then the caller sees "Calling…", not "Ringing…" —
+  /// a push that never arrived never rang anything.
+  bool remoteRinging = false;
   String? endReason;
   DateTime? connectedAt;
 
@@ -102,11 +107,14 @@ class CallManager {
   CallManager._();
   static final CallManager instance = CallManager._();
 
-  /// How long an unanswered outgoing call rings before we give up.
-  static const _outgoingTimeout = Duration(seconds: 45);
+  /// The server ends an unanswered call itself after 45s and tells the caller
+  /// with a `msg_type` 25 push. This is only the backstop for when that push
+  /// (and the poll) never make it, so it runs a little past the server's.
+  static const _outgoingTimeout = Duration(seconds: 50);
 
-  /// How long an incoming call is offered before the screen closes itself.
-  static const _incomingTimeout = Duration(seconds: 60);
+  /// How long an incoming call is offered before the screen closes itself —
+  /// the server's ring window, past which the call is already gone.
+  static const _incomingTimeout = Duration(seconds: 45);
 
   /// The call on this device, if any — including one showing its closing
   /// message. Screens listen to it to hide or refresh an "ongoing call"
@@ -184,16 +192,14 @@ class CallManager {
       return;
     }
     c.callId = info.callId;
-    // It is really ringing on the other side now, so the caller hears the
-    // tone. It carries on through the LiveKit connect below, and stops the
-    // moment somebody picks up.
-    unawaited(_startRingback());
+    // "Calling…" from here. The ringback tone waits for the callee's device
+    // to confirm it is ringing (msg_type 26) — see [_markRemoteRinging].
     await _connect(c, info);
     if (c.phase == CallPhase.outgoing) {
       _startPolling(c);
       _timeoutTimer = Timer(_outgoingTimeout, () {
         if (_isLive(c) && c.phase == CallPhase.outgoing) {
-          _hangUp(c, reason: 'no_answer', message: 'No answer');
+          _hangUp(c, reason: 'no_answer', message: _noAnswerText(c));
         }
       });
     }
@@ -343,7 +349,13 @@ class CallManager {
   Future<void> handleForegroundPush(RemoteMessage message) async {
     final type = message.data['msg_type']?.toString();
     final details = _details(message.data);
-    final callId = details['callId']?.toString() ?? '';
+    var callId = details['callId']?.toString() ?? '';
+    // Pushes aimed at the caller's own call are applied to it even if a
+    // payload ever turns up without the id.
+    if (callId.isEmpty &&
+        (type == CallPushType.ringing || type == CallPushType.noAnswer)) {
+      callId = _current?.callId ?? '';
+    }
     if (callId.isEmpty) return;
     print('call push $type for $callId');
 
@@ -370,11 +382,19 @@ class CallManager {
     // call is answered elsewhere (1:1), declined, or over.
     final systemRingOver = switch (type) {
       CallPushType.answered => details['isGroupCall']?.toString() != 'true',
-      CallPushType.declined || CallPushType.ended => true,
+      CallPushType.declined ||
+      CallPushType.ended ||
+      CallPushType.noAnswer => true,
       _ => false,
     };
     final c = _current;
-    if (c == null || c.callId != callId) {
+    // The callee can confirm its ring before our own `start` has even
+    // returned the callId.
+    final ownPendingCall = c != null &&
+        c.callId == null &&
+        c.isOutgoing &&
+        type == CallPushType.ringing;
+    if (c == null || (c.callId != callId && !ownPendingCall)) {
       if (systemRingOver) unawaited(CallKitService.dismiss(callId));
       return;
     }
@@ -389,6 +409,11 @@ class CallManager {
         _finish(c, 'Call declined');
       case CallPushType.ended:
         _finish(c, 'Call ended');
+      case CallPushType.noAnswer:
+        // The server has already ended the call — nothing to send back.
+        _finish(c, c.isOutgoing ? _noAnswerText(c) : 'Missed call');
+      case CallPushType.ringing:
+        _markRemoteRinging(c);
       case CallPushType.participantLeft:
         unawaited(_refreshNames(c));
     }
@@ -454,6 +479,8 @@ class CallManager {
     );
     _open(c);
     _startRinging();
+    // Our ring is on screen — the caller's UI can say "Ringing…" now.
+    unawaited(CallApiService.confirmRinging(callId));
     _startPolling(c);
     _timeoutTimer = Timer(_incomingTimeout, () {
       if (_isLive(c) && c.phase == CallPhase.incoming) {
@@ -626,6 +653,23 @@ class CallManager {
   bool _isLive(CallController c) =>
       identical(_current, c) && c.phase != CallPhase.ended;
 
+  /// A callee confirmed its ring (msg_type 26): the caller's screen switches
+  /// to "Ringing…" and the ringback tone starts. It carries on through to the
+  /// answer, and stops the moment somebody picks up.
+  void _markRemoteRinging(CallController c) {
+    if (!c.isOutgoing || c.phase != CallPhase.outgoing || c.remoteRinging) {
+      return;
+    }
+    c.remoteRinging = true;
+    c.update();
+    unawaited(_startRingback());
+  }
+
+  /// Why an outgoing call nobody answered is over: it rang and was ignored,
+  /// or it never reached a device at all.
+  static String _noAnswerText(CallController c) =>
+      c.remoteRinging ? 'No answer' : 'Unreachable';
+
   /// Backstop for missed pushes while a call is ringing on either side.
   void _startPolling(CallController c) {
     _pollTimer?.cancel();
@@ -642,7 +686,13 @@ class CallManager {
         if (snap.call.status == 'declined') {
           return _finish(c, 'Call declined');
         }
-        if (!snap.call.isLive) return _finish(c, 'Call ended');
+        if (!snap.call.isLive) {
+          // Still outgoing means nobody ever joined: the server rang it out.
+          return _finish(
+            c,
+            c.phase == CallPhase.outgoing ? _noAnswerText(c) : 'Call ended',
+          );
+        }
         if (c.phase == CallPhase.incoming) {
           final me = await _myIdentity();
           final mine =

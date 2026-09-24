@@ -92,7 +92,8 @@ String _statusText(CallController c) {
       final kind = c.isVideo ? 'video' : 'voice';
       return c.isGroupCall ? 'Incoming group $kind call' : 'Incoming $kind call';
     case CallPhase.outgoing:
-      return c.callId == null ? 'Calling…' : 'Ringing…';
+      // Only the callee's own confirmation (msg_type 26) earns "Ringing…".
+      return c.remoteRinging ? 'Ringing…' : 'Calling…';
     case CallPhase.connecting:
       return 'Connecting…';
     case CallPhase.connected:

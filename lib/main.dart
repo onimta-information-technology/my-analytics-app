@@ -122,6 +122,7 @@ Future<void> _handleBackgroundCallPush(Map<String, dynamic> data) async {
       }
     case CallPushType.declined:
     case CallPushType.ended:
+    case CallPushType.noAnswer:
       await CallKitService.dismiss(callId);
   }
 }

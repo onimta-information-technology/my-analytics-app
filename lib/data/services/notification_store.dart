@@ -64,7 +64,7 @@ class NotificationStore {
     return false;
   }
 
-  /// Call signalling (`msg_type` 20–25) — handled by the call screen, never
+  /// Call signalling (`msg_type` 20–26) — handled by the call screen, never
   /// listed in history.
   static bool isCallMessage(RemoteMessage message) =>
       CallPushType.isCallPush(message.data);

@@ -56,6 +56,34 @@ class CallApiService {
     return CallJoinInfo.fromJson(body);
   }
 
+  /// Callee side: this device has the ring on screen. The server relays it to
+  /// the caller (`msg_type` 26) so their screen goes from "Calling…" to
+  /// "Ringing…". False means the call had already moved past ringing.
+  static Future<bool> ringing(String callId) async {
+    final body = await _send(
+      'POST',
+      '/api/calls/$callId/ringing',
+      await _identity(),
+    );
+    return body['acknowledged'] == true;
+  }
+
+  /// callIds this isolate has already confirmed as ringing — the same ring
+  /// can surface through the FCM push, the VoIP push and CallKit's own event.
+  static final Set<String> _confirmedRinging = {};
+
+  /// [ringing], sent at most once per call and never throwing: it is a
+  /// courtesy to the caller's UI, and must not get in the way of the ring.
+  static Future<void> confirmRinging(String callId) async {
+    if (callId.isEmpty || !_confirmedRinging.add(callId)) return;
+    try {
+      await ringing(callId);
+    } catch (e) {
+      _confirmedRinging.remove(callId);
+      print('call ringing ack failed: $e');
+    }
+  }
+
   static Future<void> decline(String callId) async {
     await _send('POST', '/api/calls/$callId/decline', await _identity());
   }

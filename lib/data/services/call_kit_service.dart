@@ -54,7 +54,9 @@ class CallKitService {
       appName: 'My Analytics',
       handle: push.displayBody,
       type: push.media == CallMedia.video ? 1 : 0,
-      duration: 60000,
+      // The server gives up on an unanswered call after 45s (and the push
+      // itself expires then), so ringing any longer only rings a dead call.
+      duration: 45000,
       extra: push.toMap(),
       missedCallNotification: const NotificationParams(
         showNotification: true,
@@ -100,7 +102,10 @@ class CallKitService {
       await FlutterCallkitIncoming.showCallkitIncoming(params);
     } catch (e) {
       debugPrint('callkit show failed: $e');
+      return;
     }
+    // It is on screen now — let the caller's UI say "Ringing…".
+    await CallApiService.confirmRinging(push.callId);
   }
 
   /// Takes a still-ringing system call down without it counting as the user
@@ -168,8 +173,11 @@ class CallKitService {
           await CallManager.instance.acceptFromSystem(push);
           return;
         }
-        // Still ringing: keep an eye on it so it stops with the call.
+        // Still ringing: keep an eye on it so it stops with the call. A ring
+        // AppDelegate raised from a VoIP push while the app was killed was
+        // never confirmed to the caller either, so that happens here.
         _watch(push.callId);
+        unawaited(CallApiService.confirmRinging(push.callId));
       }
     } catch (e) {
       debugPrint('callkit resume failed: $e');
@@ -180,7 +188,9 @@ class CallKitService {
     switch (event) {
       case CallEventActionCallIncoming(:final callKitParams):
         final push = IncomingCallPush.fromMap(callKitParams.extra ?? const {});
-        if (push != null) _watch(push.callId);
+        if (push == null) return;
+        _watch(push.callId);
+        await CallApiService.confirmRinging(push.callId);
       case CallEventActionCallAccept(:final callKitParams):
         final push = IncomingCallPush.fromMap(callKitParams.extra ?? const {});
         if (push == null) return;

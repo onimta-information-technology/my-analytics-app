@@ -13,7 +13,15 @@ class CallPushType {
   static const declined = '22';
   static const ended = '23';
   static const participantLeft = '24';
-  static const participantMissing = '25';
+
+  /// Nobody answered within the server's ring window (45s) — the server has
+  /// already ended the call. The caller shows "No answer"/"Unreachable"
+  /// rather than a plain "Call ended".
+  static const noAnswer = '25';
+
+  /// A callee's device confirmed (`POST /calls/:callId/ringing`) that it is
+  /// showing its ringing UI — the caller switches "Calling…" to "Ringing…".
+  static const ringing = '26';
 
   static const all = {
     incoming,
@@ -21,7 +29,8 @@ class CallPushType {
     declined,
     ended,
     participantLeft,
-    participantMissing,
+    noAnswer,
+    ringing,
   };
 
   static bool isCallPush(Map<String, dynamic> data) =>

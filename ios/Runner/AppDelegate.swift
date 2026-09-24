@@ -401,7 +401,7 @@ extension AppDelegate: PKPushRegistryDelegate {
     let data = flutter_callkit_incoming.Data(
       id: uuid, nameCaller: title, handle: body, type: isVideo ? 1 : 0)
     data.appName = "My Analytics"
-    data.duration = 60000
+    data.duration = 45000
     data.handleType = "generic"
     data.supportsVideo = isVideo
     data.maximumCallGroups = 1

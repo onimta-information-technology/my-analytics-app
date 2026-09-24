@@ -117,42 +117,7 @@ class _Stage extends StatelessWidget {
     final remotes = c.remoteParticipants;
     // 1:1 (or nobody else here yet): the other side fills the screen and we
     // float in a corner, the usual video-call layout.
-    if (remotes.length <= 1) {
-      final remote = remotes.firstOrNull;
-      final remoteTrack = remote == null ? null : _remoteVideo(remote);
-      final localTrack = _localVideo(c);
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          if (remoteTrack != null)
-            VideoTrackRenderer(
-              remoteTrack,
-              fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-            )
-          else if (remote == null && localTrack != null)
-            VideoTrackRenderer(
-              localTrack,
-              fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-            )
-          else
-            _AvatarStage(controller: c, showStatus: false),
-          if (remote != null && localTrack != null)
-            Positioned(
-              right: 16,
-              bottom: 140,
-              width: 110,
-              height: 160,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: VideoTrackRenderer(
-                  localTrack,
-                  fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                ),
-              ),
-            ),
-        ],
-      );
-    }
+    if (remotes.length <= 1) return _OneToOneStage(controller: c);
 
     // Group: everyone, us included, in an even grid.
     final local = c.room?.localParticipant;
@@ -194,6 +159,144 @@ class _Stage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 1:1 video, WhatsApp style: one side fills the screen, the other floats in
+/// a small card that can be dragged (it snaps to the nearest corner) and
+/// tapped to swap which side is big.
+class _OneToOneStage extends StatefulWidget {
+  final CallController controller;
+  const _OneToOneStage({required this.controller});
+
+  @override
+  State<_OneToOneStage> createState() => _OneToOneStageState();
+}
+
+class _OneToOneStageState extends State<_OneToOneStage> {
+  static const _pipSize = Size(110, 160);
+  static const _margin = 16.0;
+  // Room kept clear for the top bar and the controls bar.
+  static const _topInset = 64.0;
+  static const _bottomInset = 120.0;
+
+  /// Which corner the card rests in.
+  bool _right = true;
+  bool _bottom = true;
+
+  /// Card's top-left while a finger is on it; null when resting in a corner.
+  Offset? _drag;
+
+  /// True when our own camera is the big picture.
+  bool _swapped = false;
+
+  Rect _bounds(Size screen, EdgeInsets safe) => Rect.fromLTRB(
+        _margin,
+        safe.top + _topInset,
+        screen.width - _margin - _pipSize.width,
+        screen.height - safe.bottom - _bottomInset - _pipSize.height,
+      );
+
+  Offset _cornerOffset(Rect b) =>
+      Offset(_right ? b.right : b.left, _bottom ? b.bottom : b.top);
+
+  void _onPanEnd(DragEndDetails d, Rect b) {
+    final pos = _drag;
+    if (pos == null) return;
+    // A fling picks the corner it was thrown towards; otherwise the nearest.
+    const flingSpeed = 600.0;
+    final v = d.velocity.pixelsPerSecond;
+    setState(() {
+      _right = v.dx.abs() > flingSpeed ? v.dx > 0 : pos.dx > b.center.dx;
+      _bottom = v.dy.abs() > flingSpeed ? v.dy > 0 : pos.dy > b.center.dy;
+      _drag = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.controller;
+    final remote = c.remoteParticipants.firstOrNull;
+    final remoteTrack = remote == null ? null : _remoteVideo(remote);
+    final localTrack = _localVideo(c);
+    final hasPip = remote != null && localTrack != null;
+    final swapped = _swapped && hasPip;
+
+    final Widget main;
+    if (swapped) {
+      main = _video(localTrack);
+    } else if (remoteTrack != null) {
+      main = _video(remoteTrack);
+    } else if (remote == null && localTrack != null) {
+      main = _video(localTrack);
+    } else {
+      main = _AvatarStage(controller: c, showStatus: false);
+    }
+
+    return LayoutBuilder(
+      builder: (context, box) {
+        final safe = MediaQuery.paddingOf(context);
+        final b = _bounds(box.biggest, safe);
+        final pos = _drag ?? _cornerOffset(b);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            main,
+            if (hasPip)
+              AnimatedPositioned(
+                duration: _drag == null
+                    ? const Duration(milliseconds: 250)
+                    : Duration.zero,
+                curve: Curves.easeOut,
+                left: pos.dx,
+                top: pos.dy,
+                width: _pipSize.width,
+                height: _pipSize.height,
+                child: GestureDetector(
+                  onTap: () => setState(() => _swapped = !_swapped),
+                  onPanStart: (_) => setState(() => _drag = pos),
+                  onPanUpdate: (d) => setState(() {
+                    final p = (_drag ?? pos) + d.delta;
+                    _drag = Offset(
+                      p.dx.clamp(b.left, b.right),
+                      p.dy.clamp(b.top, b.bottom),
+                    );
+                  }),
+                  onPanEnd: (d) => _onPanEnd(d, b),
+                  onPanCancel: () => setState(() => _drag = null),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1F2C34),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black45, blurRadius: 8),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: swapped
+                        ? (remoteTrack != null
+                            ? _video(remoteTrack)
+                            : Center(
+                                child: _Avatar(
+                                  name: c.title,
+                                  url: c.avatarUrl,
+                                  radius: 32,
+                                ),
+                              ))
+                        : _video(localTrack),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _video(VideoTrack track) => VideoTrackRenderer(
+        track,
+        key: ObjectKey(track),
+        fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+      );
 }
 
 /// Audio calls, ringing and anything without video: a big avatar, the name

@@ -231,6 +231,9 @@ class TransportDetail {
   /// [AirportPickupStatus]. `0` while nothing has been reported yet.
   final int airportPickupStatus;
 
+  /// Free-text note entered with the leg (`special_comment`), null when blank.
+  final String? specialComment;
+
   final String? receivedBy;
   final DateTime? receivedDate;
   final String? taxiPlateNumber;
@@ -255,6 +258,7 @@ class TransportDetail {
     this.silkRoute = 0,
     this.airportPickup = 0,
     this.airportPickupStatus = 0,
+    this.specialComment,
     this.receivedBy,
     this.receivedDate,
     this.taxiPlateNumber,
@@ -300,6 +304,7 @@ class TransportDetail {
       silkRoute: _parseInt(json['silk_route']),
       airportPickup: _parseInt(json['airport_pickup']),
       airportPickupStatus: _parseInt(json['airport_pickup_status']),
+      specialComment: _parseText(json['special_comment']),
       receivedBy: _parseText(json['received_by']),
       receivedDate: _parseDate(json['received_date']),
       taxiPlateNumber: _parseText(json['taxi_plate_number']),

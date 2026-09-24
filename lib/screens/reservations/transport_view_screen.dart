@@ -1019,6 +1019,16 @@ class _TripCardState extends State<_TripCard> {
               ),
             ],
           ),
+          if (detail.specialComment != null) ...[
+            const SizedBox(height: 6),
+            TransportViewScreen._infoRow(
+              Icons.comment_outlined,
+              'Special comment',
+              detail.specialComment!,
+              Colors.deepOrange,
+              fontSettings,
+            ),
+          ],
           if (detail.hasDriverInfo) ...[
             const SizedBox(height: 6),
             TransportViewScreen._infoRow(

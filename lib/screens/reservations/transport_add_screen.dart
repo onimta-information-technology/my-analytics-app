@@ -842,6 +842,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
 
     final primary = allMembers.first;
     final salesCode = await StorageUtil.getSalesCode();
+    final marketingCode = await StorageUtil.getMarketingCode();
     final userName = await StorageUtil.getUName();
     final deviceId = await DeviceId.get();
     final phoneNumber = await StorageUtil.getMobileNumber();
@@ -854,6 +855,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       'contact_number': phoneNumber,
       'reservation_status': 'Requested',
       'sales_code': salesCode,
+      'marketing_code': marketingCode,
       'user_name': userName,
       'device_id': deviceId,
       'transport_details': allMembers.map(_memberToDetail).toList(),

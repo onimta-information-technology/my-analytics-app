@@ -124,6 +124,9 @@ class CallManager {
   CallController? get _current => active.value;
   set _current(CallController? c) => active.value = c;
   EventsListener<RoomEvent>? _roomListener;
+
+  /// Keeps the call screen on screen while the app is still starting up.
+  Timer? _screenWatchdog;
   Timer? _pollTimer;
   Timer? _timeoutTimer;
   bool _ringing = false;
@@ -373,7 +376,8 @@ class CallManager {
           );
           return;
         }
-        return CallKitService.showIncoming(push);
+        await CallKitService.showIncoming(push);
+        return;
       }
       return _offerIncoming(push);
     }
@@ -601,6 +605,7 @@ class CallManager {
     c.endReason = reason;
     c.update();
 
+    _screenWatchdog?.cancel();
     _stopRinging();
     _stopRingback();
     _pollTimer?.cancel();
@@ -634,13 +639,31 @@ class CallManager {
 
   void _open(CallController c) {
     _current = c;
+    _showScreen(c);
+    // A call answered from the system UI starts the app: for a moment there
+    // is no navigator to push onto, and the routing that follows the splash
+    // screen throws away whatever was pushed before it ran. Both are covered
+    // by putting the screen back until it sticks.
+    _screenWatchdog?.cancel();
+    var tries = 0;
+    _screenWatchdog = Timer.periodic(const Duration(milliseconds: 250), (t) {
+      final stale = !identical(_current, c) || c.phase == CallPhase.ended;
+      if (stale || ++tries > 24) return t.cancel();
+      if (c._route?.isActive == true) return;
+      _showScreen(c);
+    });
+  }
+
+  void _showScreen(CallController c) {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
     final route = MaterialPageRoute<void>(
       settings: const RouteSettings(name: CallScreen.routeName),
       fullscreenDialog: true,
       builder: (_) => CallScreen(controller: c),
     );
     c._route = route;
-    navigatorKey.currentState?.push(route);
+    navigator.push(route);
   }
 
   /// Rejoining the call we are already in just surfaces its screen again.

@@ -61,18 +61,23 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   _logPushMessage('background', message);
 
-  // Silent thread updates (an edit, a reaction) carry no new message — the
-  // chat is refetched when it is next opened, so nothing is stored or counted.
-  if (NotificationStore.isSilentThreadUpdate(message)) return;
-
   // Call pushes are data-only, so nothing rings unless this raises it: the
   // incoming ring goes to the OS call UI, and the rest take that ring down
   // again once the call is answered elsewhere, declined or over. None of them
   // are unread items.
+  //
+  // Checked before the silent-update test, the way the foreground listener
+  // does: a call push carries `silent: true` in its `Details` too, and
+  // testing that first swallowed every ring while the app was in the
+  // background.
   if (CallPushType.isCallPush(message.data)) {
     await _handleBackgroundCallPush(message.data);
     return;
   }
+
+  // Silent thread updates (an edit, a reaction) carry no new message — the
+  // chat is refetched when it is next opened, so nothing is stored or counted.
+  if (NotificationStore.isSilentThreadUpdate(message)) return;
 
   // Keep non-chat notifications in local history so the home screen bell shows
   // them the next time the app is opened.
@@ -110,11 +115,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> _handleBackgroundCallPush(Map<String, dynamic> data) async {
   final type = data['msg_type']?.toString();
   final callId = data['callId']?.toString() ?? '';
+  print('PUSH call background: msg_type=$type callId=$callId');
   if (callId.isEmpty) return;
   switch (type) {
     case CallPushType.incoming:
       final push = IncomingCallPush.fromMap(data);
-      if (push != null) await CallKitService.showIncoming(push);
+      if (push == null) {
+        print('PUSH call background: payload did not parse as a call');
+        return;
+      }
+      final error = await CallKitService.showIncoming(push);
+      if (error != null) print('PUSH call background: ring failed — $error');
     case CallPushType.answered:
       // In a group call someone else joining leaves our ring standing.
       if (data['isGroupCall']?.toString() != 'true') {
@@ -215,14 +226,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _setupFirebaseListenersOnly();
 
     // A call answered from the lock screen / while the app was killed was
-    // accepted before anything here was listening — join it once the
-    // navigator can show the call screen.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 800), () async {
-        if (await StorageUtil.hasActiveSession()) {
-          await CallKitService.resumeAcceptedCall();
-        }
-      });
+    // accepted before anything here was listening. Picked up on the first
+    // frame — not after a delay — so answering lands on the call screen
+    // instead of watching the app start up first. CallManager keeps the
+    // screen there while the rest of the routing settles.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (await StorageUtil.hasActiveSession()) {
+        await CallKitService.resumeAcceptedCall();
+      }
     });
   }
 

@@ -47,7 +47,10 @@ class CallKitService {
   // ─── Ringing ──────────────────────────────────────────────────────────────
 
   /// Raises the system incoming-call UI. Safe from a background isolate.
-  static Future<void> showIncoming(IncomingCallPush push) async {
+  /// Returns null once the system UI is up, or the failure text when the
+  /// platform refused to show it — [debugCallPushStep] reports that on the
+  /// phone while the Android ringing problem is being tracked down.
+  static Future<String?> showIncoming(IncomingCallPush push) async {
     final params = CallKitParams(
       id: systemId(push.callId),
       nameCaller: push.displayTitle,
@@ -102,10 +105,11 @@ class CallKitService {
       await FlutterCallkitIncoming.showCallkitIncoming(params);
     } catch (e) {
       debugPrint('callkit show failed: $e');
-      return;
+      return 'showCallkitIncoming failed: $e';
     }
     // It is on screen now — let the caller's UI say "Ringing…".
     await CallApiService.confirmRinging(push.callId);
+    return null;
   }
 
   /// Takes a still-ringing system call down without it counting as the user

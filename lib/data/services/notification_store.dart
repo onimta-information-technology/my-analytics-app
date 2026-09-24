@@ -23,6 +23,11 @@ class NotificationStore {
   /// says what they really are inside `Details`, in `action` and a `silent`
   /// flag — so the top-level type alone never identifies one.
   static bool isSilentThreadUpdate(RemoteMessage message) {
+    // A call push is sent silent/data-only as well — `Details.silent` is
+    // "true" on every one of them — but it is anything but a no-op: it has a
+    // phone to ring. It is never one of these.
+    if (isCallMessage(message)) return false;
+
     const silentActions = {
       'message_edit',
       'message_edited',

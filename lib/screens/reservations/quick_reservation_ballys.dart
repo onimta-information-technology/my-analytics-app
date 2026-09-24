@@ -104,7 +104,14 @@ const TextStyle kInputTextStyle = TextStyle(
 );
 
 class QuickReservationBallysScreen extends ConsumerStatefulWidget {
-  const QuickReservationBallysScreen({super.key});
+  /// Opened from the + on the Airport Services list: only the Airport Service
+  /// form is shown, and a successful save pops `true` so the list can reload.
+  final bool airportServiceOnly;
+
+  const QuickReservationBallysScreen({
+    super.key,
+    this.airportServiceOnly = false,
+  });
   @override
   ConsumerState<QuickReservationBallysScreen> createState() =>
       _QuickReservationBallysScreenState();
@@ -112,7 +119,9 @@ class QuickReservationBallysScreen extends ConsumerStatefulWidget {
 
 class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationBallysScreen>
     with TickerProviderStateMixin, ConnectivityMixin {
-  _Section _activeSection = _Section.airTicket;
+  late _Section _activeSection = widget.airportServiceOnly
+      ? _Section.airportService
+      : _Section.airTicket;
 
   final _hotelFormKey = GlobalKey<FormState>();
   final _airFormKey = GlobalKey<FormState>();
@@ -3018,7 +3027,10 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
     );
     _handleSaveResult(
       result,
-      onSuccess: _clearAllAirportServiceForm,
+      onSuccess: () {
+        _clearAllAirportServiceForm();
+        if (widget.airportServiceOnly) context.pop(true);
+      },
       successFallback: 'Airport service request saved successfully',
     );
   }
@@ -3213,9 +3225,11 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
             backgroundColor: _accentColor,
             foregroundColor: Colors.white,
             elevation: 0,
-            title: const Text(
-              'Quick Reservation',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            title: Text(
+              widget.airportServiceOnly
+                  ? 'Add Airport Service'
+                  : 'Quick Reservation',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -3242,6 +3256,7 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
             ),
             child: Column(
               children: [
+                if (!widget.airportServiceOnly)
                 Container(
                   color: _accentColor,
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),

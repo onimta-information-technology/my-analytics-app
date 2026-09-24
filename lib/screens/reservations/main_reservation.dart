@@ -457,8 +457,42 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                           ),
                         ),
                       ),
-                      // Keeps the card the same width as the cards above.
-                      const Expanded(child: SizedBox()),
+                      // ── Airport Services (Ballys only) ────────────
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_userLevel == '3') {
+                              _showAccessDeniedDialog();
+                              return;
+                            }
+                            context.go('/reservationMain/airport-service-ballys');
+                          },
+                          child: Card(
+                            color: const Color(0xFF0277BD),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: const [
+                                  Icon(
+                                    Icons.local_airport,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    'Airport Services',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 

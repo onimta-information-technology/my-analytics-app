@@ -20,6 +20,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
   late AnimationController _controller;
   String? _salesCode;
   String? _userLevel;
+  bool _isBellagio = false;
   bool _isLoading = true;
 
   @override
@@ -40,10 +41,12 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
   Future<void> _loadSalesCode() async {
     final salesCode = await StorageUtil.getSalesCode();
     final userLevel = await StorageUtil.getUserLevel();
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
     if (!mounted) return;
     setState(() {
       _salesCode = salesCode;
       _userLevel = userLevel;
+      _isBellagio = apiUrl.contains('bty.world');
       _isLoading = false;
     });
   }
@@ -882,6 +885,55 @@ centerTitle: true,
                     ),
                   ],
                 ),
+                // Duty Manager (Ballys only)
+                if (!_isBellagio)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_isLevelThree) {
+                              _showAccessDeniedDialog();
+                              return;
+                            }
+                            // TODO: navigate to the Duty Manager screen once it exists
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Duty Manager - coming soon'),
+                              ),
+                            );
+                          },
+                          child: const Card(
+                            color: Color.fromARGB(255, 21, 101, 192),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    width: 80,
+                                    height: 80,
+                                    child: Icon(
+                                      Icons.manage_accounts,
+                                      size: 60,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    'On Duty Managers',
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

@@ -580,6 +580,40 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               ],
             ],
 
+            // ✅ Rejection details for turned-down requests
+            if (reservation.hasRejection) ...[
+              if ((reservation.rejectedBy ?? '').isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.person_off_outlined,
+                  'Rejected by: ${reservation.rejectedBy}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.red,
+                ),
+              ],
+              if (reservation.rejectedDate != null) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.event_busy,
+                  'Rejected: ${_formatDateTime(reservation.rejectedDate)}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.red,
+                ),
+              ],
+              if ((reservation.rejectRemark ?? '').isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _iconRow(
+                  Icons.comment_outlined,
+                  'Remark: ${reservation.rejectRemark}',
+                  fontSettings.fontSize + 1,
+                  fontSettings.fontWeight,
+                  Colors.red,
+                ),
+              ],
+            ],
+
             // ✅ Airport pickup progress reported by transport staff
             if (reservation.hasAirportPickup) ...[
               const SizedBox(height: 8),

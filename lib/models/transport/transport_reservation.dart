@@ -18,6 +18,18 @@ class TransportReservation {
   final String? taxiPlateNumber;
   final String? driverName;
   final String? driverPhoneNumber;
+
+  /// `vehicle_assigned` as the API sends it — a flag or the assigned vehicle
+  /// itself; null until transport staff assign one.
+  final String? vehicleAssigned;
+  final String? vehicleAssignedBy;
+  final DateTime? vehicleAssignedDate;
+
+  final bool isRejected;
+  final String? rejectRemark;
+  final String? rejectedBy;
+  final DateTime? rejectedDate;
+
   final List<TransportDetail> details;
 
   /// Passport scans uploaded with the request, served as files from the API
@@ -44,10 +56,36 @@ class TransportReservation {
     this.taxiPlateNumber,
     this.driverName,
     this.driverPhoneNumber,
+    this.vehicleAssigned,
+    this.vehicleAssignedBy,
+    this.vehicleAssignedDate,
+    this.isRejected = false,
+    this.rejectRemark,
+    this.rejectedBy,
+    this.rejectedDate,
     required this.details,
     this.passportFiles = const [],
     this.amendments = const [],
   });
+
+  /// True once transport staff have recorded a vehicle assignment.
+  bool get isVehicleAssigned =>
+      _isTruthy(vehicleAssigned) ||
+      vehicleAssignedBy != null ||
+      vehicleAssignedDate != null;
+
+  /// The assigned vehicle when `vehicle_assigned` carries one rather than a
+  /// plain yes/no flag.
+  String? get vehicleAssignedLabel {
+    final value = vehicleAssigned;
+    if (value == null || _isFlag(value)) return null;
+    return value;
+  }
+
+  /// True when the request was turned down, whether flagged by `is_rejected`
+  /// or by its `reservation_status`.
+  bool get hasRejection =>
+      isRejected || status == TransportStatus.rejected;
 
   /// True when at least one amendment note was raised against this request.
   bool get hasAmendments => amendments.isNotEmpty;
@@ -106,6 +144,13 @@ class TransportReservation {
       taxiPlateNumber: _parseText(json['taxi_plate_number']),
       driverName: _parseText(json['driver_name']),
       driverPhoneNumber: _parseText(json['driver_phone_number']),
+      vehicleAssigned: _parseText(json['vehicle_assigned']),
+      vehicleAssignedBy: _parseText(json['vehicle_assigned_by']),
+      vehicleAssignedDate: _parseDate(json['vehicle_assigned_date']),
+      isRejected: _isTruthy(_parseText(json['is_rejected'])),
+      rejectRemark: _parseText(json['reject_remark']),
+      rejectedBy: _parseText(json['rejected_by']),
+      rejectedDate: _parseDate(json['rejected_date']),
       details: rawDetails is List
           ? rawDetails
               .whereType<Map>()
@@ -415,6 +460,17 @@ String? _parseText(dynamic value) {
   if (value == null) return null;
   final text = value.toString().trim();
   return text.isEmpty ? null : text;
+}
+
+/// Yes/no values the API uses for flags (`true`, `1`, …).
+bool _isFlag(String value) => const {'true', 'false', '1', '0', 'yes', 'no'}
+    .contains(value.toLowerCase());
+
+/// True for a set flag, or for any other non-blank value (e.g. a vehicle name).
+bool _isTruthy(String? value) {
+  if (value == null) return false;
+  final v = value.toLowerCase();
+  return v != 'false' && v != '0' && v != 'no';
 }
 
 DateTime? _parseDate(dynamic value) {

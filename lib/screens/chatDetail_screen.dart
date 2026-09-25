@@ -265,6 +265,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   /// banner. Null when there is none, or when it is the call we are on.
   CallInfo? _activeCall;
 
+  /// Whether a call was up the last time [CallManager.active] changed, so the
+  /// moment it goes away can be told apart from any other change.
+  bool _wasOnCall = false;
+
   // ── @mentions ──
   /// Group roster, used both to suggest names while typing and to highlight
   /// mentions in bubbles. Empty for 1:1 chats.
@@ -411,12 +415,15 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _messageFocusNode.addListener(_onFocusChange);
     BadgeService().clearBadge();
     _checkActiveCall();
+    _wasOnCall = CallManager.instance.current != null;
     CallManager.instance.active.addListener(_checkActiveCall);
+    CallManager.instance.active.addListener(_onCallChanged);
   }
 
   @override
   void dispose() {
     CallManager.instance.active.removeListener(_checkActiveCall);
+    CallManager.instance.active.removeListener(_onCallChanged);
     _readStatusPollTimer?.cancel();
     _highlightTimer?.cancel();
     _foregroundMessageSubscription?.cancel();
@@ -485,6 +492,21 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       // Calling is optional server-side; no banner is the right fallback.
       print('active-call check failed: $e');
     }
+  }
+
+  /// A finished call is logged into the thread by the server, but nothing
+  /// pushes that log to the screen that was sitting under the call. Pull the
+  /// thread when the call goes away, and once more a moment later in case the
+  /// server logged it after the call screen closed.
+  void _onCallChanged() {
+    final onCall = CallManager.instance.current != null;
+    final ended = _wasOnCall && !onCall;
+    _wasOnCall = onCall;
+    if (!ended || !mounted) return;
+    _fetchMessagesFromApi(silent: true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _fetchMessagesFromApi(silent: true);
+    });
   }
 
   void _startCall(CallMedia media) {

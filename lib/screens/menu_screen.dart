@@ -896,12 +896,7 @@ centerTitle: true,
                               _showAccessDeniedDialog();
                               return;
                             }
-                            // TODO: navigate to the Duty Manager screen once it exists
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Duty Manager - coming soon'),
-                              ),
-                            );
+                            context.go('/menu/duty-manager');
                           },
                           child: const Card(
                             color: Color.fromARGB(255, 21, 101, 192),

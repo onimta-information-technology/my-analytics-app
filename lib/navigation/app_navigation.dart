@@ -18,6 +18,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/screens/air_ticket_screen.dart';
 import 'package:ballys_reservation_app/screens/approve_reject_show_screen.dart';
+import 'package:ballys_reservation_app/screens/duty_manager_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/login_screen.dart';
 import 'package:ballys_reservation_app/screens/auth/otpVerification_screen.dart';
 import 'package:ballys_reservation_app/screens/birthdayGiftRequestScreen.dart';
@@ -1541,6 +1542,10 @@ GoRoute(
                         },
                   );
                 },
+              ),
+              GoRoute(
+                path: 'duty-manager',
+                builder: (context, state) => const DutyManagerScreen(),
               ),
               GoRoute(
                 path: 'approve-reject',

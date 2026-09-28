@@ -30,6 +30,11 @@ class TransportReservation {
   final String? rejectedBy;
   final DateTime? rejectedDate;
 
+  /// Note left by the airport representative on this request.
+  final String? airportRepRemark;
+  final String? airportRepRemarkBy;
+  final DateTime? airportRepRemarkDate;
+
   final List<TransportDetail> details;
 
   /// Passport scans uploaded with the request, served as files from the API
@@ -63,6 +68,9 @@ class TransportReservation {
     this.rejectRemark,
     this.rejectedBy,
     this.rejectedDate,
+    this.airportRepRemark,
+    this.airportRepRemarkBy,
+    this.airportRepRemarkDate,
     required this.details,
     this.passportFiles = const [],
     this.amendments = const [],
@@ -86,6 +94,12 @@ class TransportReservation {
   /// or by its `reservation_status`.
   bool get hasRejection =>
       isRejected || status == TransportStatus.rejected;
+
+  /// True once the airport representative has left a remark.
+  bool get hasAirportRepRemark =>
+      airportRepRemark != null ||
+      airportRepRemarkBy != null ||
+      airportRepRemarkDate != null;
 
   /// True when at least one amendment note was raised against this request.
   bool get hasAmendments => amendments.isNotEmpty;
@@ -151,6 +165,9 @@ class TransportReservation {
       rejectRemark: _parseText(json['reject_remark']),
       rejectedBy: _parseText(json['rejected_by']),
       rejectedDate: _parseDate(json['rejected_date']),
+      airportRepRemark: _parseText(json['airport_rep_remark']),
+      airportRepRemarkBy: _parseText(json['airport_rep_remark_by']),
+      airportRepRemarkDate: _parseDate(json['airport_rep_remark_date']),
       details: rawDetails is List
           ? rawDetails
               .whereType<Map>()

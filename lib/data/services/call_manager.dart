@@ -230,7 +230,7 @@ class CallManager {
       phase: CallPhase.connecting,
     );
     _open(c);
-    await _acceptInto(c);
+    await _acceptInto(c, answeringRing: false);
   }
 
   /// The user tapped Accept on the system incoming-call UI. The app may have
@@ -310,7 +310,13 @@ class CallManager {
     if (c == null || lp == null) return;
     c.micEnabled = !c.micEnabled;
     c.update();
-    await lp.setMicrophoneEnabled(c.micEnabled);
+    try {
+      await lp.setMicrophoneEnabled(c.micEnabled);
+    } catch (e) {
+      print('mic toggle failed: $e');
+      c.micEnabled = !c.micEnabled;
+      c.update();
+    }
   }
 
   Future<void> toggleCamera() async {
@@ -323,7 +329,13 @@ class CallManager {
     }
     c.cameraEnabled = !c.cameraEnabled;
     c.update();
-    await lp.setCameraEnabled(c.cameraEnabled);
+    try {
+      await lp.setCameraEnabled(c.cameraEnabled);
+    } catch (e) {
+      print('camera toggle failed: $e');
+      c.cameraEnabled = !c.cameraEnabled;
+      c.update();
+    }
   }
 
   Future<void> toggleSpeaker() async {
@@ -509,13 +521,28 @@ class CallManager {
 
   // ─── Internals ───────────────────────────────────────────────────────────
 
-  Future<void> _acceptInto(CallController c) async {
+  /// [answeringRing] is true when this answers a ring rather than joining a
+  /// call already in progress: if the call can't be taken, the caller is
+  /// told so rather than left ringing until the timeout.
+  Future<void> _acceptInto(CallController c, {bool answeringRing = true}) async {
     if (!await _ensurePermissions(c.media)) {
-      return _finish(c, 'Microphone${c.isVideo ? ' and camera' : ''} permission is required');
+      final id = c.callId;
+      _finish(c, 'Microphone${c.isVideo ? ' and camera' : ''} permission is required');
+      if (answeringRing && id != null) {
+        unawaited(
+          CallApiService.decline(id).catchError((e) => print('call decline failed: $e')),
+        );
+      }
+      return;
     }
     try {
       final info = await CallApiService.join(c.callId!);
-      if (!_isLive(c)) return;
+      if (!_isLive(c)) {
+        // Hung up while the join was in flight — the server now counts us as
+        // joined, and the end sent at hang-up may have landed before it.
+        unawaited(_safeEnd(info.callId, 'cancelled'));
+        return;
+      }
       await _connect(c, info);
     } on CallApiException catch (e) {
       _finish(c, _describe(e));
@@ -647,7 +674,11 @@ class CallManager {
       room?.removeListener(c.update);
       await room?.disconnect();
       await room?.dispose();
-      Hardware.instance.setSpeakerphoneOn(false).ignore();
+      // A new call may have started while this one was tearing down — its
+      // speaker setting is not ours to reset.
+      if (_current == null || identical(_current, c)) {
+        Hardware.instance.setSpeakerphoneOn(false).ignore();
+      }
     }());
 
     Future.delayed(const Duration(milliseconds: 1500), () {

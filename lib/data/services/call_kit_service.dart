@@ -226,7 +226,14 @@ class CallKitService {
 
   static void _watch(String callId) {
     if (_watchers.containsKey(callId)) return;
+    var ticks = 0;
     _watchers[callId] = Timer.periodic(const Duration(seconds: 3), (_) async {
+      // The server rings out a call after 45s. Past that it is gone even if
+      // the status lookups keep failing (e.g. offline), so stop ringing it.
+      if (++ticks > 20) {
+        await dismiss(callId);
+        return;
+      }
       try {
         final snap = await CallApiService.status(callId);
         final me = '${await DeviceId.get()}|${FirebaseApiService.appType}';

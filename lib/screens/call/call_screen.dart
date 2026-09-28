@@ -3,28 +3,78 @@ import 'dart:async';
 import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' show RTCVideoViewObjectFit;
 import 'package:livekit_client/livekit_client.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Full-screen UI for the device's one call: ringing (either direction),
 /// connecting, in-call and the brief "call ended" state before it closes.
 /// Everything it shows comes from [CallController]; every button goes back
 /// through [CallManager].
-class CallScreen extends StatelessWidget {
+class CallScreen extends StatefulWidget {
   static const routeName = '/call';
 
   final CallController controller;
 
   const CallScreen({super.key, required this.controller});
 
+  @override
+  State<CallScreen> createState() => _CallScreenState();
+}
+
+class _CallScreenState extends State<CallScreen> {
   static const _background = Color(0xFF0B141A);
+
+  static const _proximity = MethodChannel('call_proximity');
+
+  /// Whether the proximity sensor is currently allowed to blank the screen.
+  bool _proximityOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Keep the display from timing out for as long as the call screen is up.
+    WakelockPlus.enable();
+    widget.controller.addListener(_syncProximity);
+    _syncProximity();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncProximity);
+    _setProximity(false);
+    WakelockPlus.disable();
+    super.dispose();
+  }
+
+  /// Like WhatsApp: the screen goes dark at the ear only while the call is
+  /// being held there — on the earpiece, with no camera of ours to look at.
+  /// Ringing, speaker and video calls keep the screen live.
+  void _syncProximity() {
+    final c = widget.controller;
+    final atEar = (c.phase == CallPhase.outgoing ||
+            c.phase == CallPhase.connecting ||
+            c.phase == CallPhase.connected) &&
+        !c.speakerOn &&
+        !c.cameraEnabled;
+    _setProximity(atEar);
+  }
+
+  void _setProximity(bool enabled) {
+    if (enabled == _proximityOn) return;
+    _proximityOn = enabled;
+    _proximity.invokeMethod('setEnabled', enabled).catchError((Object e) {
+      print('proximity switch failed: $e');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
+      listenable: widget.controller,
       builder: (context, _) {
-        final c = controller;
+        final c = widget.controller;
         return PopScope(
           // Leaving the screen would strand the call with no way back to its
           // controls; hanging up is how you leave.

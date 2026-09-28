@@ -103,6 +103,18 @@ import flutter_callkit_incoming
         }
       }
 
+      // Blanks the screen while the phone is held to the ear during a call.
+      let proximityChannel = FlutterMethodChannel(name: "call_proximity",
+                                                  binaryMessenger: controller.binaryMessenger)
+      proximityChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+        guard call.method == "setEnabled" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        UIDevice.current.isProximityMonitoringEnabled = (call.arguments as? Bool) ?? false
+        result(nil)
+      }
+
       // Image clipboard MethodChannel
       let clipboardChannel = FlutterMethodChannel(name: "image_clipboard",
                                                   binaryMessenger: controller.binaryMessenger)

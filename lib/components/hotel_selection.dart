@@ -1000,7 +1000,7 @@ DropdownButtonFormField<String>(
           DropdownMenuItem(value: 'By Guest',          child: Text('By Guest')),
           DropdownMenuItem(value: 'By Hamoos ',        child: Text('By Hamoos')),
           DropdownMenuItem(value: 'By Guest & Hamoos', child: Text('By Guest & Hamoos')),
-          DropdownMenuItem(value: 'Pay through Cashier ', child: Text('Pay through Cashier')),
+         // DropdownMenuItem(value: 'Pay through Cashier ', child: Text('Pay through Cashier')),
         ],
   onChanged: (value) {
     setState(() => selectedByPaymnet = value ?? (_isBellagio ? 'N/A' : 'NA'));

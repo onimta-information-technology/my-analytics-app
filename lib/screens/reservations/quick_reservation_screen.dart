@@ -3775,7 +3775,7 @@ class _HotelForm extends StatelessWidget {
                       'By Guest',
                       'By Hamoos',
                       'By Guest & Hamoos',
-                      'Pay through Cashier',
+                      //'Pay through Cashier',
                     ],
               selected: state._h_paymentBy.text.isEmpty
                   ? (state._isBellagio ? 'N/A' : 'NA')

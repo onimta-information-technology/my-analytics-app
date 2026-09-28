@@ -7,6 +7,7 @@ import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -126,6 +127,98 @@ class CallKitService {
     }
   }
 
+  // ─── Ongoing calls (Android) ──────────────────────────────────────────────
+
+  /// Marks a call entry this app raised for a call placed or answered in-app,
+  /// rather than one answered from the system ring.
+  static const _inAppKey = 'inApp';
+
+  static const _keepAlive = MethodChannel('call_keep_alive');
+
+  /// Android: keeps the Flutter engine running while a call is on, so the
+  /// call carries on after the app is swiped out of recents
+  /// (`CallKeepAlive.kt`).
+  static Future<void> setKeepAlive(bool active) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _keepAlive.invokeMethod('setActive', active);
+    } catch (e) {
+      debugPrint('call keep-alive failed: $e');
+    }
+  }
+
+  /// iOS: swiping the app away terminates it, call and all — iOS allows no
+  /// way around that. What it does allow is a few seconds in
+  /// `applicationWillTerminate`, which AppDelegate uses to send this call's
+  /// end request, so the other side isn't left on a dead call.
+  static Future<void> armTerminateHangUp(String callId) async {
+    if (!Platform.isIOS) return;
+    try {
+      await _keepAlive.invokeMethod(
+        'armHangUp',
+        await CallApiService.endRequest(callId),
+      );
+    } catch (e) {
+      debugPrint('call terminate hang-up arm failed: $e');
+    }
+  }
+
+  static Future<void> disarmTerminateHangUp() async {
+    if (!Platform.isIOS) return;
+    try {
+      await _keepAlive.invokeMethod('disarmHangUp');
+    } catch (_) {}
+  }
+
+  /// Android: puts a call placed or answered in-app on the system's
+  /// ongoing-call notification, the way a call answered from the system ring
+  /// already is — a foreground service that keeps the app alive with the
+  /// call in the notification bar and a "Hang up" button, like WhatsApp.
+  /// Hang up there arrives as [CallEventActionCallEnded].
+  static Future<void> showOngoing({
+    required String callId,
+    required String title,
+    required CallMedia media,
+  }) async {
+    if (!Platform.isAndroid) return;
+    if (await _activeSystemIdFor(callId) != null) return;
+    final kind = media == CallMedia.video ? 'video' : 'voice';
+    final params = CallKitParams(
+      id: systemId(callId),
+      nameCaller: title,
+      appName: 'My Analytics',
+      handle: 'Ongoing $kind call',
+      type: media == CallMedia.video ? 1 : 0,
+      extra: {'callId': callId, _inAppKey: true},
+      callingNotification: const NotificationParams(
+        showNotification: true,
+        isShowCallback: true,
+        subtitle: 'Ongoing call',
+        callbackText: 'Hang up',
+      ),
+      android: const AndroidParams(
+        isCustomNotification: true,
+        isShowLogo: false,
+        backgroundColor: '#075E54',
+        actionColor: '#25D366',
+        textColor: '#ffffff',
+        isShowCallID: false,
+      ),
+    );
+    try {
+      await FlutterCallkitIncoming.startCall(params);
+      // The entry is saved by a broadcast receiver a moment later. Until it
+      // shows up, [release] would find nothing to end and leave the
+      // notification behind.
+      for (var i = 0; i < 10; i++) {
+        if (await _activeSystemIdFor(callId) != null) return;
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    } catch (e) {
+      debugPrint('callkit ongoing call failed: $e');
+    }
+  }
+
   /// The accepted call is connected — starts the system call timer.
   static Future<void> markConnected(String callId) async {
     final id = await _activeSystemIdFor(callId);
@@ -165,8 +258,20 @@ class CallKitService {
     try {
       final calls = await FlutterCallkitIncoming.activeCalls();
       for (final call in calls) {
-        final push = IncomingCallPush.fromMap(call.extra ?? const {});
+        final extra = call.extra ?? const {};
+        final push = IncomingCallPush.fromMap(extra);
         if (push == null) continue;
+        if (extra[_inAppKey]?.toString() == 'true') {
+          // The app's own ongoing-call entry. Nothing to join from it: it is
+          // either the call already on, or left over from a process that was
+          // killed mid-call.
+          final current = CallManager.instance.current;
+          if (current?.callId != push.callId ||
+              current?.phase == CallPhase.ended) {
+            await dismiss(push.callId);
+          }
+          continue;
+        }
         if (call.isAccepted) {
           // Already on it — this runs on every resume too.
           final current = CallManager.instance.current;

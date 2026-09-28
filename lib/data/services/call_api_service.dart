@@ -98,6 +98,14 @@ class CallApiService {
     return body['ended'] == true || body['alreadyEnded'] == true;
   }
 
+  /// [end] as a plain request, for native code to send on its own when the
+  /// app is being terminated and Dart no longer gets to run.
+  static Future<Map<String, dynamic>> endRequest(String callId) async => {
+        'url': '${await FirebaseApiService.resolveDomain()}/api/calls/$callId/end',
+        'headers': await FirebaseApiService.getAuthHeaders(),
+        'body': jsonEncode({...await _identity(), 'reason': 'hangup'}),
+      };
+
   static Future<CallSnapshot> status(String callId) async {
     final body = await _send('GET', '/api/calls/$callId');
     return CallSnapshot.fromJson(body);

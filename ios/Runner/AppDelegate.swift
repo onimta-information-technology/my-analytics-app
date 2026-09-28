@@ -73,6 +73,36 @@ import flutter_callkit_incoming
         }
       }
 
+      // Arms the hang-up applicationWillTerminate sends for a call that is
+      // still on when the app is swiped away (CallKitService.armTerminateHangUp).
+      let callChannel = FlutterMethodChannel(name: "call_keep_alive",
+                                             binaryMessenger: controller.binaryMessenger)
+      callChannel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
+        switch call.method {
+        case "armHangUp":
+          guard let args = call.arguments as? [String: Any],
+                let urlString = args["url"] as? String,
+                let url = URL(string: urlString) else {
+            result(FlutterError(code: "BAD_ARGS", message: "No hang-up url", details: nil))
+            return
+          }
+          var request = URLRequest(url: url)
+          request.httpMethod = "POST"
+          (args["headers"] as? [String: String])?.forEach {
+            request.setValue($0.value, forHTTPHeaderField: $0.key)
+          }
+          request.httpBody = (args["body"] as? String)?.data(using: .utf8)
+          request.timeoutInterval = 3
+          self?.pendingHangUp = request
+          result(nil)
+        case "disarmHangUp":
+          self?.pendingHangUp = nil
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+
       // Image clipboard MethodChannel
       let clipboardChannel = FlutterMethodChannel(name: "image_clipboard",
                                                   binaryMessenger: controller.binaryMessenger)
@@ -136,6 +166,24 @@ import flutter_callkit_incoming
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// The end request for the call on right now, sent if the app is
+  /// terminated before Dart gets to hang up.
+  private var pendingHangUp: URLRequest?
+
+  /// Swiping the app away during a call terminates it — iOS offers no way to
+  /// keep the call running. The end request goes out here instead, waiting
+  /// for it briefly (iOS allows ~5s in total), so the other side sees the
+  /// call end rather than staying on a dead one.
+  override func applicationWillTerminate(_ application: UIApplication) {
+    if let request = pendingHangUp {
+      pendingHangUp = nil
+      let done = DispatchSemaphore(value: 0)
+      URLSession.shared.dataTask(with: request) { _, _, _ in done.signal() }.resume()
+      _ = done.wait(timeout: .now() + 3)
+    }
+    super.applicationWillTerminate(application)
   }
 
   /// Held for the app's lifetime — a released registry stops delivering VoIP

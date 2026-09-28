@@ -129,7 +129,14 @@ class CallManager {
   Timer? _screenWatchdog;
   Timer? _pollTimer;
   Timer? _timeoutTimer;
+  Timer? _lostTimer;
   bool _ringing = false;
+
+  /// How long the other side of a 1:1 call may stay unreachable before the
+  /// call is given up on. An iPhone swiped out of the app switcher dies
+  /// without hanging up, and LiveKit can keep it in the room long after — its
+  /// connection quality going `lost` is the first sign.
+  static const _lostTimeout = Duration(seconds: 15);
 
   /// Plays the ringback tone to whoever placed the call. Null when nothing is
   /// ringing out.
@@ -195,6 +202,15 @@ class CallManager {
       return;
     }
     c.callId = info.callId;
+    await CallKitService.showOngoing(
+      callId: info.callId,
+      title: c.title,
+      media: c.media,
+    );
+    if (!_isLive(c)) {
+      unawaited(CallKitService.release(info.callId));
+      return;
+    }
     // "Calling…" from here. The ringback tone waits for the callee's device
     // to confirm it is ringing (msg_type 26) — see [_markRemoteRinging].
     await _connect(c, info);
@@ -267,7 +283,8 @@ class CallManager {
     final c = _current;
     if (c == null || c.callId != callId || c.phase == CallPhase.ended) return;
     if (c.phase == CallPhase.incoming) return decline();
-    await _hangUp(c, reason: 'hangup');
+    final nobodyAnswered = c.phase == CallPhase.outgoing;
+    await _hangUp(c, reason: nobodyAnswered ? 'cancelled' : 'hangup');
   }
 
   // ─── User actions from the call screen ───────────────────────────────────
@@ -535,6 +552,19 @@ class CallManager {
       }
       return;
     }
+    // Answered from the system ring, the call already has its ongoing-call
+    // notification.
+    if (!c.viaSystem) {
+      await CallKitService.showOngoing(
+        callId: c.callId!,
+        title: c.title,
+        media: c.media,
+      );
+      if (!_isLive(c)) {
+        unawaited(CallKitService.release(c.callId!));
+        return;
+      }
+    }
     try {
       final info = await CallApiService.join(c.callId!);
       if (!_isLive(c)) {
@@ -550,6 +580,7 @@ class CallManager {
   }
 
   Future<void> _connect(CallController c, CallJoinInfo info) async {
+    unawaited(CallKitService.armTerminateHangUp(info.callId));
     final room = Room(
       roomOptions: const RoomOptions(
         adaptiveStream: true,
@@ -594,6 +625,21 @@ class CallManager {
           c.update();
         }
       })
+      ..on<ParticipantConnectionQualityUpdatedEvent>((e) {
+        if (c.isGroupCall || e.participant is! RemoteParticipant) return;
+        if (e.connectionQuality != ConnectionQuality.lost) {
+          _lostTimer?.cancel();
+          _lostTimer = null;
+          return;
+        }
+        _lostTimer ??= Timer(_lostTimeout, () {
+          _lostTimer = null;
+          if (_isLive(c) && c.phase == CallPhase.connected) {
+            print('call: other side unreachable, ending');
+            _hangUp(c, reason: 'disconnected', message: 'Call ended');
+          }
+        });
+      })
       ..on<RoomDisconnectedEvent>((e) {
         // Our own hang-up disconnects too, by which point we are ended.
         if (_isLive(c)) {
@@ -620,7 +666,10 @@ class CallManager {
         c.phase = CallPhase.connected;
         c.connectedAt = DateTime.now();
       }
-      if (c.viaSystem) unawaited(CallKitService.markConnected(info.callId));
+      // Starts the timer on the system entry: the system ring's, or on
+      // Android the ongoing-call notification [CallKitService.showOngoing]
+      // raised. A no-op when there is none.
+      unawaited(CallKitService.markConnected(info.callId));
       c.update();
       unawaited(_refreshNames(c));
     } catch (e) {
@@ -660,10 +709,11 @@ class CallManager {
     _stopRingback();
     _pollTimer?.cancel();
     _timeoutTimer?.cancel();
+    _lostTimer?.cancel();
+    _lostTimer = null;
     final callId = c.callId;
-    if (c.viaSystem && callId != null) {
-      unawaited(CallKitService.release(callId));
-    }
+    if (callId != null) unawaited(CallKitService.release(callId));
+    unawaited(CallKitService.disarmTerminateHangUp());
 
     final listener = _roomListener;
     final room = c.room;
@@ -682,7 +732,10 @@ class CallManager {
     }());
 
     Future.delayed(const Duration(milliseconds: 1500), () {
-      if (identical(_current, c)) _current = null;
+      if (identical(_current, c)) {
+        _current = null;
+        unawaited(CallKitService.setKeepAlive(false));
+      }
       final route = c._route;
       c._route = null;
       if (route != null && route.isActive) {
@@ -693,6 +746,7 @@ class CallManager {
 
   void _open(CallController c) {
     _current = c;
+    unawaited(CallKitService.setKeepAlive(true));
     _showScreen(c);
     // A call answered from the system UI starts the app: for a moment there
     // is no navigator to push onto, and the routing that follows the splash

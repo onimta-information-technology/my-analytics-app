@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -15,8 +16,26 @@ class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "developer_mode"
     private val CLIPBOARD_CHANNEL = "image_clipboard"
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        CallKeepAlive.onActivityCreated()
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (!isChangingConfigurations) CallKeepAlive.onActivityDestroyed()
+    }
+
+    /// The engine is cached rather than owned by this Activity, so a call
+    /// survives the app being swiped away — see [CallKeepAlive].
+    override fun getCachedEngineId(): String {
+        CallKeepAlive.obtainEngine(this, intent)
+        return CallKeepAlive.ENGINE_ID
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        CallKeepAlive.register(flutterEngine)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "isDeveloperMode") {

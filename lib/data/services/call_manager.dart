@@ -89,6 +89,13 @@ class CallController extends ChangeNotifier {
   /// server's participant list. Covers anyone whose token carried no name.
   final Map<String, String> names = {};
 
+  /// LiveKit identity → profile photo URL, looked up once per participant.
+  /// The empty string marks a lookup that found no photo.
+  final Map<String, String> avatars = {};
+
+  /// Our own profile photo, for the "You" tile.
+  String? myAvatarUrl;
+
   CallController({
     required this.callId,
     required this.chatId,
@@ -109,6 +116,11 @@ class CallController extends ChangeNotifier {
   String nameOf(Participant p) {
     if (p.name.isNotEmpty) return p.name;
     return names[p.identity] ?? (isGroupCall ? 'Participant' : title);
+  }
+
+  String? avatarOf(Participant p) {
+    final url = avatars[p.identity];
+    return (url == null || url.isEmpty) ? null : url;
   }
 
   /// The screen showing this call, removed once it has ended.
@@ -936,7 +948,41 @@ class CallManager {
         if (name.isNotEmpty) c.names[p.identity] = name;
       }
       if (_isLive(c)) c.update();
+      if (c.isGroupCall) await _refreshAvatars(c, snap.participants);
     } catch (_) {}
+  }
+
+  /// Profile photos for the group call's tiles. Each participant is looked
+  /// up once; a failed lookup is retried on the next refresh.
+  Future<void> _refreshAvatars(
+    CallController c,
+    List<CallParticipantInfo> participants,
+  ) async {
+    final me = await _myIdentity();
+    final lookups = <Future<void>>[
+      for (final p in participants)
+        if (p.userUuid.isNotEmpty && !c.avatars.containsKey(p.identity))
+          FirebaseApiService.fetchUserProfile(userUuid: p.userUuid).then((
+            profile,
+          ) {
+            if (profile == null) return;
+            final url = profile['profileImageUrl']?.toString() ?? '';
+            c.avatars[p.identity] = url;
+            if (p.identity == me && url.isNotEmpty) c.myAvatarUrl = url;
+          }),
+      if (c.myAvatarUrl == null &&
+          !c.avatars.containsKey(me) &&
+          !participants.any((p) => p.identity == me))
+        FirebaseApiService.fetchUserProfile().then((profile) {
+          if (profile == null) return;
+          final url = profile['profileImageUrl']?.toString() ?? '';
+          c.avatars[me] = url;
+          if (url.isNotEmpty) c.myAvatarUrl = url;
+        }),
+    ];
+    if (lookups.isEmpty) return;
+    await Future.wait(lookups);
+    if (_isLive(c)) c.update();
   }
 
   Future<bool> _ensurePermissions(CallMedia media) async {

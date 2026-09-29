@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/data/services/call_audio_router.dart';
@@ -118,6 +119,11 @@ bool _showsVideoStage(CallController c) {
       c.remoteParticipants.any((p) => _remoteVideo(p) != null);
 }
 
+/// A live group call with no cameras on: everyone gets a tile, WhatsApp
+/// style, rather than the single big avatar.
+bool _showsGroupAudioStage(CallController c) =>
+    c.isGroupCall && c.phase == CallPhase.connected && !_showsVideoStage(c);
+
 VideoTrack? _remoteVideo(RemoteParticipant p) => p.videoTrackPublications
     .where((pub) => pub.subscribed && !pub.muted)
     .map((pub) => pub.track)
@@ -163,6 +169,7 @@ class _Stage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    if (_showsGroupAudioStage(c)) return _GroupAudioStage(controller: c);
     if (!_showsVideoStage(c)) return _AvatarStage(controller: c);
 
     final remotes = c.remoteParticipants;
@@ -447,6 +454,356 @@ class _AvatarStage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Group voice call: the call's name and timer on top, then one tile per
+/// person — photo, name, a coloured border and wave while they talk, and a
+/// mic-off badge when they are muted.
+class _GroupAudioStage extends StatelessWidget {
+  final CallController controller;
+  const _GroupAudioStage({required this.controller});
+
+  /// Per-person colours, the way a group chat colours sender names.
+  static const _palette = [
+    Color(0xFF53BDEB),
+    Color(0xFFFFD279),
+    Color(0xFF25D366),
+    Color(0xFFA791FF),
+    Color(0xFFFC9775),
+    Color(0xFF42C7B8),
+    Color(0xFF8EBFFF),
+  ];
+  static const _youColor = Color(0xFFFF72A1);
+
+  static Color colorOf(String identity) {
+    final hash = identity.codeUnits.fold<int>(
+      0,
+      (h, u) => (h * 31 + u) & 0x7fffffff,
+    );
+    return _palette[hash % _palette.length];
+  }
+
+  static List<_GroupMember> membersOf(CallController c) {
+    final local = c.room?.localParticipant;
+    return [
+      for (final p in c.remoteParticipants)
+        _GroupMember(
+          name: c.nameOf(p),
+          avatarUrl: c.avatarOf(p),
+          color: colorOf(p.identity),
+          muted: p.isMuted,
+          speaking: p.isSpeaking,
+        ),
+      _GroupMember(
+        name: 'You',
+        avatarUrl: c.myAvatarUrl,
+        color: _youColor,
+        muted: !c.micEnabled,
+        speaking: c.micEnabled && (local?.isSpeaking ?? false),
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final members = membersOf(c);
+    return SafeArea(
+      child: Column(
+        children: [
+          _GroupHeader(controller: c),
+          Expanded(
+            child: Padding(
+              // Room at the bottom for the controls bar floating over it.
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 112),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  const gap = 10.0;
+                  final columns = members.length <= 2 ? 1 : 2;
+                  final rows = (members.length / columns).ceil();
+                  // Fill the screen, but past a handful of people scroll
+                  // rather than squash the tiles.
+                  final height = ((box.maxHeight - gap * (rows - 1)) / rows)
+                      .clamp(150.0, double.infinity);
+                  final width = (box.maxWidth - gap * (columns - 1)) / columns;
+                  return SingleChildScrollView(
+                    child: Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final m in members)
+                          SizedBox(
+                            width: width,
+                            height: height,
+                            child: _GroupTile(member: m),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupMember {
+  final String name;
+  final String? avatarUrl;
+  final Color color;
+  final bool muted;
+  final bool speaking;
+
+  const _GroupMember({
+    required this.name,
+    required this.avatarUrl,
+    required this.color,
+    required this.muted,
+    required this.speaking,
+  });
+}
+
+class _GroupHeader extends StatelessWidget {
+  final CallController controller;
+  const _GroupHeader({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 12, 4),
+      child: Row(
+        children: [
+          // Balances the participants button so the title stays centred.
+          const SizedBox(width: 56),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  c.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                _Duration(since: c.connectedAt),
+              ],
+            ),
+          ),
+          Material(
+            color: Colors.white12,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _showParticipants(context),
+              child: const SizedBox(
+                width: 56,
+                height: 56,
+                child: Icon(Icons.people, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showParticipants(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1F2C34),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          final members = _GroupAudioStage.membersOf(controller);
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Text(
+                    '${members.length} in call',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final m in members)
+                        ListTile(
+                          leading: _Avatar(
+                            name: m.name,
+                            url: m.avatarUrl,
+                            radius: 20,
+                          ),
+                          title: Text(
+                            m.name,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          trailing: Icon(
+                            m.muted ? Icons.mic_off : Icons.mic,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GroupTile extends StatelessWidget {
+  final _GroupMember member;
+  const _GroupTile({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    final m = member;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111B21),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: m.speaking ? m.color : Colors.transparent,
+          width: 3,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Avatar(name: m.name, url: m.avatarUrl, radius: 46),
+                  SizedBox(
+                    height: 22,
+                    child: m.speaking
+                        ? _SpeakingWave(color: m.color)
+                        : const SizedBox.shrink(),
+                  ),
+                  Text(
+                    m.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: m.color,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (m.muted)
+            Positioned(
+              top: 10,
+              left: 10,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.white12,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.mic_off,
+                  size: 18,
+                  color: Colors.white70,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The little moving bars under a speaker's photo.
+class _SpeakingWave extends StatefulWidget {
+  final Color color;
+  const _SpeakingWave({required this.color});
+
+  @override
+  State<_SpeakingWave> createState() => _SpeakingWaveState();
+}
+
+class _SpeakingWaveState extends State<_SpeakingWave>
+    with SingleTickerProviderStateMixin {
+  static const _bars = 7;
+
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < _bars; i++)
+              Container(
+                width: 3,
+                // Each bar rides the same wave a little out of phase, taller
+                // towards the middle.
+                height:
+                    4 +
+                    12 *
+                        (1 - (i - _bars ~/ 2).abs() / _bars) *
+                        (0.5 +
+                            0.5 *
+                                math.sin(
+                                  2 * math.pi * (_anim.value + i / _bars),
+                                )),
+                margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

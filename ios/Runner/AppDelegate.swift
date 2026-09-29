@@ -115,6 +115,28 @@ import flutter_callkit_incoming
         result(nil)
       }
 
+      // The call's audio outputs — iPhone, Speaker, AirPods / Bluetooth,
+      // headphones — for the in-call output picker (CallAudioRouter).
+      let audioRouteChannel = FlutterMethodChannel(name: "call_audio_route",
+                                                   binaryMessenger: controller.binaryMessenger)
+      audioRouteChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+        switch call.method {
+        case "getRoutes":
+          result(AppDelegate.callAudioRoutes())
+        case "setRoute":
+          let args = call.arguments as? [String: Any]
+          do {
+            try AppDelegate.selectCallAudioRoute(type: args?["type"] as? String ?? "earpiece",
+                                                 id: args?["id"] as? String)
+            result(true)
+          } catch {
+            result(FlutterError(code: "ROUTE_FAILED", message: error.localizedDescription, details: nil))
+          }
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+
       // Image clipboard MethodChannel
       let clipboardChannel = FlutterMethodChannel(name: "image_clipboard",
                                                   binaryMessenger: controller.binaryMessenger)
@@ -183,6 +205,75 @@ import flutter_callkit_incoming
   /// The end request for the call on right now, sent if the app is
   /// terminated before Dart gets to hang up.
   private var pendingHangUp: URLRequest?
+
+  private static func audioRoute(_ type: String, id: String? = nil, name: String? = nil) -> [String: Any] {
+    ["type": type, "id": id ?? NSNull(), "name": name ?? NSNull()]
+  }
+
+  /// `{current, available}`, each route `{type, id, name}` — the same shape
+  /// the Android plugin reports. Bluetooth and wired routes are the session's
+  /// selectable inputs; picking one moves the output to that device too.
+  static func callAudioRoutes() -> [String: Any] {
+    let session = AVAudioSession.sharedInstance()
+    var available: [[String: Any]] = []
+    if UIDevice.current.userInterfaceIdiom == .phone {
+      available.append(audioRoute("earpiece"))
+    }
+    available.append(audioRoute("speaker"))
+    for port in session.availableInputs ?? [] {
+      switch port.portType {
+      case .bluetoothHFP, .bluetoothLE:
+        available.append(audioRoute("bluetooth", id: port.uid, name: port.portName))
+      case .headsetMic:
+        available.append(audioRoute("wired", id: port.uid, name: port.portName))
+      default:
+        break
+      }
+    }
+
+    var current: [String: Any]?
+    if let output = session.currentRoute.outputs.first {
+      switch output.portType {
+      case .builtInSpeaker:
+        current = audioRoute("speaker")
+      case .builtInReceiver:
+        current = audioRoute("earpiece")
+      case .bluetoothHFP, .bluetoothA2DP, .bluetoothLE, .carAudio:
+        current = audioRoute("bluetooth", id: output.uid, name: output.portName)
+      case .headphones:
+        current = audioRoute("wired", id: output.uid, name: output.portName)
+      default:
+        break
+      }
+    }
+    // A listen-only (A2DP) headset can't be picked as an input, but it is
+    // still where the call is playing.
+    if let current = current, current["type"] as? String == "bluetooth",
+       !available.contains(where: { $0["name"] as? String == current["name"] as? String }) {
+      available.append(current)
+    }
+    return ["current": current ?? NSNull(), "available": available]
+  }
+
+  static func selectCallAudioRoute(type: String, id: String?) throws {
+    let session = AVAudioSession.sharedInstance()
+    let inputs = session.availableInputs ?? []
+    switch type {
+    case "speaker":
+      try session.overrideOutputAudioPort(.speaker)
+    case "bluetooth", "wired":
+      try session.overrideOutputAudioPort(.none)
+      let kinds: [AVAudioSession.Port] =
+        type == "bluetooth" ? [.bluetoothHFP, .bluetoothLE] : [.headsetMic]
+      let port = inputs.first { $0.uid == id } ?? inputs.first { kinds.contains($0.portType) }
+      try session.setPreferredInput(port)
+    default:
+      // The built-in mic takes the output back to the receiver even while a
+      // headset is connected.
+      try session.overrideOutputAudioPort(.none)
+      try session.setPreferredInput(inputs.first { $0.portType == .builtInMic })
+    }
+  }
 
   /// Swiping the app away during a call terminates it — iOS offers no way to
   /// keep the call running. The end request goes out here instead, waiting

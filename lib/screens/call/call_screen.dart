@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ballys_reservation_app/core/chat_colors.dart';
+import 'package:ballys_reservation_app/data/services/call_audio_router.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,13 +51,13 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Like WhatsApp: the screen goes dark at the ear only while the call is
   /// being held there — on the earpiece, with no camera of ours to look at.
-  /// Ringing, speaker and video calls keep the screen live.
+  /// Ringing, speaker, headset and video calls keep the screen live.
   void _syncProximity() {
     final c = widget.controller;
     final atEar = (c.phase == CallPhase.outgoing ||
             c.phase == CallPhase.connecting ||
             c.phase == CallPhase.connected) &&
-        !c.speakerOn &&
+        c.onEarpiece &&
         !c.cameraEnabled;
     _setProximity(atEar);
   }
@@ -732,12 +733,7 @@ class _Controls extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _ToggleButton(
-            icon: c.speakerOn ? Icons.volume_up : Icons.volume_down,
-            active: c.speakerOn,
-            tooltip: 'Speaker',
-            onTap: live ? manager.toggleSpeaker : null,
-          ),
+          _AudioButton(controller: c, live: live),
           if (c.isVideo) ...[
             _ToggleButton(
               icon: c.cameraEnabled ? Icons.videocam : Icons.videocam_off,
@@ -765,6 +761,85 @@ class _Controls extends StatelessWidget {
             onTap: ended ? null : manager.hangUp,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Speaker on/off while the phone is all there is. With a Bluetooth or
+/// wired headset connected it shows where the audio is going and opens a
+/// list of outputs — Phone, Speaker, AirPods… — the way WhatsApp does.
+class _AudioButton extends StatelessWidget {
+  final CallController controller;
+  final bool live;
+  const _AudioButton({required this.controller, required this.live});
+
+  static IconData iconFor(AudioRouteType? type) => switch (type) {
+        AudioRouteType.speaker => Icons.volume_up,
+        AudioRouteType.bluetooth => Icons.bluetooth_audio,
+        AudioRouteType.wired => Icons.headset,
+        AudioRouteType.earpiece || null => Icons.phone_in_talk,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final routes = c.audioRoutes;
+    if (routes == null || !routes.hasHeadset) {
+      return _ToggleButton(
+        icon: c.speakerOn ? Icons.volume_up : Icons.volume_down,
+        active: c.speakerOn,
+        tooltip: 'Speaker',
+        onTap: live ? CallManager.instance.toggleSpeaker : null,
+      );
+    }
+    final type = c.audioRoute?.type;
+    return _ToggleButton(
+      icon: iconFor(type),
+      active: type != null && type != AudioRouteType.earpiece,
+      tooltip: 'Audio',
+      onTap: live ? () => _pick(context) : null,
+    );
+  }
+
+  void _pick(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1F2C34),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          final routes = controller.audioRoutes;
+          final current = controller.audioRoute;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final route in routes?.available ?? const <AudioRoute>[])
+                    ListTile(
+                      leading: Icon(iconFor(route.type), color: Colors.white),
+                      title: Text(
+                        route.label,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      trailing: route.sameAs(current)
+                          ? const Icon(Icons.check, color: Color(0xFF25D366))
+                          : null,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        CallManager.instance.selectAudioRoute(route);
+                      },
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

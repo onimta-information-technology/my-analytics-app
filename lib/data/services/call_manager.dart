@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:audio_session/audio_session.dart'
     show AndroidAudioAttributes, AndroidAudioContentType, AndroidAudioUsage;
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_audio_router.dart';
 import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/main.dart' show navigatorKey;
@@ -67,6 +68,21 @@ class CallController extends ChangeNotifier {
   bool micEnabled = true;
   late bool cameraEnabled = media == CallMedia.video;
   late bool speakerOn = media == CallMedia.video;
+
+  /// The call's audio outputs and the one it is on, kept current while the
+  /// call is live. Null until the platform reports them.
+  AudioRoutes? audioRoutes;
+
+  /// The output picked from the speaker button / picker. Until there is one
+  /// the call follows [speakerOn], with a connected headset winning.
+  AudioRoute? chosenRoute;
+
+  AudioRoute? get audioRoute => audioRoutes?.current;
+
+  /// Audio is at the ear: not the loudspeaker, nor a headset.
+  bool get onEarpiece =>
+      !speakerOn &&
+      (audioRoute == null || audioRoute!.type == AudioRouteType.earpiece);
   CameraPosition cameraPosition = CameraPosition.front;
 
   /// LiveKit identity (`<userUuid>|<appType>`) → display name, from the
@@ -131,6 +147,11 @@ class CallManager {
   Timer? _pollTimer;
   Timer? _timeoutTimer;
   Timer? _lostTimer;
+  Timer? _routeTimer;
+
+  /// Right after a switch the platform still reports the old route for a
+  /// moment; polls until then are ignored so the button doesn't flick back.
+  DateTime _routeSettleAt = DateTime(0);
   bool _ringing = false;
 
   /// How long the other side of a 1:1 call may stay unreachable before the
@@ -356,26 +377,89 @@ class CallManager {
     }
   }
 
+  /// Speaker on/off — for when no headset is connected; with one, the call
+  /// screen offers the full list through [selectAudioRoute] instead.
   Future<void> toggleSpeaker() async {
     final c = _current;
     if (c == null) return;
-    c.speakerOn = !c.speakerOn;
-    c.update();
-    await _applySpeaker(c);
+    await selectAudioRoute(AudioRoute(
+      c.speakerOn ? AudioRouteType.earpiece : AudioRouteType.speaker,
+    ));
   }
 
-  /// Routes call audio to the loudspeaker or the earpiece per
-  /// [CallController.speakerOn]. LiveKit ignores the request (it only logs)
-  /// until a local audio track is published, and Android can move audio back
-  /// to the earpiece once remote audio starts — so this is re-run after
-  /// connecting and whenever a remote audio track arrives.
+  /// Plays the call through [route]: the earpiece, the loudspeaker, or a
+  /// Bluetooth / wired headset.
+  Future<void> selectAudioRoute(AudioRoute route) async {
+    final c = _current;
+    if (c == null) return;
+    c.chosenRoute = route;
+    c.speakerOn = route.type == AudioRouteType.speaker;
+    final routes = c.audioRoutes;
+    if (routes != null) c.audioRoutes = AudioRoutes(route, routes.available);
+    _routeSettleAt = DateTime.now().add(const Duration(seconds: 2));
+    c.update();
+    if (!_isLive(c) || c.room == null) return;
+    await CallAudioRouter.select(route);
+  }
+
+  /// Puts call audio where it belongs: the output the user picked, or else a
+  /// connected Bluetooth headset (AirPods etc.), a wired one, and failing
+  /// those the loudspeaker or earpiece per [CallController.speakerOn].
+  ///
+  /// LiveKit ignores a speaker switch (it only logs) until a local audio
+  /// track is published, and Android can move audio back to the earpiece
+  /// once remote audio starts — so this is re-run after connecting and
+  /// whenever a remote audio track arrives.
   Future<void> _applySpeaker(CallController c) async {
     if (!_isLive(c) || c.room == null) return;
-    try {
-      await Hardware.instance.setSpeakerphoneOn(c.speakerOn);
-    } catch (e) {
-      print('speaker switch failed: $e');
+    var route = c.chosenRoute;
+    if (route == null) {
+      final routes = await CallAudioRouter.fetch();
+      if (!_isLive(c)) return;
+      if (routes != null) c.audioRoutes = routes;
+      final available = routes?.available ?? const <AudioRoute>[];
+      route = available
+              .where((r) => r.type == AudioRouteType.bluetooth)
+              .firstOrNull ??
+          available.where((r) => r.type == AudioRouteType.wired).firstOrNull ??
+          AudioRoute(
+            c.speakerOn ? AudioRouteType.speaker : AudioRouteType.earpiece,
+          );
+      c.speakerOn = route.type == AudioRouteType.speaker;
+      c.update();
     }
+    await CallAudioRouter.select(route);
+  }
+
+  /// Keeps [CallController.audioRoutes] in step with the device while the
+  /// call is on — headsets come and go, and the system can move the audio
+  /// itself (AirPods connecting mid-call take it over, like on any call).
+  void _watchAudioRoutes(CallController c) {
+    _routeTimer?.cancel();
+    _routeTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (!_isLive(c) || c.room == null) return;
+      final routes = await CallAudioRouter.fetch();
+      if (routes == null || !_isLive(c)) return;
+      if (DateTime.now().isBefore(_routeSettleAt)) return;
+      final before = c.audioRoutes;
+      final chosen = c.chosenRoute;
+      if (chosen != null) {
+        final stillThere = routes.available.any(chosen.sameAs);
+        // A headset that just connected takes the audio over; the pick made
+        // before it no longer says where audio should go.
+        final newHeadset = routes.available.any((r) =>
+            r.type == AudioRouteType.bluetooth &&
+            !(before?.available.any(r.sameAs) ?? true));
+        if (!stillThere || newHeadset) c.chosenRoute = null;
+      }
+      final current = routes.current;
+      final speakerOn =
+          current == null ? c.speakerOn : current.type == AudioRouteType.speaker;
+      if (routes == before && speakerOn == c.speakerOn) return;
+      c.audioRoutes = routes;
+      c.speakerOn = speakerOn;
+      c.update();
+    });
   }
 
   Future<void> switchCamera() async {
@@ -658,6 +742,7 @@ class CallManager {
         await room.localParticipant?.setCameraEnabled(true);
       }
       await _applySpeaker(c);
+      _watchAudioRoutes(c);
       // Joining a call someone is already in: no ParticipantConnectedEvent
       // fires for them, so the call counts as connected straight away.
       if (c.phase == CallPhase.connecting ||
@@ -712,6 +797,8 @@ class CallManager {
     _timeoutTimer?.cancel();
     _lostTimer?.cancel();
     _lostTimer = null;
+    _routeTimer?.cancel();
+    _routeTimer = null;
     final callId = c.callId;
     if (callId != null) unawaited(CallKitService.release(callId));
     unawaited(CallKitService.disarmTerminateHangUp());
@@ -858,6 +945,9 @@ class CallManager {
       if (media == CallMedia.video) Permission.camera,
     ];
     final results = await perms.request();
+    // Android 12+: without it WebRTC can't see a Bluetooth headset and routes
+    // the call past AirPods & co. Not required to make the call.
+    if (Platform.isAndroid) await Permission.bluetoothConnect.request();
     return results.values.every((s) => s.isGranted || s.isLimited);
   }
 

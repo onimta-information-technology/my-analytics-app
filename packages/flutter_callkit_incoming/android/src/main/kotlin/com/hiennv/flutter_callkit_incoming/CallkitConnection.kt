@@ -1,5 +1,6 @@
 package com.hiennv.flutter_callkit_incoming
 
+import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -7,6 +8,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.OutcomeReceiver
+import android.telecom.CallAudioState
+import android.telecom.CallEndpoint
+import android.telecom.CallEndpointException
 import android.telecom.Connection
 import android.telecom.DisconnectCause
 import android.telecom.TelecomManager
@@ -68,6 +73,13 @@ class CallkitConnection(
         }
 
         fun activeCount(): Int = activeConnections.size
+
+        /** The call whose audio is on: the active one, else any still live. */
+        fun current(): CallkitConnection? {
+            val connections = activeConnections.values
+            return connections.firstOrNull { it.state == STATE_ACTIVE }
+                ?: connections.firstOrNull()
+        }
     }
 
     init {
@@ -161,6 +173,191 @@ class CallkitConnection(
             CallkitConstants.ACTION_CALL_TOGGLE_HOLD,
             mapOf("id" to callId, "isOnHold" to false),
         )
+    }
+
+    // -------------------------------------------------------------------------
+    // Audio routing
+    //
+    // A self-managed call's audio route belongs to Telecom: it sets the audio
+    // mode and communication device itself, and puts them back whenever an app
+    // changes them through AudioManager — which is why the WebRTC speaker
+    // switch had no effect on Android. The route has to be asked of Telecom
+    // through the Connection instead.
+    // -------------------------------------------------------------------------
+
+    /** Android 14+: the endpoints Telecom offers, for [requestCallEndpointChange]. */
+    @Volatile
+    private var availableEndpoints: List<CallEndpoint> = emptyList()
+
+    /** Android 14+: the endpoint the call is playing through now. */
+    @Volatile
+    private var currentEndpoint: CallEndpoint? = null
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    override fun onAvailableCallEndpointsChanged(endpoints: MutableList<CallEndpoint>) {
+        super.onAvailableCallEndpointsChanged(endpoints)
+        availableEndpoints = endpoints.toList()
+        Log.d(TAG, "endpoints id=$callId ${endpoints.map { it.endpointType }}")
+    }
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    override fun onCallEndpointChanged(endpoint: CallEndpoint) {
+        super.onCallEndpointChanged(endpoint)
+        currentEndpoint = endpoint
+        Log.d(TAG, "endpoint id=$callId now ${endpoint.endpointType}")
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onCallAudioStateChanged(state: CallAudioState?) {
+        @Suppress("DEPRECATION")
+        super.onCallAudioStateChanged(state)
+        Log.d(TAG, "audio id=$callId route=${state?.route} supported=${state?.supportedRouteMask}")
+    }
+
+    private fun useEndpoints(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            availableEndpoints.isNotEmpty()
+
+    /**
+     * The outputs this call can play through and the one it is on, as
+     * `{current: route?, available: [route]}` where a route is
+     * `{type: earpiece|speaker|bluetooth|wired, id: String?, name: String}`.
+     * Bluetooth routes carry the device's own name ("AirPods Pro") and an id
+     * for [selectRoute]. Null until Telecom has reported any audio state.
+     */
+    fun audioRoutes(): Map<String, Any?>? {
+        if (useEndpoints()) {
+            return mapOf(
+                "current" to currentEndpoint?.let(::endpointRoute),
+                "available" to availableEndpoints.mapNotNull(::endpointRoute),
+            )
+        }
+        @Suppress("DEPRECATION")
+        val state = callAudioState ?: return null
+        val available = mutableListOf<Map<String, Any?>>()
+        val supported = state.supportedRouteMask
+        if (supported and CallAudioState.ROUTE_EARPIECE != 0) {
+            available += route("earpiece")
+        }
+        if (supported and CallAudioState.ROUTE_WIRED_HEADSET != 0) {
+            available += route("wired")
+        }
+        if (supported and CallAudioState.ROUTE_SPEAKER != 0) {
+            available += route("speaker")
+        }
+        if (supported and CallAudioState.ROUTE_BLUETOOTH != 0) {
+            val devices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                state.supportedBluetoothDevices.toList()
+            } else {
+                emptyList()
+            }
+            if (devices.isEmpty()) {
+                available += route("bluetooth")
+            } else {
+                devices.forEach { available += route("bluetooth", it.address, deviceName(it)) }
+            }
+        }
+        val current = when (state.route) {
+            CallAudioState.ROUTE_EARPIECE -> route("earpiece")
+            CallAudioState.ROUTE_WIRED_HEADSET -> route("wired")
+            CallAudioState.ROUTE_SPEAKER -> route("speaker")
+            CallAudioState.ROUTE_BLUETOOTH -> {
+                val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    state.activeBluetoothDevice
+                } else {
+                    null
+                }
+                if (device != null) route("bluetooth", device.address, deviceName(device))
+                else route("bluetooth")
+            }
+            else -> null
+        }
+        return mapOf("current" to current, "available" to available)
+    }
+
+    /**
+     * Switches the call to [type] (earpiece, speaker, bluetooth, wired) — to
+     * the Bluetooth device [id] when there is more than one.
+     */
+    fun selectRoute(type: String, id: String?) {
+        if (useEndpoints()) {
+            val wanted = endpointType(type)
+            val endpoint = availableEndpoints.firstOrNull {
+                it.endpointType == wanted && (id == null || it.identifier.toString() == id)
+            } ?: availableEndpoints.firstOrNull { it.endpointType == wanted }
+            if (endpoint != null) {
+                Log.d(TAG, "selectRoute id=$callId $type -> endpoint ${endpoint.endpointName}")
+                requestCallEndpointChange(
+                    endpoint,
+                    appContext.mainExecutor,
+                    object : OutcomeReceiver<Void, CallEndpointException> {
+                        override fun onResult(result: Void?) {}
+                        override fun onError(error: CallEndpointException) {
+                            Log.w(TAG, "endpoint change failed: ${error.message}")
+                            selectRouteLegacy(type, id)
+                        }
+                    },
+                )
+                return
+            }
+        }
+        selectRouteLegacy(type, id)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun selectRouteLegacy(type: String, id: String?) {
+        if (type == "bluetooth" && id != null &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+        ) {
+            val device = callAudioState?.supportedBluetoothDevices?.firstOrNull { it.address == id }
+            if (device != null) {
+                Log.d(TAG, "selectRoute id=$callId bluetooth ${device.address}")
+                requestBluetoothAudio(device)
+                return
+            }
+        }
+        val route = when (type) {
+            "speaker" -> CallAudioState.ROUTE_SPEAKER
+            "bluetooth" -> CallAudioState.ROUTE_BLUETOOTH
+            else -> CallAudioState.ROUTE_WIRED_OR_EARPIECE
+        }
+        Log.d(TAG, "selectRoute id=$callId $type -> route $route")
+        setAudioRoute(route)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun endpointRoute(endpoint: CallEndpoint): Map<String, Any?>? {
+        val type = when (endpoint.endpointType) {
+            CallEndpoint.TYPE_EARPIECE -> "earpiece"
+            CallEndpoint.TYPE_SPEAKER -> "speaker"
+            CallEndpoint.TYPE_BLUETOOTH -> "bluetooth"
+            CallEndpoint.TYPE_WIRED_HEADSET -> "wired"
+            else -> return null
+        }
+        val name = endpoint.endpointName.toString()
+        return route(
+            type,
+            endpoint.identifier.toString(),
+            name.takeIf { type == "bluetooth" && it.isNotBlank() },
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun endpointType(type: String): Int = when (type) {
+        "speaker" -> CallEndpoint.TYPE_SPEAKER
+        "bluetooth" -> CallEndpoint.TYPE_BLUETOOTH
+        "wired" -> CallEndpoint.TYPE_WIRED_HEADSET
+        else -> CallEndpoint.TYPE_EARPIECE
+    }
+
+    private fun route(type: String, id: String? = null, name: String? = null) =
+        mapOf("type" to type, "id" to id, "name" to name)
+
+    /** Needs BLUETOOTH_CONNECT on Android 12+; without it the route is just "Bluetooth". */
+    private fun deviceName(device: BluetoothDevice): String? = try {
+        device.name
+    } catch (e: SecurityException) {
+        null
     }
 
     // -------------------------------------------------------------------------

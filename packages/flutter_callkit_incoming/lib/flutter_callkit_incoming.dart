@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -175,6 +176,29 @@ class FlutterCallkitIncoming {
   /// On Android, Nothing(only callback event listener).
   static Future<void> setCallConnected(String id) async {
     await _channel.invokeMethod("callConnected", {'id': id});
+  }
+
+  /// Android: the outputs Telecom offers the ongoing call and the one it is
+  /// on — `{current: route?, available: [route]}`, a route being
+  /// `{type: earpiece|speaker|bluetooth|wired, id, name}`. Null when there is
+  /// no Telecom call (and always on iOS).
+  static Future<Map<String, dynamic>?> getAudioRoutes() async {
+    if (!Platform.isAndroid) return null;
+    final routes = await _channel.invokeMethod<Map>("getAudioRoutes");
+    return routes == null ? null : jsonDecode(jsonEncode(routes));
+  }
+
+  /// Android: moves the ongoing call's audio to [type] (earpiece, speaker,
+  /// bluetooth, wired) — the Bluetooth device [id] when given. Returns false
+  /// when there is no Telecom call to route (and always on iOS, where CallKit
+  /// follows the app's own AVAudioSession).
+  static Future<bool> setAudioRoute(String type, {String? id}) async {
+    if (!Platform.isAndroid) return false;
+    return (await _channel.invokeMethod<bool>(
+          "setAudioRoute",
+          {'type': type, 'id': id},
+        )) ??
+        false;
   }
 
   /// End all calls.

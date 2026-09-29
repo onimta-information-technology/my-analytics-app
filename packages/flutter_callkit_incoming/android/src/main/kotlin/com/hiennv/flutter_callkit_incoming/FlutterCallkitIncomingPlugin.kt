@@ -441,8 +441,28 @@ class FlutterCallkitIncomingPlugin : FlutterPlugin, MethodCallHandler, ActivityA
                     reply.success(true)
                 }
 
+                "getAudioRoutes" -> {
+                    // Null when there is no Telecom call to ask.
+                    val routes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        CallkitConnection.current()?.audioRoutes()
+                    } else {
+                        null
+                    }
+                    reply.success(routes)
+                }
+
                 "setAudioRoute" -> {
-                    reply.success(true)
+                    // true once a Telecom call took the route; false when there
+                    // is none and the app has to route the audio itself.
+                    val type = call.argument<String>("type") ?: "earpiece"
+                    val id = call.argument<String>("id")
+                    val connection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        CallkitConnection.current()
+                    } else {
+                        null
+                    }
+                    connection?.selectRoute(type, id)
+                    reply.success(connection != null)
                 }
 
                 else -> {

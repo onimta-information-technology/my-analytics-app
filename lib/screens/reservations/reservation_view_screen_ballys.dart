@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:ballys_reservation_app/components/amendment_payment_by_ballys.dart';
 import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/reservation_pdf_button_ballys.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/reservation_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
@@ -1623,6 +1625,33 @@ class _ReservationViewScreenBallysState
                       ),
                     ),
                   ),
+                // Payment By belongs to the whole reservation, not to a hotel
+                // or a ticket, so it is always on offer.
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.of(dialogContext).pop('payment-by'),
+                    icon: const Icon(Icons.payments_outlined, size: 20),
+                    label: const Text(
+                      'PAYMENT BY',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
@@ -1647,10 +1676,180 @@ class _ReservationViewScreenBallysState
 
     if (choice == null || !mounted) return;
 
+    if (choice == 'payment-by') {
+      await _showPaymentByDialog();
+      return;
+    }
+
     await context.push(
       choice == 'hotel'
           ? '/reservationMain/reservations/hotel-amendment-ballys'
           : '/reservationMain/reservations/air-ticket-amendment-ballys',
+    );
+  }
+
+  /// Raises a Payment By change through its own endpoint
+  /// (`AmendmentPaymentBy/Insert`). It lands as Pending like any other
+  /// modification.
+  Future<void> _showPaymentByDialog() async {
+    final reservation = ref.read(selectedReservationBallysProvider);
+    if (reservation == null) return;
+
+    final current = currentPaymentByBallys(reservation);
+    String? picked = current;
+    // Held as a plain string rather than a controller: the dialog is still
+    // animating out after showDialog returns, so a controller disposed here
+    // would be read after disposal.
+    String remark = '';
+    bool submitting = false;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final unchanged = picked == null ||
+                picked!.trim() == (current ?? '').trim();
+            final hasRemark = remark.trim().isNotEmpty;
+
+            Future<void> submit() async {
+              setDialogState(() => submitting = true);
+              try {
+                final repo =
+                    ReservationRepository(ApiService(SecureStorage.instance));
+                final response = await repo.submitPaymentByUpdate(
+                  reservation: reservation,
+                  paymentBy: picked!,
+                  currentPaymentBy: current,
+                  remarks: remark.trim(),
+                );
+                if (!dialogContext.mounted) return;
+                if (response.success) {
+                  final message = response.message?.trim();
+                  Navigator.of(dialogContext).pop(
+                    message == null || message.isEmpty
+                        ? 'Payment By update submitted successfully.'
+                        : message,
+                  );
+                  return;
+                }
+                setDialogState(() => submitting = false);
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      response.message ?? 'Failed to update Payment By.',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                if (!dialogContext.mounted) return;
+                setDialogState(() => submitting = false);
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to update Payment By: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Update Payment By',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              content: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AmendmentPaymentByFieldBallys(
+                      value: picked,
+                      current: current,
+                      onChanged: submitting
+                          ? (_) {}
+                          : (value) => setDialogState(() => picked = value),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      enabled: !submitting,
+                      minLines: 2,
+                      maxLines: 4,
+                      textCapitalization: TextCapitalization.sentences,
+                      onChanged: (value) =>
+                          setDialogState(() => remark = value),
+                      decoration: InputDecoration(
+                        labelText: 'Remark *',
+                        hintText: 'Why is Payment By being changed?',
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
+                        helperText: hasRemark ? null : 'Remark is required.',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                TextButton(
+                  onPressed: submitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  // Nothing to send until a different option is picked and a
+                  // remark says why.
+                  onPressed:
+                      unchanged || !hasRemark || submitting ? null : submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Constants.kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: submitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Update',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result), backgroundColor: Constants.kPrimaryColor),
     );
   }
 

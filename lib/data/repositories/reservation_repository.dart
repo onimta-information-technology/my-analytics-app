@@ -396,6 +396,51 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     return response['Status'] as bool? ?? false;
   }
 
+  /// Raises a Payment By change for [reservation] through its own endpoint.
+  /// Like the hotel / air ticket amendments it lands as Pending, so the
+  /// reservation keeps [currentPaymentBy] until the back office approves it.
+  Future<PaymentByUpdateResult> submitPaymentByUpdate({
+    required ReservationBallys reservation,
+    required String paymentBy,
+    String? currentPaymentBy,
+    String? remarks,
+  }) async {
+    final userName = await StorageUtil.getUserName();
+    final deviceId = await DeviceId.get();
+    final markedingCode = await StorageUtil.getMarketingCode();
+    final salesCode = await StorageUtil.getSalesCode();
+    final body = <String, Object?>{
+      'master_id': reservation.idNo,
+      'reservation_no': reservation.reservNo,
+      'bm_number': reservation.mid,
+      'guest_name': reservation.mName,
+      'amendment_on': 'PaymentBy',
+      'current_payment_by': currentPaymentBy,
+      'payment_by': paymentBy,
+      'remarks': remarks,
+      'user_name': userName,
+      'device_id': deviceId,
+      'marketing_code': markedingCode,
+      'sales_code': salesCode,
+      'status': 'Pending',
+    };
+
+    print('submitPaymentByUpdate payload: $body');
+    final response = await apiService.post('AmendmentPaymentBy/Insert', body);
+    print('submitPaymentByUpdate response: $response');
+
+    final rowId = (response['MasterRowId'] as num?)?.toInt();
+    return PaymentByUpdateResult(
+      success: response['success'] == true ||
+          response['Status'] == true ||
+          (rowId != null && rowId > 0),
+      message: (response['Message'] ?? response['message'] ??
+              response['statusMsg'])
+          ?.toString(),
+      masterRowId: rowId,
+    );
+  }
+
   /// Saves an edited reservation through the same endpoint as a new one. The
   /// existing reservation id travels as `master_id`, so the backend overwrites
   /// that record (guests, rooms, air tickets and passports included) instead of
@@ -554,4 +599,19 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     }
     return DateFormat('dd/MM/yyyy').format(date);
   }
+}
+
+/// Outcome of an `AmendmentPaymentBy/Insert` call.
+class PaymentByUpdateResult {
+  final bool success;
+  final String? message;
+
+  /// The row the change was written as, when the endpoint names it.
+  final int? masterRowId;
+
+  const PaymentByUpdateResult({
+    required this.success,
+    this.message,
+    this.masterRowId,
+  });
 }

@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/screens/call/call_screen.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -860,15 +861,36 @@ class CallManager {
     return results.values.every((s) => s.isGranted || s.isLimited);
   }
 
+  /// Android rings through `CallRingtone.kt`: flutter_ringtone_player reads
+  /// the stored ringtone setting, which on Xiaomi can still be the factory
+  /// tone after the user picked another one per SIM.
+  static const _ringtoneChannel = MethodChannel('call_ringtone');
+
   void _startRinging() {
     if (_ringing) return;
     _ringing = true;
-    FlutterRingtonePlayer().playRingtone(looping: true).ignore();
+    if (!Platform.isAndroid) {
+      FlutterRingtonePlayer().playRingtone(looping: true).ignore();
+      return;
+    }
+    unawaited(() async {
+      try {
+        await _ringtoneChannel.invokeMethod('play');
+      } catch (e) {
+        print('call ringtone failed, using the plugin: $e');
+        if (_ringing) {
+          FlutterRingtonePlayer().playRingtone(looping: true).ignore();
+        }
+      }
+    }());
   }
 
   void _stopRinging() {
     if (!_ringing) return;
     _ringing = false;
+    if (Platform.isAndroid) {
+      _ringtoneChannel.invokeMethod('stop').ignore();
+    }
     FlutterRingtonePlayer().stop().ignore();
   }
 

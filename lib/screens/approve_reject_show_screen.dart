@@ -17,6 +17,13 @@ class ApproveScreen extends ConsumerStatefulWidget {
 }
 
 class _ApproveScreenState extends ConsumerState<ApproveScreen> with ConnectivityMixin{
+  /// Group Reservation, Amendments, Visa, Airport Services and the Ballys
+  /// Transport list are Ballys-only, as on the Reservations screen.
+  bool _isBallys = false;
+
+  /// The shared Transport list is a Bellagio-only (bty.world) feature.
+  bool _isBellagio = false;
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +31,17 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
   Future.microtask(() {
     ref.read(pendingCountProvider.notifier).fetch();
   });
+    _resolveLocation();
+  }
+
+  Future<void> _resolveLocation() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    final isBallys = await _isBallysLocation();
+    if (!mounted) return;
+    setState(() {
+      _isBellagio = apiUrl.contains('bty.world');
+      _isBallys = isBallys;
+    });
   }
 
   /// True when the logged-in device/user is on the Ballys location, which
@@ -57,6 +75,120 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
       error: (e, st) => const PendingCounts(),
     );
 
+    // Laid out two per row in this order, so location-only cards fill the
+    // gaps instead of leaving half-empty rows.
+    final cards = <Widget>[
+      _CardWithBadge(
+        count: counts.reservation,
+        onTap: _openReservations,
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 255, 149, 0),
+            Color.fromARGB(255, 255, 149, 0),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: FontAwesomeIcons.luggageCart,
+        label: 'Reservations',
+      ),
+      _CardWithBadge(
+        count: counts.otpGift,
+        onTap: () => context.go('/menu/approve-reject/special-gift-requests'),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4CAF50), Color.fromARGB(255, 2, 235, 235)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: FontAwesomeIcons.gifts,
+        label: 'OTP Gifts',
+      ),
+      _CardWithBadge(
+        count: counts.birthdayGift,
+        onTap: () => context.go('/menu/approve-reject/birthday-gifts'),
+        gradient: const LinearGradient(
+          colors: [Color.fromARGB(255, 0, 0, 0), Color(0xFFFF6F00)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: FontAwesomeIcons.cakeCandles,
+        label: 'Birthday Gifts',
+      ),
+      // Same lists as the Reservations menu, opened without their add
+      // buttons — nothing is created from the Approve flow.
+      if (_isBallys) ...[
+        _CardWithBadge(
+          count: 0,
+          onTap: () =>
+              context.go('/menu/approve-reject/group-reservations-ballys'),
+          gradient: const LinearGradient(
+            colors: [
+              Color.fromARGB(255, 103, 58, 183),
+              Color.fromARGB(255, 103, 58, 183),
+            ],
+          ),
+          icon: Icons.groups,
+          label: 'Group Reservation',
+        ),
+        _CardWithBadge(
+          count: 0,
+          onTap: () => context.go('/menu/approve-reject/amendments-ballys'),
+          gradient: const LinearGradient(
+            colors: [
+              Color.fromARGB(255, 0, 121, 107),
+              Color.fromARGB(255, 0, 121, 107),
+            ],
+          ),
+          icon: Icons.edit_note,
+          label: 'Amendments',
+        ),
+        _CardWithBadge(
+          count: 0,
+          onTap: () => context.go('/menu/approve-reject/transport-ballys'),
+          gradient: const LinearGradient(
+            colors: [
+              Color.fromARGB(255, 63, 81, 181),
+              Color.fromARGB(255, 63, 81, 181),
+            ],
+          ),
+          icon: Icons.directions_car_filled,
+          label: 'Transport',
+        ),
+        _CardWithBadge(
+          count: 0,
+          onTap: () => context.go('/menu/approve-reject/visa-ballys'),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6A1B9A), Color(0xFF6A1B9A)],
+          ),
+          icon: Icons.badge,
+          label: 'Visa',
+        ),
+        _CardWithBadge(
+          count: 0,
+          onTap: () =>
+              context.go('/menu/approve-reject/airport-service-ballys'),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0277BD), Color(0xFF0277BD)],
+          ),
+          icon: Icons.local_airport,
+          label: 'Airport Services',
+        ),
+      ],
+      if (_isBellagio)
+        _CardWithBadge(
+          count: 0,
+          onTap: () => context.go('/menu/approve-reject/transport'),
+          gradient: const LinearGradient(
+            colors: [
+              Color.fromARGB(255, 63, 81, 181),
+              Color.fromARGB(255, 63, 81, 181),
+            ],
+          ),
+          icon: Icons.directions_car_filled,
+          label: 'Transport',
+        ),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -76,78 +208,25 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         ),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // ── Reservations card ────────────────────────────────────
-                Expanded(
-                  child: _CardWithBadge(
-                    count: counts.reservation,
-                    onTap: _openReservations,
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color.fromARGB(255, 255, 149, 0),
-                        Color.fromARGB(255, 255, 149, 0),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    icon: FontAwesomeIcons.luggageCart,
-                    label: 'Reservations',
+            for (var i = 0; i < cards.length; i += 2) ...[
+              if (i > 0) const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(child: cards[i]),
+                  const SizedBox(width: 12),
+                  // Odd count: empty spacer keeps the last card half width.
+                  Expanded(
+                    child: i + 1 < cards.length
+                        ? cards[i + 1]
+                        : const SizedBox(),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // ── OTP Gifts card ───────────────────────────────────────
-                Expanded(
-                  child: _CardWithBadge(
-                    count: counts.otpGift,
-                    onTap: () =>
-                        context.go('/menu/approve-reject/special-gift-requests'),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF4CAF50),
-                        Color.fromARGB(255, 2, 235, 235),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    icon: FontAwesomeIcons.gifts,
-                    label: 'OTP Gifts',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                // ── Birthday Gifts card ──────────────────────────────────
-                Expanded(
-                  child: _CardWithBadge(
-                    count: counts.birthdayGift,
-                    onTap: () =>
-                        context.go('/menu/approve-reject/birthday-gifts'),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color.fromARGB(255, 0, 0, 0),
-                        Color(0xFFFF6F00),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    icon: FontAwesomeIcons.cakeCandles,
-                    label: 'Birthday Gifts',
-                  ),
-                ),
-                // empty spacer so Birthday Gifts takes only half width
-                const Expanded(child: SizedBox()),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

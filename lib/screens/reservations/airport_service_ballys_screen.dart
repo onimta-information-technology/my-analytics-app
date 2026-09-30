@@ -39,7 +39,9 @@ IconData airportServiceStatusBallysIcon(AirportServiceStatusBallys status) {
 /// ResChk see everything, everyone else by marketing code — so nothing is
 /// filtered here.
 class AirportServiceBallysScreen extends ConsumerStatefulWidget {
-  const AirportServiceBallysScreen({super.key});
+  /// True when opened from Approve — nothing is created from that flow.
+  final bool hideAddButton;
+  const AirportServiceBallysScreen({super.key, this.hideAddButton = false});
 
   @override
   ConsumerState<AirportServiceBallysScreen> createState() =>
@@ -167,11 +169,12 @@ class _AirportServiceBallysScreenState
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 30),
-            tooltip: 'Add Airport Service',
-            onPressed: _openAdd,
-          ),
+          if (!widget.hideAddButton)
+            IconButton(
+              icon: const Icon(Icons.add, size: 30),
+              tooltip: 'Add Airport Service',
+              onPressed: _openAdd,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: _loadData,

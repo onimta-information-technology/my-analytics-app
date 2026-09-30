@@ -38,7 +38,9 @@ IconData transportStatusBallysIcon(TransportStatusBallys status) {
 /// status plus "All". The API already scopes the list — AD001 by sales code,
 /// everyone else by marketing code — so nothing is filtered here.
 class TransportBallysScreen extends ConsumerStatefulWidget {
-  const TransportBallysScreen({super.key});
+  /// True when opened from Approve — nothing is created from that flow.
+  final bool hideAddButton;
+  const TransportBallysScreen({super.key, this.hideAddButton = false});
 
   @override
   ConsumerState<TransportBallysScreen> createState() =>
@@ -159,11 +161,12 @@ class _TransportBallysScreenState extends ConsumerState<TransportBallysScreen>
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 30),
-            tooltip: 'Add Transport',
-            onPressed: _openAddTransport,
-          ),
+          if (!widget.hideAddButton)
+            IconButton(
+              icon: const Icon(Icons.add, size: 30),
+              tooltip: 'Add Transport',
+              onPressed: _openAddTransport,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: _loadTransportData,

@@ -38,7 +38,9 @@ IconData visaStatusBallysIcon(VisaStatusBallys status) {
 /// "All". The API already scopes the list — AD001 / ResApp / ResChk see
 /// everything, everyone else by marketing code — so nothing is filtered here.
 class VisaBallysScreen extends ConsumerStatefulWidget {
-  const VisaBallysScreen({super.key});
+  /// True when opened from Approve — nothing is created from that flow.
+  final bool hideAddButton;
+  const VisaBallysScreen({super.key, this.hideAddButton = false});
 
   @override
   ConsumerState<VisaBallysScreen> createState() => _VisaBallysScreenState();
@@ -163,11 +165,12 @@ class _VisaBallysScreenState extends ConsumerState<VisaBallysScreen>
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 30),
-            tooltip: 'Add Visa Request',
-            onPressed: _openAddVisa,
-          ),
+          if (!widget.hideAddButton)
+            IconButton(
+              icon: const Icon(Icons.add, size: 30),
+              tooltip: 'Add Visa Request',
+              onPressed: _openAddVisa,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: _loadVisaData,

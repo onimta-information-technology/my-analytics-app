@@ -14,7 +14,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class TransportScreen extends ConsumerStatefulWidget {
-  const TransportScreen({super.key, this.highlightMasterId});
+  const TransportScreen({
+    super.key,
+    this.highlightMasterId,
+    this.hideAddButton = false,
+  });
+
+  /// True when opened from Approve — nothing is created from that flow.
+  final bool hideAddButton;
 
   /// `master_id` of the request to reveal on open — set when the screen is
   /// reached from a transport push notification, so the user lands on the
@@ -332,12 +339,13 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 30),
-            tooltip: 'Add Transport',
-            onPressed: () =>
-                context.push('/reservationMain/transport/transport-add'),
-          ),
+          if (!widget.hideAddButton)
+            IconButton(
+              icon: const Icon(Icons.add, size: 30),
+              tooltip: 'Add Transport',
+              onPressed: () =>
+                  context.push('/reservationMain/transport/transport-add'),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 30),
             onPressed: _loadTransportData,

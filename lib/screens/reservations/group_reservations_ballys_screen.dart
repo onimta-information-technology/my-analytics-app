@@ -19,7 +19,9 @@ import 'package:url_launcher/url_launcher.dart';
 /// reservation and amendment lists use: Pending & Checked → For Approval →
 /// Approved → Rejected.
 class GroupReservationsBallysScreen extends ConsumerStatefulWidget {
-  const GroupReservationsBallysScreen({super.key});
+  /// True when opened from Approve — nothing is created from that flow.
+  final bool hideAddButton;
+  const GroupReservationsBallysScreen({super.key, this.hideAddButton = false});
 
   @override
   ConsumerState<GroupReservationsBallysScreen> createState() =>
@@ -162,17 +164,19 @@ class _GroupReservationsBallysScreenState
       ),
       // The write side lives on its own screen; pushed (not `go`) so coming
       // back lands on this list again.
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'New group reservation',
-        backgroundColor: const Color.fromARGB(255, 103, 58, 183),
-        onPressed: () async {
-          await context.push('/reservationMain/group-reservation-ballys');
-          if (!mounted) return;
-          // A group may have been saved while we were away.
-          ref.invalidate(groupReservationsProvider);
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: widget.hideAddButton
+          ? null
+          : FloatingActionButton(
+              tooltip: 'New group reservation',
+              backgroundColor: const Color.fromARGB(255, 103, 58, 183),
+              onPressed: () async {
+                await context.push('/reservationMain/group-reservation-ballys');
+                if (!mounted) return;
+                // A group may have been saved while we were away.
+                ref.invalidate(groupReservationsProvider);
+              },
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       body: Stack(
         children: [
           SafeArea(

@@ -1674,6 +1674,112 @@ GoRoute(
                           },
                     ),
                   ),
+                  // Approve → the other reservation lists, same as the
+                  // Reservations menu minus their add buttons. Detail views
+                  // are pushed at their /reservationMain paths, so back
+                  // returns here.
+                  GoRoute(
+                    path: '/group-reservations-ballys',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const GroupReservationsBallysScreen(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/amendments-ballys',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const AmendmentsBallysScreen(),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/transport-ballys',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const TransportBallysScreen(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/visa-ballys',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const VisaBallysScreen(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/airport-service-ballys',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const AirportServiceBallysScreen(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/transport',
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      fullscreenDialog: true,
+                      key: state.pageKey,
+                      child: const TransportScreen(hideAddButton: true),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: CurveTween(
+                                curve: Curves.easeInOutCirc,
+                              ).animate(animation),
+                              child: child,
+                            );
+                          },
+                    ),
+                  ),
                   GoRoute(
                     path: '/special-gift-requests',
                     pageBuilder: (context, state) => CustomTransitionPage(

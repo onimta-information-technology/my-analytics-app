@@ -34,6 +34,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ballys_reservation_app/screens/call/ongoing_call_bar.dart';
 
 Color customGoldColor = const Color(0xFFDAB066);
 
@@ -517,7 +518,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.noScaling,
           ),
-          child: child!,
+          child: OngoingCallBar(child: child!),
         );
       },
     );

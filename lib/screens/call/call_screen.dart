@@ -78,9 +78,15 @@ class _CallScreenState extends State<CallScreen> {
       builder: (context, _) {
         final c = widget.controller;
         return PopScope(
-          // Leaving the screen would strand the call with no way back to its
-          // controls; hanging up is how you leave.
-          canPop: c.phase == CallPhase.ended,
+          // Like WhatsApp, backing out keeps the call going and hands over to
+          // the "return to call" bar. Only a ringing incoming call holds the
+          // screen — it has to be answered or declined.
+          canPop: c.phase != CallPhase.incoming,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop && c.phase != CallPhase.ended) {
+              CallManager.instance.screenMinimized(c);
+            }
+          },
           child: Scaffold(
             backgroundColor: _background,
             body: Stack(
@@ -99,6 +105,22 @@ class _CallScreenState extends State<CallScreen> {
                     ],
                   ),
                 ),
+                if (c.phase != CallPhase.incoming &&
+                    c.phase != CallPhase.ended)
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: IconButton(
+                        tooltip: 'Back to app',
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

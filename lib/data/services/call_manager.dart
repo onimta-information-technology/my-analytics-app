@@ -150,6 +150,11 @@ class CallManager {
   /// banner as calls come and go.
   final ValueNotifier<CallController?> active = ValueNotifier(null);
 
+  /// Whether [CallScreen] is up. False while the call carries on behind the
+  /// app's other screens, WhatsApp style, with the "return to call" bar
+  /// offering the way back.
+  final ValueNotifier<bool> screenShown = ValueNotifier(false);
+
   CallController? get _current => active.value;
   set _current(CallController? c) => active.value = c;
   EventsListener<RoomEvent>? _roomListener;
@@ -265,7 +270,7 @@ class CallManager {
     String? avatarUrl,
   }) async {
     if (isBusy) {
-      if (_current!.callId == call.callId) return _bringToFront();
+      if (_current!.callId == call.callId) return showScreen();
       _toast('You are already on a call');
       return;
     }
@@ -290,7 +295,7 @@ class CallManager {
     final current = _current;
     if (current != null && current.callId == push.callId) {
       if (current.phase == CallPhase.incoming) return accept();
-      if (current.phase != CallPhase.ended) return _bringToFront();
+      if (current.phase != CallPhase.ended) return showScreen();
     }
     if (isBusy) {
       _toast('You are already on a call');
@@ -834,6 +839,7 @@ class CallManager {
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (identical(_current, c)) {
         _current = null;
+        screenShown.value = false;
         unawaited(CallKitService.setKeepAlive(false));
       }
       final route = c._route;
@@ -871,13 +877,34 @@ class CallManager {
       builder: (_) => CallScreen(controller: c),
     );
     c._route = route;
-    navigator.push(route);
+    screenShown.value = true;
+    navigator.push(route).whenComplete(() {
+      if (!identical(c._route, route)) return;
+      c._route = null;
+      if (identical(_current, c)) screenShown.value = false;
+    });
   }
 
-  /// Rejoining the call we are already in just surfaces its screen again.
-  void _bringToFront() {
-    final nav = navigatorKey.currentState;
-    nav?.popUntil((r) => r.settings.name == CallScreen.routeName || r.isFirst);
+  /// Brings the call's screen back — from the "return to call" bar, or when
+  /// rejoining the call we are already in.
+  void showScreen() {
+    final c = _current;
+    if (c == null || c.phase == CallPhase.ended) return;
+    if (c._route?.isActive == true) {
+      final nav = navigatorKey.currentState;
+      nav?.popUntil((r) => r.settings.name == CallScreen.routeName || r.isFirst);
+      return;
+    }
+    _showScreen(c);
+  }
+
+  /// The user backed out of [CallScreen] to use the rest of the app while the
+  /// call carries on. The startup watchdog must not push it straight back.
+  void screenMinimized(CallController c) {
+    if (!identical(_current, c)) return;
+    _screenWatchdog?.cancel();
+    c._route = null;
+    screenShown.value = false;
   }
 
   /// Still the call on this device, and not yet hung up.

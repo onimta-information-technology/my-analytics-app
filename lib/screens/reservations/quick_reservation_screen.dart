@@ -32,6 +32,7 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/mobile_number_util.dart';
 import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
@@ -58,9 +59,6 @@ const List<String> kHireTypes = [
 // settled on one yet and will call it in later.
 const String kGuestWillInform = 'Guest Will Inform';
 
-// Digit count allowed in the contact number, excluding the country code.
-const int kMinContactDigits = 9;
-const int kMaxContactDigits = 10;
 
 const TextStyle kInputTextStyle = TextStyle(
   fontSize: 17,
@@ -1021,7 +1019,7 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
       }),
       'contactNumber': _t_contactNumber.text.trim().isEmpty
           ? ''
-          : '+${_t_country.phoneCode}${_t_contactNumber.text.trim()}',
+          : MobileNumberUtil.format(_t_contactNumber.text, _t_country),
       'silkRoute': _t_silkRoute,
       'airportPickup': _t_airportPickup,
       'specialComment': _t_specialComment.text.trim(),
@@ -1092,12 +1090,11 @@ class _QuickReservationScreenState extends ConsumerState<QuickReservationScreen>
     check(_t_pickupLocationCtrl.text.trim().isEmpty, 'Pickup Location');
     check(_t_dropLocationCtrl.text.trim().isEmpty, 'Drop Location');
 
-    final digits = _t_contactNumber.text.trim();
-    if (digits.isEmpty) {
+    if (_t_contactNumber.text.trim().isEmpty) {
       missing.add('Guest Mobile');
-    } else if (digits.length < kMinContactDigits ||
-        digits.length > kMaxContactDigits) {
-      missing.add('Guest Mobile ($kMinContactDigits-$kMaxContactDigits digits)');
+    } else if (MobileNumberUtil.validate(_t_contactNumber.text, _t_country) !=
+        null) {
+      missing.add('Guest Mobile (invalid for ${_t_country.name})');
     }
     return missing;
   }
@@ -4736,28 +4733,26 @@ class _TransportForm extends StatelessWidget {
                   controller: state._t_contactNumber,
                   style: kInputTextStyle,
                   keyboardType: TextInputType.phone,
+                  // Re-checks against the new rules when the country changes
+                  // after the user has typed a number.
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(kMaxContactDigits),
+                    LengthLimitingTextInputFormatter(
+                      MobileNumberUtil.maxDigits,
+                    ),
                   ],
                   decoration: _fieldDeco(
                     'Guest Mobile *',
                     icon: Icons.phone_rounded,
                     accent: accent,
+                  ).copyWith(
+                    hintText: state._t_country.example.isEmpty
+                        ? null
+                        : 'e.g. ${state._t_country.example}',
                   ),
-                  validator: (value) {
-                    final digits = (value ?? '').trim();
-                    if (digits.isEmpty) {
-                      return 'Contact Number is required';
-                    }
-                    if (digits.length < kMinContactDigits) {
-                      return 'Enter at least $kMinContactDigits digits';
-                    }
-                    if (digits.length > kMaxContactDigits) {
-                      return 'Enter no more than $kMaxContactDigits digits';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      MobileNumberUtil.validate(value ?? '', state._t_country),
                 ),
               ),
             ],

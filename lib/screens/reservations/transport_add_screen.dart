@@ -23,6 +23,7 @@ import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
+import 'package:ballys_reservation_app/utils/mobile_number_util.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
@@ -44,10 +45,6 @@ const List<String> _kHireTypes = ['Pickup', 'Drop'];
 // Placeholder saved as the drop location when the guest has not settled on one
 // yet and will call it in later.
 const String _kGuestWillInform = 'Guest Will Inform';
-
-// Digit count allowed in the contact number, excluding the country code.
-const int _kMinContactDigits = 9;
-const int _kMaxContactDigits = 10;
 
 const TextStyle _kInputTextStyle = TextStyle(
   fontSize: 17,
@@ -605,7 +602,7 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
       }),
       'contactNumber': _contactNumberCtrl.text.trim().isEmpty
           ? ''
-          : '+${_country.phoneCode}${_contactNumberCtrl.text.trim()}',
+          : MobileNumberUtil.format(_contactNumberCtrl.text, _country),
       'silkRoute': _silkRoute,
       'airportPickup': _airportPickup,
       'specialComment': _specialCommentCtrl.text.trim(),
@@ -679,14 +676,10 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
     check(_pickupLocationCtrl.text.trim().isEmpty, 'Pickup Location');
     check(_dropLocationCtrl.text.trim().isEmpty, 'Drop Location');
 
-    final digits = _contactNumberCtrl.text.trim();
-    if (digits.isEmpty) {
+    if (_contactNumberCtrl.text.trim().isEmpty) {
       missing.add('Guest Mobile');
-    } else if (digits.length < _kMinContactDigits ||
-        digits.length > _kMaxContactDigits) {
-      missing.add(
-        'Guest Mobile ($_kMinContactDigits-$_kMaxContactDigits digits)',
-      );
+    } else if (MobileNumberUtil.validate(_contactNumberCtrl.text, _country) != null) {
+      missing.add('Guest Mobile (invalid for ${_country.name})');
     }
     return missing;
   }
@@ -1330,29 +1323,25 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                         controller: _contactNumberCtrl,
                         style: _kInputTextStyle,
                         keyboardType: TextInputType.phone,
+                        // Re-checks against the new rules when the country
+                        // changes after the user has typed a number.
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(
-                            _kMaxContactDigits,
+                            MobileNumberUtil.maxDigits,
                           ),
                         ],
                         decoration: _fieldDeco(
                           'Guest Mobile *',
                           icon: Icons.phone_rounded,
+                        ).copyWith(
+                          hintText: _country.example.isEmpty
+                              ? null
+                              : 'e.g. ${_country.example}',
                         ),
-                        validator: (value) {
-                          final digits = (value ?? '').trim();
-                          if (digits.isEmpty) {
-                            return 'Contact Number is required';
-                          }
-                          if (digits.length < _kMinContactDigits) {
-                            return 'Enter at least $_kMinContactDigits digits';
-                          }
-                          if (digits.length > _kMaxContactDigits) {
-                            return 'Enter no more than $_kMaxContactDigits digits';
-                          }
-                          return null;
-                        },
+                        validator: (value) =>
+                            MobileNumberUtil.validate(value ?? '', _country),
                       ),
                     ),
                   ],

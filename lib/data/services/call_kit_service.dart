@@ -77,7 +77,9 @@ class CallKitService {
         isCustomNotification: true,
         isShowLogo: false,
         ringtonePath: 'system_ringtone_default',
-        backgroundColor: '#075E54',
+        // The in-app call screen's background, so the lock-screen ring
+        // (CallkitIncomingActivity) looks like the one rung in-app.
+        backgroundColor: '#0B141A',
         actionColor: '#25D366',
         textColor: '#ffffff',
         incomingCallNotificationChannelName: 'Incoming calls',

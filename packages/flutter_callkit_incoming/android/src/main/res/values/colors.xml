@@ -8,4 +8,11 @@
 
     <color name="action_text">#FFFFFF</color>
     <color name="ripple_main_color">#80ffffff</color>
+
+    <!-- Incoming-call screen, matching lib/screens/call/call_screen.dart -->
+    <color name="call_background">#0B141A</color>
+    <color name="call_avatar">#008069</color>
+    <color name="call_pulse">#1FFFFFFF</color>
+    <color name="call_text_dim">#B3FFFFFF</color>
+    <color name="call_text_faint">#8AFFFFFF</color>
 </resources>

@@ -93,6 +93,11 @@ class CallkitIncomingActivity : Activity() {
     private lateinit var ivLogo: ImageView
     private lateinit var ivAvatar: CircleImageView
 
+    // Only in the phone layout, which mirrors the app's own call screen.
+    private var llContent: View? = null
+    private var tvCallKind: TextView? = null
+    private var tvInitials: TextView? = null
+
     private lateinit var llAction: LinearLayout
     private lateinit var ivAcceptCall: ImageView
     private lateinit var tvAccept: TextView
@@ -208,13 +213,37 @@ class CallkitIncomingActivity : Activity() {
 
         val textColor = data?.getString(CallkitConstants.EXTRA_CALLKIT_TEXT_COLOR, "#ffffff")
         val isShowCallID = data?.getBoolean(CallkitConstants.EXTRA_CALLKIT_IS_SHOW_CALL_ID, false)
-        tvNameCaller.text = data?.getString(CallkitConstants.EXTRA_CALLKIT_NAME_CALLER, "")
-        tvNumber.text = data?.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, "")
-        tvNumber.visibility = if (isShowCallID == true) View.VISIBLE else View.INVISIBLE
+        val nameCaller = data?.getString(CallkitConstants.EXTRA_CALLKIT_NAME_CALLER, "") ?: ""
+        tvNameCaller.text = nameCaller
+        tvInitials?.text = initialsOf(nameCaller)
+
+        val isVideo = (data?.getInt(CallkitConstants.EXTRA_CALLKIT_TYPE, 0) ?: 0) > 0
+        if (llContent != null) {
+            // The phone layout shows the call's state under the name, the way
+            // the in-app screen does, instead of the handle.
+            val extra = data?.getSerializable(CallkitConstants.EXTRA_CALLKIT_EXTRA) as? Map<*, *>
+            val isGroup = extra?.get("isGroupCall")?.toString() == "true"
+            tvCallKind?.setText(if (isVideo) R.string.text_video_call else R.string.text_voice_call)
+            tvNumber.setText(
+                when {
+                    isGroup && isVideo -> R.string.text_incoming_group_video_call
+                    isGroup -> R.string.text_incoming_group_voice_call
+                    isVideo -> R.string.text_incoming_video_call
+                    else -> R.string.text_incoming_voice_call
+                }
+            )
+            tvNumber.visibility = View.VISIBLE
+        } else {
+            tvNumber.text = data?.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, "")
+            tvNumber.visibility = if (isShowCallID == true) View.VISIBLE else View.INVISIBLE
+            try {
+                tvNumber.setTextColor(Color.parseColor(textColor))
+            } catch (error: Exception) {
+            }
+        }
 
         try {
             tvNameCaller.setTextColor(Color.parseColor(textColor))
-            tvNumber.setTextColor(Color.parseColor(textColor))
         } catch (error: Exception) {
         }
 
@@ -258,23 +287,25 @@ class CallkitIncomingActivity : Activity() {
             if (TextUtils.isEmpty(textDecline)) getString(R.string.text_decline) else textDecline
 
         val acceptCallColor =
-            data?.getString(CallkitConstants.EXTRA_CALLKIT_ACCEPT_COLOR, "#4CAF50")
+            data?.getString(CallkitConstants.EXTRA_CALLKIT_ACCEPT_COLOR, "#25D366")
         try {
             ivAcceptCall.setBackground(AppUtils.createCircleDrawable(Color.parseColor(acceptCallColor)))
         } catch (error: Exception) {
         }
 
         val declineCallColor =
-            data?.getString(CallkitConstants.EXTRA_CALLKIT_DECLINE_COLOR, "#F44336")
+            data?.getString(CallkitConstants.EXTRA_CALLKIT_DECLINE_COLOR, "#FF5252")
         try {
             ivDeclineCall.setBackground(AppUtils.createCircleDrawable(Color.parseColor(declineCallColor)))
         } catch (error: Exception) {
         }
 
-        try {
-            tvAccept.setTextColor(Color.parseColor(textColor))
-            tvDecline.setTextColor(Color.parseColor(textColor))
-        } catch (error: Exception) {
+        if (llContent == null) {
+            try {
+                tvAccept.setTextColor(Color.parseColor(textColor))
+                tvDecline.setTextColor(Color.parseColor(textColor))
+            } catch (error: Exception) {
+            }
         }
 
         val backgroundColor =
@@ -316,9 +347,19 @@ class CallkitIncomingActivity : Activity() {
     private fun initView() {
         ivBackground = findViewById(R.id.ivBackground)
         llBackgroundAnimation = findViewById(R.id.llBackgroundAnimation)
-        llBackgroundAnimation.layoutParams.height =
-            Utils.getScreenWidth() + Utils.getStatusBarHeight(this@CallkitIncomingActivity)
         llBackgroundAnimation.startRippleAnimation()
+
+        llContent = findViewById(R.id.llContent)
+        llContent?.let {
+            it.setPadding(
+                it.paddingLeft,
+                Utils.getStatusBarHeight(this@CallkitIncomingActivity),
+                it.paddingRight,
+                it.paddingBottom
+            )
+        }
+        tvCallKind = findViewById(R.id.tvCallKind)
+        tvInitials = findViewById(R.id.tvInitials)
 
         tvNameCaller = findViewById(R.id.tvNameCaller)
         tvNumber = findViewById(R.id.tvNumber)
@@ -335,7 +376,7 @@ class CallkitIncomingActivity : Activity() {
         tvAccept = findViewById(R.id.tvAccept)
         ivDeclineCall = findViewById(R.id.ivDeclineCall)
         tvDecline = findViewById(R.id.tvDecline)
-        animateAcceptCall()
+        if (llContent == null) animateAcceptCall()
 
         ivAcceptCall.setOnClickListener {
             onAcceptClick()
@@ -343,6 +384,13 @@ class CallkitIncomingActivity : Activity() {
         ivDeclineCall.setOnClickListener {
             onDeclineClick()
         }
+    }
+
+    /** Up to two initials, like `_initials` in the app's call screen. */
+    private fun initialsOf(name: String): String {
+        val parts = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (parts.isEmpty()) return "?"
+        return parts.take(2).joinToString("") { it.substring(0, 1).uppercase() }
     }
 
     private fun animateAcceptCall() {

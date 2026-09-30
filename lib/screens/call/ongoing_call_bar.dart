@@ -1,13 +1,12 @@
 import 'dart:async';
 
-import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Wraps the whole app: while a call carries on behind the other screens,
-/// a green "Tap to return to call" bar sits above them, WhatsApp style, and
-/// tapping it brings [CallScreen] back.
+/// a WhatsApp-style bar sits above them — mute, the name and timer, hang
+/// up — and tapping it brings [CallScreen] back.
 class OngoingCallBar extends StatelessWidget {
   final Widget child;
   const OngoingCallBar({super.key, required this.child});
@@ -92,52 +91,117 @@ class _BarState extends State<_Bar> {
     final d = DateTime.now().difference(since);
     String two(int n) => n.toString().padLeft(2, '0');
     final h = d.inHours;
-    final m = two(d.inMinutes.remainder(60));
+    final m = d.inMinutes.remainder(60);
     final s = two(d.inSeconds.remainder(60));
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
+    return h > 0 ? '$h:${two(m)}:$s' : '$m:$s';
   }
+
+  static const _background = Color(0xFF1F2C34);
+  static const _green = Color(0xFF25D366);
+  static const _red = Color(0xFFEA0038);
 
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
+    final manager = CallManager.instance;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Material(
-        color: ChatColors.primary,
+        color: _background,
         child: InkWell(
-          onTap: CallManager.instance.showScreen,
+          onTap: manager.showScreen,
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Row(
                 children: [
-                  Icon(
-                    c.isVideo ? Icons.videocam : Icons.call,
-                    color: Colors.white,
-                    size: 18,
+                  _RoundButton(
+                    tooltip: c.micEnabled ? 'Mute' : 'Unmute',
+                    icon: Icons.mic_off,
+                    // Lit up while muted, like the call screen's own button.
+                    background:
+                        c.micEnabled ? const Color(0xFF2A3942) : Colors.white,
+                    iconColor: c.micEnabled ? Colors.white : Colors.black87,
+                    onPressed: manager.toggleMic,
                   ),
-                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      'Tap to return to call · ${c.title}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            c.isVideo ? Icons.videocam : Icons.call,
+                            color: _green,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '${c.title} - ${_label()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _green,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _label(),
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  _RoundButton(
+                    tooltip: 'Hang up',
+                    icon: Icons.call_end,
+                    background: _red,
+                    iconColor: Colors.white,
+                    onPressed: manager.hangUp,
                   ),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundButton extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final Color background;
+  final Color iconColor;
+  final VoidCallback onPressed;
+
+  const _RoundButton({
+    required this.tooltip,
+    required this.icon,
+    required this.background,
+    required this.iconColor,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Semantics, not Tooltip: this bar sits above the navigator, where there
+    // is no Overlay for a tooltip to show in.
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Material(
+        color: background,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Icon(icon, color: iconColor, size: 24),
           ),
         ),
       ),

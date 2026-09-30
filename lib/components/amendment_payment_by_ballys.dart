@@ -12,6 +12,7 @@ const List<String> _hamoosOptions = [
   'By Guest',
   'By Hamoos ',
   'By Guest & Hamoos',
+  'Pay through Cashier',
 ];
 
 const List<String> _bellagioOptions = [

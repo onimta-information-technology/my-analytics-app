@@ -303,23 +303,48 @@ class _ReservationPdfButtonBallysState
         ];
       }
       return widget.flights.map((flight) {
-          final dep = flight.airports?.departure;
-          final ret = flight.airports?.returnFlight;
+          // Every transit stop is included, so a multi-sector leg reads in
+          // travel order ("CMB  >  DXB  >  LHR").
+          final depCodes = flight.departureRouteCodes;
+          final retCodes = flight.returnRouteCodes;
+          final depRoute =
+              depCodes.isEmpty ? 'N/A  >  N/A' : depCodes.join('  >  ');
+          final retRoute = retCodes.join('  >  ');
+          final hasReturn = flight.airports?.returnFlight != null;
 
-          final depFrom = dep?.dFrom.airportCode.isNotEmpty == true
-              ? dep!.dFrom.airportCode
-              : 'N/A';
-          final depTo = dep?.dTo.airportCode.isNotEmpty == true
-              ? dep!.dTo.airportCode
-              : 'N/A';
+          // " (Arrival)" / " (Departure)" — blank on facilities saved before
+          // the leg was asked for.
+          String leg(String? type) {
+            final value = type?.trim() ?? '';
+            return value.isEmpty ? '' : ' ($value)';
+          }
 
-          final retFrom = ret?.rFrom.airportCode.isNotEmpty == true
-              ? ret!.rFrom.airportCode
-              : null;
-          final retTo = ret?.rTo.airportCode.isNotEmpty == true
-              ? ret!.rTo.airportCode
-              : null;
-          final hasReturn = flight.isRoundTrip && ret != null;
+          final airline = flight.airLine?.trim() ?? '';
+          final contactPerson = flight.contactPerson?.trim() ?? '';
+          final mealRemark = flight.mealRemark?.trim() ?? '';
+
+          // Label / value pairs under the dates, mirroring the flight card on
+          // the reservation screen. The estimated cost is left out on purpose.
+          final details = <MapEntry<String, String>>[
+            if (airline.isNotEmpty) MapEntry('Airline', airline),
+            // if (contactPerson.isNotEmpty)
+            //   MapEntry('Contact Person', contactPerson),
+            MapEntry('Visa', flight.visa ? 'Yes' : 'No'),
+            MapEntry('Airport Transportation',
+                flight.airportTransportation == 1 ? 'Yes' : 'No'),
+            MapEntry(
+                'Silk Route',
+                flight.silkRoute == 1
+                    ? 'Yes${leg(flight.silkRouteType)}'
+                    : 'No'),
+            if (flight.isMultiSector) const MapEntry('Multi Sector', 'Yes'),
+            if (flight.goldRoute)
+              MapEntry('Gold Route', 'Yes${leg(flight.goldRouteType)}'),
+            if (flight.extraLegroomSeat)
+              const MapEntry('Extra Legroom Seat', 'Yes'),
+            if (flight.meal)
+              MapEntry('Meal', mealRemark.isEmpty ? 'Yes' : 'Yes - $mealRemark'),
+          ];
 
           final depDate =
               flight.departureDate != null ? _fmtDate(flight.departureDate!) : 'N/A';
@@ -362,9 +387,11 @@ class _ReservationPdfButtonBallysState
                             ),
                           ),
                           pw.SizedBox(width: 6),
-                          pw.Text(
-                            '$depFrom  >  $depTo',
-                            style: flightRouteStyle.copyWith(color: blueCol),
+                          pw.Expanded(
+                            child: pw.Text(
+                              depRoute,
+                              style: flightRouteStyle.copyWith(color: blueCol),
+                            ),
                           ),
                         ],
                       ),
@@ -382,11 +409,13 @@ class _ReservationPdfButtonBallysState
                               ),
                             ),
                             pw.SizedBox(width: 6),
-                            pw.Text(
-                              '${retFrom ?? 'N/A'}  >  ${retTo ?? 'N/A'}',
-                              style: flightRouteStyle.copyWith(
-                                color: greenCol,
-                                fontWeight: pw.FontWeight.normal,
+                            pw.Expanded(
+                              child: pw.Text(
+                                retRoute.isEmpty ? 'N/A  >  N/A' : retRoute,
+                                style: flightRouteStyle.copyWith(
+                                  color: greenCol,
+                                  fontWeight: pw.FontWeight.normal,
+                                ),
                               ),
                             ),
                           ],
@@ -407,8 +436,10 @@ class _ReservationPdfButtonBallysState
                           children: [
                             pw.TextSpan(text: 'Class: ', style: flightLabelStyle),
                             pw.TextSpan(
-                              text: flight.airTicketClassName.isNotEmpty
-                                  ? flight.airTicketClassName
+                              // Every class with its seat count, e.g.
+                              // "Economy x2, Business x1".
+                              text: flight.ticketClassSummary.isNotEmpty
+                                  ? flight.ticketClassSummary
                                   : 'N/A',
                               style: flightLabelStyle,
                             ),
@@ -436,21 +467,23 @@ class _ReservationPdfButtonBallysState
                           ],
                         ),
                       ),
-                      pw.SizedBox(height: 4),
-                      pw.RichText(
-                        text: pw.TextSpan(
-                          children: [
-                            pw.TextSpan(
-                              text: 'Estimated Cost: ',
-                              style: flightLabelStyle,
-                            ),
-                            pw.TextSpan(
-                              text: '${flight.selectedCost ?? 'N/A'}',
-                              style: flightValueStyle,
-                            ),
-                          ],
+                      for (final detail in details) ...[
+                        pw.SizedBox(height: 4),
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: '${detail.key}: ',
+                                style: flightLabelStyle,
+                              ),
+                              pw.TextSpan(
+                                text: detail.value,
+                                style: flightValueStyle,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -650,10 +683,10 @@ class _ReservationPdfButtonBallysState
                   'Reservation No: ${widget.reservation.reservNo}',
                   style: const pw.TextStyle(fontSize: 16, color: PdfColors.white),
                 ),
-                pw.Text(
-                  'Manual No: ${widget.reservation.reservationnewnumber ?? 'N/A'}',
-                  style: const pw.TextStyle(fontSize: 16, color: PdfColors.white),
-                ),
+                // pw.Text(
+                //   'Manual No: ${widget.reservation.reservationnewnumber ?? 'N/A'}',
+                //   style: const pw.TextStyle(fontSize: 16, color: PdfColors.white),
+                // ),
               ],
             ),
           ),
@@ -663,6 +696,18 @@ class _ReservationPdfButtonBallysState
           pw.SizedBox(height: 4),
           kv('Member ID', widget.reservation.mid),
           kv('Member Name', widget.reservation.mName),
+          // Reservation-level now; older rows only carried it per room, so
+          // fall back to the first room that has one.
+          kv(
+            'Payment By',
+            [
+              widget.reservation.paymentBy,
+              ...widget.hotels.map((h) => h.paymentBy),
+              ...widget.reservation.hotelDescip.map((h) => h.paymentBy),
+            ]
+                .map((v) => v?.trim() ?? '')
+                .firstWhere((v) => v.isNotEmpty, orElse: () => 'N/A'),
+          ),
           // kv('Rating', widget.reservation.gRating ?? 'N/A'),
           // kv(
           //   'Package Amount',

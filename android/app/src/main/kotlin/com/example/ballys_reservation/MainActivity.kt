@@ -38,6 +38,7 @@ class MainActivity : FlutterFragmentActivity() {
         CallKeepAlive.register(flutterEngine)
         CallProximity.register(flutterEngine, this)
         CallRingtone.register(flutterEngine, this)
+        CallScreenShare.register(flutterEngine, this)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "isDeveloperMode") {

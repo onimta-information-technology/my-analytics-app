@@ -1,0 +1,4 @@
+// Only the app's version numbers, so the extension's always match the app's
+// (App Store Connect rejects a mismatch). Not the Pods config: the extension
+// links none of the app's plugins.
+#include "../Flutter/Generated.xcconfig"

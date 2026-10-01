@@ -59,6 +59,10 @@
 	<string>We need gallery access to select photos</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need access to save images to your gallery</string>
+	<key>RTCAppGroupIdentifier</key>
+	<string>group.com.app.ballysReservationApp</string>
+	<key>RTCScreenSharingExtension</key>
+	<string>com.app.ballysReservationApp.ScreenShare</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

@@ -15,6 +15,7 @@ import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MethodChannel;
+import 'package:flutter_webrtc/flutter_webrtc.dart' show Helper;
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -68,6 +69,9 @@ class CallController extends ChangeNotifier {
   bool micEnabled = true;
   late bool cameraEnabled = media == CallMedia.video;
   late bool speakerOn = media == CallMedia.video;
+
+  /// We are showing our screen to the others on the call.
+  bool screenSharing = false;
 
   /// The call's audio outputs and the one it is on, kept current while the
   /// call is live. Null until the platform reports them.
@@ -479,11 +483,119 @@ class CallManager {
     });
   }
 
+  /// Native side of screen sharing. Android: the foreground service that
+  /// Android 10+ requires while the screen is captured (`CallScreenShare.kt`).
+  /// iOS: the system broadcast picker and the ScreenShare extension's
+  /// start/stop signals (`AppDelegate.registerScreenShareChannel`).
+  static const _screenShareChannel = MethodChannel('call_screen_share');
+  bool _screenShareChannelReady = false;
+
+  static bool get screenShareSupported => Platform.isAndroid || Platform.isIOS;
+
+  /// Starts or stops showing our screen to everyone on the call, WhatsApp
+  /// style: the system asks the user first, and while it is on there is a
+  /// way out from outside the app too — a notification with "Stop sharing"
+  /// on Android, the red status-bar pill on iOS.
+  Future<void> toggleScreenShare() async {
+    final c = _current;
+    final lp = c?.room?.localParticipant;
+    if (c == null || lp == null || !screenShareSupported) return;
+    if (c.screenSharing) return _stopScreenShare(c);
+
+    _listenForScreenShareStop();
+    if (Platform.isIOS) {
+      // Sharing starts when the extension says the broadcast has —
+      // see [_startIOSScreenShare]. Cancelling the sheet leaves nothing to
+      // undo.
+      try {
+        await _screenShareChannel.invokeMethod('showPicker');
+      } catch (e) {
+        print('screen share picker failed: $e');
+        _toast('Could not share your screen');
+      }
+      return;
+    }
+    try {
+      // The system "start recording or casting?" prompt.
+      if (!await Helper.requestCapturePermission()) return;
+      if (!_isLive(c)) return;
+      await _screenShareChannel.invokeMethod('start');
+      if (!_isLive(c)) {
+        _screenShareChannel.invokeMethod('stop').ignore();
+        return;
+      }
+      await lp.setScreenShareEnabled(true);
+      c.screenSharing = true;
+      c.update();
+    } catch (e) {
+      print('screen share failed: $e');
+      _screenShareChannel.invokeMethod('stop').ignore();
+      _toast('Could not share your screen');
+    }
+  }
+
+  /// iOS: the user tapped Start Broadcast and the extension is up. Our
+  /// screen track opens the socket the extension is waiting to send to.
+  Future<void> _startIOSScreenShare() async {
+    final c = _current;
+    final lp = c?.room?.localParticipant;
+    if (c == null || lp == null || !_isLive(c) || c.screenSharing) {
+      // Not on a call (any more): the broadcast has nowhere to go.
+      _screenShareChannel.invokeMethod('stop').ignore();
+      return;
+    }
+    try {
+      final track = await LocalVideoTrack.createScreenShareTrack(
+        const _IOSBroadcastCaptureOptions(),
+      );
+      if (!_isLive(c)) {
+        await track.stop();
+        _screenShareChannel.invokeMethod('stop').ignore();
+        return;
+      }
+      await lp.publishVideoTrack(track);
+      c.screenSharing = true;
+      c.update();
+    } catch (e) {
+      print('screen share failed: $e');
+      _screenShareChannel.invokeMethod('stop').ignore();
+      _toast('Could not share your screen');
+    }
+  }
+
+  Future<void> _stopScreenShare(CallController c) async {
+    c.screenSharing = false;
+    c.update();
+    try {
+      await c.room?.localParticipant?.setScreenShareEnabled(false);
+    } catch (e) {
+      print('screen share stop failed: $e');
+    }
+    _screenShareChannel.invokeMethod('stop').ignore();
+  }
+
+  /// Sharing stopped from outside the app — Android's notification action,
+  /// iOS's status bar — and, on iOS, the broadcast starting.
+  void _listenForScreenShareStop() {
+    if (_screenShareChannelReady) return;
+    _screenShareChannelReady = true;
+    _screenShareChannel.setMethodCallHandler((call) async {
+      final c = _current;
+      switch (call.method) {
+        case 'broadcastStarted':
+          await _startIOSScreenShare();
+        case 'stopRequested':
+          if (c != null && c.screenSharing) await _stopScreenShare(c);
+      }
+    });
+  }
+
   Future<void> switchCamera() async {
     final c = _current;
-    final pub = c?.room?.localParticipant?.videoTrackPublications.firstOrNull;
+    final pub = c?.room?.localParticipant
+        ?.getTrackPublicationBySource(TrackSource.camera);
     final track = pub?.track;
-    if (c == null || track == null) return;
+    if (c == null || track is! LocalVideoTrack) return;
     c.cameraPosition = c.cameraPosition == CameraPosition.front
         ? CameraPosition.back
         : CameraPosition.front;
@@ -816,6 +928,10 @@ class CallManager {
     _lostTimer = null;
     _routeTimer?.cancel();
     _routeTimer = null;
+    if (c.screenSharing) {
+      c.screenSharing = false;
+      _screenShareChannel.invokeMethod('stop').ignore();
+    }
     final callId = c.callId;
     if (callId != null) unawaited(CallKitService.release(callId));
     unawaited(CallKitService.disarmTerminateHangUp());
@@ -1187,4 +1303,18 @@ class CallManager {
       SnackBar(content: Text(text), behavior: SnackBarBehavior.floating),
     );
   }
+}
+
+/// Screen capture through the ScreenShare broadcast extension. LiveKit's own
+/// iOS broadcast option also opens the system picker as the track is
+/// created; the `-manual` device id tells flutter_webrtc not to, because the
+/// picker has already been shown and the broadcast is already running.
+class _IOSBroadcastCaptureOptions extends ScreenShareCaptureOptions {
+  const _IOSBroadcastCaptureOptions() : super(useiOSBroadcastExtension: true);
+
+  @override
+  Map<String, dynamic> toMediaConstraintsMap() => {
+        ...super.toMediaConstraintsMap(),
+        'deviceId': 'broadcast-manual',
+      };
 }

@@ -1,6 +1,7 @@
 import AVFoundation
 import Flutter
 import PushKit
+import ReplayKit
 import UIKit
 import FirebaseCore
 import FirebaseMessaging
@@ -115,6 +116,8 @@ import flutter_callkit_incoming
         result(nil)
       }
 
+      registerScreenShareChannel(controller.binaryMessenger)
+
       // The call's audio outputs — iPhone, Speaker, AirPods / Bluetooth,
       // headphones — for the in-call output picker (CallAudioRouter).
       let audioRouteChannel = FlutterMethodChannel(name: "call_audio_route",
@@ -201,6 +204,49 @@ import flutter_callkit_incoming
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+
+  /// Screen sharing during a call (CallManager.toggleScreenShare). The
+  /// ScreenShare broadcast extension does the capturing; this side opens
+  /// the system picker for it and passes start/stop between it and Dart:
+  ///
+  /// - `showPicker` → the system "Start Broadcast" sheet.
+  /// - extension started → Dart `broadcastStarted`, which publishes the
+  ///   screen track (flutter_webrtc then opens the socket the extension
+  ///   sends frames to).
+  /// - extension finished (status bar / Control Center) → Dart
+  ///   `stopRequested`.
+  /// - `stop` from Dart → the extension ends the broadcast.
+  private func registerScreenShareChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(name: "call_screen_share", binaryMessenger: messenger)
+    screenShareChannel = channel
+    DarwinNotificationCenter.observe(ScreenShareSignal.started) {
+      channel.invokeMethod("broadcastStarted", arguments: nil)
+    }
+    DarwinNotificationCenter.observe(ScreenShareSignal.finished) {
+      channel.invokeMethod("stopRequested", arguments: nil)
+    }
+    channel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+      switch call.method {
+      case "showPicker":
+        let picker = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+        picker.preferredExtension =
+          Bundle.main.object(forInfoDictionaryKey: "RTCScreenSharingExtension") as? String
+        picker.showsMicrophoneButton = false
+        // The picker has no API to open itself; tapping its button is the
+        // accepted way, the same one flutter_webrtc uses.
+        let button = picker.subviews.compactMap { $0 as? UIButton }.first
+        button?.sendActions(for: .allTouchEvents)
+        result(button != nil)
+      case "stop":
+        DarwinNotificationCenter.post(ScreenShareSignal.stopRequested)
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private var screenShareChannel: FlutterMethodChannel?
 
   /// The end request for the call on right now, sent if the app is
   /// terminated before Dart gets to hang up.

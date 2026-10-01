@@ -59,7 +59,9 @@ class _CallScreenState extends State<CallScreen> {
             c.phase == CallPhase.connecting ||
             c.phase == CallPhase.connected) &&
         c.onEarpiece &&
-        !c.cameraEnabled;
+        !c.cameraEnabled &&
+        !c.screenSharing &&
+        _remoteScreenSharer(c) == null;
     _setProximity(atEar);
   }
 
@@ -96,7 +98,8 @@ class _CallScreenState extends State<CallScreen> {
                 SafeArea(
                   child: Column(
                     children: [
-                      if (_showsVideoStage(c)) _TopBar(controller: c),
+                      if (_showsVideoStage(c) || _showsScreenShareStage(c))
+                        _TopBar(controller: c),
                       const Spacer(),
                       c.phase == CallPhase.incoming
                           ? const _IncomingActions()
@@ -121,6 +124,26 @@ class _CallScreenState extends State<CallScreen> {
                       ),
                     ),
                   ),
+                // Flip camera sits up top, WhatsApp style, leaving the
+                // controls bar room for screen sharing.
+                if (c.isVideo &&
+                    c.cameraEnabled &&
+                    c.room != null &&
+                    c.phase != CallPhase.ended)
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        tooltip: 'Switch camera',
+                        icon: const Icon(
+                          Icons.cameraswitch,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                        onPressed: CallManager.instance.switchCamera,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -141,22 +164,42 @@ bool _showsVideoStage(CallController c) {
       c.remoteParticipants.any((p) => _remoteVideo(p) != null);
 }
 
+/// Someone's screen is being shared, ours included: that takes over the
+/// stage, whatever kind of call it is.
+bool _showsScreenShareStage(CallController c) =>
+    c.phase == CallPhase.connected &&
+    (c.screenSharing || _remoteScreenSharer(c) != null);
+
+/// The first other person showing their screen, if any.
+RemoteParticipant? _remoteScreenSharer(CallController c) =>
+    c.remoteParticipants.where((p) => _remoteScreen(p) != null).firstOrNull;
+
+VideoTrack? _remoteScreen(RemoteParticipant p) {
+  final pub = p.getTrackPublicationBySource(TrackSource.screenShareVideo);
+  if (pub == null || !pub.subscribed || pub.muted) return null;
+  final track = pub.track;
+  return track is VideoTrack ? track as VideoTrack : null;
+}
+
 /// A live group call with no cameras on: everyone gets a tile, WhatsApp
 /// style, rather than the single big avatar.
 bool _showsGroupAudioStage(CallController c) =>
     c.isGroupCall && c.phase == CallPhase.connected && !_showsVideoStage(c);
 
 VideoTrack? _remoteVideo(RemoteParticipant p) => p.videoTrackPublications
-    .where((pub) => pub.subscribed && !pub.muted)
+    .where((pub) =>
+        pub.source == TrackSource.camera && pub.subscribed && !pub.muted)
     .map((pub) => pub.track)
     .whereType<VideoTrack>()
     .firstOrNull;
 
 VideoTrack? _localVideo(CallController c) {
   if (!c.cameraEnabled) return null;
-  final pub = c.room?.localParticipant?.videoTrackPublications.firstOrNull;
+  final pub =
+      c.room?.localParticipant?.getTrackPublicationBySource(TrackSource.camera);
   if (pub == null || pub.muted) return null;
-  return pub.track;
+  final track = pub.track;
+  return track is VideoTrack ? track as VideoTrack : null;
 }
 
 String _initials(String name) {
@@ -191,6 +234,13 @@ class _Stage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    if (c.phase == CallPhase.connected && c.screenSharing) {
+      return const _SharingOwnScreenStage();
+    }
+    final sharer = c.phase == CallPhase.connected ? _remoteScreenSharer(c) : null;
+    if (sharer != null) {
+      return _RemoteScreenStage(controller: c, sharer: sharer);
+    }
     if (_showsGroupAudioStage(c)) return _GroupAudioStage(controller: c);
     if (!_showsVideoStage(c)) return _AvatarStage(controller: c);
 
@@ -377,6 +427,106 @@ class _OneToOneStageState extends State<_OneToOneStage> {
         key: ObjectKey(track),
         fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
       );
+}
+
+/// What the sharer sees while their screen is out, WhatsApp style — not a
+/// mirror of the screen itself, which would just repeat into itself.
+class _SharingOwnScreenStage extends StatelessWidget {
+  const _SharingOwnScreenStage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.screen_share, color: Colors.white70, size: 72),
+            const SizedBox(height: 20),
+            const Text(
+              "You're sharing your screen",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Everyone on the call can see what is on your screen, '
+              'including notifications.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.stop_screen_share),
+              label: const Text('Stop sharing'),
+              onPressed: CallManager.instance.toggleScreenShare,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Somebody else's screen, fitted whole (not cropped) so nothing on it is
+/// cut off; pinch to zoom in on the detail.
+class _RemoteScreenStage extends StatelessWidget {
+  final CallController controller;
+  final RemoteParticipant sharer;
+  const _RemoteScreenStage({required this.controller, required this.sharer});
+
+  @override
+  Widget build(BuildContext context) {
+    final track = _remoteScreen(sharer)!;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 56, 0, 112),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.screen_share,
+                      color: Colors.white70, size: 16),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      '${controller.nameOf(sharer)} is sharing their screen',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: InteractiveViewer(
+                maxScale: 4,
+                child: VideoTrackRenderer(
+                  track,
+                  key: ObjectKey(track),
+                  fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Audio calls, ringing and anything without video: a big avatar, the name
@@ -1120,13 +1270,18 @@ class _Controls extends StatelessWidget {
               tooltip: 'Camera',
               onTap: live ? manager.toggleCamera : null,
             ),
-            _ToggleButton(
-              icon: Icons.cameraswitch,
-              active: false,
-              tooltip: 'Switch camera',
-              onTap: live && c.cameraEnabled ? manager.switchCamera : null,
-            ),
           ],
+          if (CallManager.screenShareSupported)
+            _ToggleButton(
+              icon: c.screenSharing
+                  ? Icons.stop_screen_share
+                  : Icons.screen_share,
+              active: c.screenSharing,
+              tooltip: c.screenSharing ? 'Stop sharing' : 'Share screen',
+              onTap: live && c.phase == CallPhase.connected
+                  ? manager.toggleScreenShare
+                  : null,
+            ),
           _ToggleButton(
             icon: c.micEnabled ? Icons.mic : Icons.mic_off,
             active: !c.micEnabled,

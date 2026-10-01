@@ -1774,7 +1774,7 @@ const SizedBox(height: 16),
                           child: OutlinedButton(
                             onPressed: _saveHotelSelection,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: editMode
+                              backgroundColor: editMode
                                   ? Colors.green
                                   : Constants.kSecondaryColor,
                               side: BorderSide(
@@ -1793,6 +1793,7 @@ const SizedBox(height: 16),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                             ),
                           ),

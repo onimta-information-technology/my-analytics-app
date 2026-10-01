@@ -2304,7 +2304,7 @@ class _AirTicketsSelectionBallysScreenState
                               ? OutlinedButton(
                                   onPressed: _saveTicketSelection,
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green,
+                                    backgroundColor: Colors.green,
                                     side: const BorderSide(
                                         color: Colors.green, width: 2),
                                     shape: RoundedRectangleBorder(
@@ -2317,13 +2317,13 @@ class _AirTicketsSelectionBallysScreenState
                                     "Update Air Ticket",
                                     style: TextStyle(
                                         fontSize: 16,
-                                        fontWeight: FontWeight.bold),
+                                        fontWeight: FontWeight.bold,color: Color.fromARGB(255, 254, 254, 254)),
                                   ),
                                 )
                               : OutlinedButton(
                                   onPressed: _saveTicketSelection,
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Constants.kSecondaryColor,
+                                    backgroundColor: Constants.kSecondaryColor,
                                     side: const BorderSide(
                                         color: Constants.kSecondaryColor,
                                         width: 2),
@@ -2337,7 +2337,7 @@ class _AirTicketsSelectionBallysScreenState
                                     "Add Air Ticket",
                                     style: TextStyle(
                                         fontSize: 16,
-                                        fontWeight: FontWeight.bold),
+                                        fontWeight: FontWeight.bold,color: Color.fromARGB(255, 254, 254, 254)),
                                   ),
                                 ),
                         ),

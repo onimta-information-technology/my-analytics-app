@@ -5209,223 +5209,234 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                   : ChatColors.incomingBubble),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Sender (groups only)
-                          if (showSenderName)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                bottom: 2,
-                                left: isImageBubble ? 8 : 0,
-                                top: isImageBubble ? 4 : 0,
-                              ),
-                              child: Text(
-                                senderLabel,
-                                style: TextStyle(
-                                  color: ChatContact.generateColorFromName(
-                                    senderLabel,
-                                  ),
-                                  fontSize: fontSettings.fontSize - 4,
-                                  fontWeight: FontWeight.bold,
+                      // Sized to its widest line, so the time row below can
+                      // sit in the bottom-right corner without stretching a
+                      // short message to full width.
+                      child: IntrinsicWidth(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Sender (groups only)
+                            if (showSenderName)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: 2,
+                                  left: isImageBubble ? 8 : 0,
+                                  top: isImageBubble ? 4 : 0,
                                 ),
-                              ),
-                            ),
-
-                          // Quoted message (reply)
-                          if (message.replyToMessageId != null && !isDeleted)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                left: isImageBubble ? 8 : 0,
-                                right: isImageBubble ? 8 : 0,
-                                top: isImageBubble ? 4 : 0,
-                              ),
-                              child: _buildQuotedMessage(message, fontSettings),
-                            ),
-
-                          // Forwarded tag — the backend marks messages created
-                          // by the forward endpoint, naming the original sender.
-                          if (message.isForwarded && !isDeleted)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                bottom: 4,
-                                left: isImageBubble ? 8 : 0,
-                                top: isImageBubble ? 4 : 0,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.forward,
-                                    size: fontSettings.fontSize - 3,
-                                    color: ChatColors.bubbleMeta,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      (message.forwardedFromSenderName
-                                                  ?.trim()
-                                                  .isNotEmpty ??
-                                              false)
-                                          ? 'Forwarded from '
-                                                '${message.forwardedFromSenderName!.trim()}'
-                                          : 'Forwarded',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontStyle: FontStyle.italic,
-                                        fontSize: fontSettings.fontSize - 4,
-                                        color: ChatColors.bubbleMeta,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // "Mentioned you" tag, driven by the server's mentions
-                          // list so it is right even when the text is edited or a
-                          // member was renamed.
-                          // if (_mentionsMe(message))
-                          //   Padding(
-                          //     padding: EdgeInsets.only(
-                          //       bottom: 2,
-                          //       left: isImageBubble ? 8 : 0,
-                          //       right: isImageBubble ? 8 : 0,
-                          //     ),
-                          //     child: Row(
-                          //       mainAxisSize: MainAxisSize.min,
-                          //       children: [
-                          //         Icon(
-                          //           Icons.alternate_email,
-                          //           size: fontSettings.fontSize - 4,
-                          //           color: Colors.amber[800],
-                          //         ),
-                          //         const SizedBox(width: 4),
-                          //         Text(
-                          //           'Mentioned you',
-                          //           style: TextStyle(
-                          //             fontSize: fontSettings.fontSize - 5,
-                          //             fontWeight: FontWeight.bold,
-                          //             color: Colors.amber[800],
-                          //           ),
-                          //         ),
-                          //       ],
-                          //     ),
-                          //   ),
-
-                          // Attachment
-                          if (hasGrouped) ...[
-                            _buildImageGrid(
-                              message.groupedAttachments,
-                              message.isMe,
-                              message.id,
-                              fontSettings,
-                            ),
-                          ] else if (message.fileType != null &&
-                              !isDeleted) ...[
-                            _buildSingleAttachment(message, fontSettings),
-                          ],
-
-                          if (hasGrouped ||
-                              (message.fileType != null && !isDeleted))
-                            const SizedBox(height: 4),
-
-                          // Tombstone, standing in for whatever was here
-                          // before the sender deleted it for everyone.
-                          if (isDeleted)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.block,
-                                    size: fontSettings.fontSize,
-                                    color: ChatColors.bubbleMeta,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      message.isMe
-                                          ? 'You deleted this message'
-                                          : 'This message was deleted',
-                                      style: TextStyle(
-                                        color: ChatColors.bubbleMeta,
-                                        fontSize: fontSettings.fontSize,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Text
-                          if (showText)
-                            Padding(
-                              padding: isImageBubble
-                                  ? const EdgeInsets.symmetric(horizontal: 8)
-                                  : EdgeInsets.zero,
-                              child: _buildMessageText(
-                                message,
-                                TextStyle(
-                                  color: ChatColors.bubbleText,
-                                  fontSize: fontSettings.fontSize + 2,
-                                  fontWeight: fontSettings.fontWeight,
-                                ),
-                              ),
-                            ),
-
-                          // Time + read tick
-                          Padding(
-                            padding: isImageBubble
-                                ? const EdgeInsets.only(
-                                    right: 8,
-                                    left: 8,
-                                    bottom: 4,
-                                  )
-                                : EdgeInsets.zero,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _formatTime(message.timestamp),
+                                child: Text(
+                                  senderLabel,
                                   style: TextStyle(
-                                    color: ChatColors.bubbleMeta,
+                                    color: ChatContact.generateColorFromName(
+                                      senderLabel,
+                                    ),
                                     fontSize: fontSettings.fontSize - 4,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                // Corrected after sending: say so, the way
-                                // every other chat app does, so a changed
-                                // message is never silently different.
-                                if (message.isEdited && !isDeleted) ...[
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'edited',
-                                    style: TextStyle(
+                              ),
+
+                            // Quoted message (reply)
+                            if (message.replyToMessageId != null && !isDeleted)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  left: isImageBubble ? 8 : 0,
+                                  right: isImageBubble ? 8 : 0,
+                                  top: isImageBubble ? 4 : 0,
+                                ),
+                                child: _buildQuotedMessage(
+                                  message,
+                                  fontSettings,
+                                ),
+                              ),
+
+                            // Forwarded tag — the backend marks messages created
+                            // by the forward endpoint, naming the original sender.
+                            if (message.isForwarded && !isDeleted)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: 4,
+                                  left: isImageBubble ? 8 : 0,
+                                  top: isImageBubble ? 4 : 0,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.forward,
+                                      size: fontSettings.fontSize - 3,
                                       color: ChatColors.bubbleMeta,
-                                      fontSize: fontSettings.fontSize - 5,
-                                      fontStyle: FontStyle.italic,
                                     ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        (message.forwardedFromSenderName
+                                                    ?.trim()
+                                                    .isNotEmpty ??
+                                                false)
+                                            ? 'Forwarded from '
+                                                  '${message.forwardedFromSenderName!.trim()}'
+                                            : 'Forwarded',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: fontSettings.fontSize - 4,
+                                          color: ChatColors.bubbleMeta,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            // "Mentioned you" tag, driven by the server's mentions
+                            // list so it is right even when the text is edited or a
+                            // member was renamed.
+                            // if (_mentionsMe(message))
+                            //   Padding(
+                            //     padding: EdgeInsets.only(
+                            //       bottom: 2,
+                            //       left: isImageBubble ? 8 : 0,
+                            //       right: isImageBubble ? 8 : 0,
+                            //     ),
+                            //     child: Row(
+                            //       mainAxisSize: MainAxisSize.min,
+                            //       children: [
+                            //         Icon(
+                            //           Icons.alternate_email,
+                            //           size: fontSettings.fontSize - 4,
+                            //           color: Colors.amber[800],
+                            //         ),
+                            //         const SizedBox(width: 4),
+                            //         Text(
+                            //           'Mentioned you',
+                            //           style: TextStyle(
+                            //             fontSize: fontSettings.fontSize - 5,
+                            //             fontWeight: FontWeight.bold,
+                            //             color: Colors.amber[800],
+                            //           ),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+
+                            // Attachment
+                            if (hasGrouped) ...[
+                              _buildImageGrid(
+                                message.groupedAttachments,
+                                message.isMe,
+                                message.id,
+                                fontSettings,
+                              ),
+                            ] else if (message.fileType != null &&
+                                !isDeleted) ...[
+                              _buildSingleAttachment(message, fontSettings),
+                            ],
+
+                            if (hasGrouped ||
+                                (message.fileType != null && !isDeleted))
+                              const SizedBox(height: 4),
+
+                            // Tombstone, standing in for whatever was here
+                            // before the sender deleted it for everyone.
+                            if (isDeleted)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.block,
+                                      size: fontSettings.fontSize,
+                                      color: ChatColors.bubbleMeta,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        message.isMe
+                                            ? 'You deleted this message'
+                                            : 'This message was deleted',
+                                        style: TextStyle(
+                                          color: ChatColors.bubbleMeta,
+                                          fontSize: fontSettings.fontSize,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            // Text
+                            if (showText)
+                              Padding(
+                                padding: isImageBubble
+                                    ? const EdgeInsets.symmetric(horizontal: 8)
+                                    : EdgeInsets.zero,
+                                child: _buildMessageText(
+                                  message,
+                                  TextStyle(
+                                    color: ChatColors.bubbleText,
+                                    fontSize: fontSettings.fontSize + 2,
+                                    fontWeight: fontSettings.fontWeight,
                                   ),
-                                ],
-                                if (message.isMe) ...[
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    message.isRead == true
-                                        ? Icons.done_all
-                                        : Icons.done,
-                                    color: message.isRead == true
-                                        ? ChatColors.readTick
-                                        : ChatColors.bubbleMeta,
-                                    size: 16,
-                                  ),
-                                ],
-                              ],
+                                ),
+                              ),
+
+                            // Time + read tick, bottom-right like WhatsApp.
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: isImageBubble
+                                    ? const EdgeInsets.only(
+                                        right: 8,
+                                        left: 8,
+                                        bottom: 4,
+                                      )
+                                    : EdgeInsets.zero,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _formatTime(message.timestamp),
+                                      style: TextStyle(
+                                        color: ChatColors.bubbleMeta,
+                                        fontSize: fontSettings.fontSize - 4,
+                                      ),
+                                    ),
+                                    // Corrected after sending: say so, the way
+                                    // every other chat app does, so a changed
+                                    // message is never silently different.
+                                    if (message.isEdited && !isDeleted) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'edited',
+                                        style: TextStyle(
+                                          color: ChatColors.bubbleMeta,
+                                          fontSize: fontSettings.fontSize - 5,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                    if (message.isMe) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        message.isRead == true
+                                            ? Icons.done_all
+                                            : Icons.done,
+                                        color: message.isRead == true
+                                            ? ChatColors.readTick
+                                            : ChatColors.bubbleMeta,
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     // Reaction summary, hung under the bubble rather than
@@ -5571,10 +5582,6 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         : (message.isMe ? Icons.call_made : Icons.call_received);
 
     final media = isVideo ? CallMedia.video : CallMedia.audio;
-    final subtitle = [
-      _formatTime(message.timestamp),
-      if (duration != null) duration,
-    ].join(' · ');
 
     // Who started it. The server logs the call as a message from the caller,
     // so in a group the caller's name sits on top, the way it does on any
@@ -5601,72 +5608,97 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 // the logged call used.
                 onTap: () => _startCall(media),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-                  child: Row(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 10, 6),
+                  // The time sits in the bottom-right corner, where every
+                  // other bubble keeps it.
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(statusIcon, size: 18, color: statusColor),
-                      ),
-                      const SizedBox(width: 10),
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (showCaller)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text(
-                                  callerLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: ChatContact.generateColorFromName(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              statusIcon,
+                              size: 18,
+                              color: statusColor,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (showCaller)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 2),
+                                    child: Text(
                                       callerLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color:
+                                            ChatContact.generateColorFromName(
+                                              callerLabel,
+                                            ),
+                                        fontSize: fontSettings.fontSize - 4,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                    fontSize: fontSettings.fontSize - 4,
-                                    fontWeight: FontWeight.bold,
+                                  ),
+                                Text(
+                                  title,
+                                  style: TextStyle(
+                                    color: ChatColors.bubbleText,
+                                    fontSize: fontSettings.fontSize,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ),
-                            Text(
-                              title,
-                              style: TextStyle(
-                                color: ChatColors.bubbleText,
-                                fontSize: fontSettings.fontSize,
-                                fontWeight: FontWeight.w500,
-                              ),
+                                if (duration != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    duration,
+                                    style: TextStyle(
+                                      color: ChatColors.bubbleMeta,
+                                      fontSize: fontSettings.fontSize - 4,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: TextStyle(
-                                color: ChatColors.bubbleMeta,
-                                fontSize: fontSettings.fontSize - 4,
-                              ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              isVideo
+                                  ? Icons.videocam_outlined
+                                  : Icons.call_outlined,
+                              color: ChatColors.primary,
+                              size: 20,
                             ),
-                          ],
-                        ),
+                            visualDensity: VisualDensity.compact,
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(6),
+                            tooltip: isVideo ? 'Video call back' : 'Call back',
+                            onPressed: () => _startCall(media),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          isVideo ? Icons.videocam_outlined : Icons.call_outlined,
-                          color: ChatColors.primary,
-                          size: 20,
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatTime(message.timestamp),
+                        style: TextStyle(
+                          color: ChatColors.bubbleMeta,
+                          fontSize: fontSettings.fontSize - 4,
                         ),
-                        visualDensity: VisualDensity.compact,
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(6),
-                        tooltip: isVideo ? 'Video call back' : 'Call back',
-                        onPressed: () => _startCall(media),
                       ),
                     ],
                   ),

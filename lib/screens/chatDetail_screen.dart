@@ -5576,6 +5576,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       if (duration != null) duration,
     ].join(' · ');
 
+    // Who started it. The server logs the call as a message from the caller,
+    // so in a group the caller's name sits on top, the way it does on any
+    // other bubble from someone else.
+    final callerLabel = _senderLabel(message);
+    final showCaller = widget.isGroup && !message.isMe;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -5614,6 +5620,22 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (showCaller)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text(
+                                  callerLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: ChatContact.generateColorFromName(
+                                      callerLabel,
+                                    ),
+                                    fontSize: fontSettings.fontSize - 4,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             Text(
                               title,
                               style: TextStyle(

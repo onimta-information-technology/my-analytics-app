@@ -2,9 +2,9 @@ import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/amendment_ballys.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
-/// Reads the raised amendments back from the two Ballys feeds.
+/// Reads the raised amendments back from the three Ballys feeds.
 ///
-/// Both endpoints answer flat: a `master` list plus child lists that reference
+/// The air and hotel endpoints answer flat: a `master` list plus child lists that reference
 /// their parent by row id. This repository does the joining, so callers get one
 /// [AmendmentBallys] per request with its rows already attached.
 class AmendmentRepository {
@@ -20,6 +20,21 @@ class AmendmentRepository {
   /// GET `{baseUrl}/AmendmentHotel/Get` — every hotel amendment.
   Future<List<AmendmentBallys>> getHotelAmendments() async {
     return parseHotelResponse(await apiService.get('AmendmentHotel/Get'));
+  }
+
+  /// GET `{baseUrl}/AmendmentPaymentBy/Get` — every payment-by amendment.
+  Future<List<AmendmentBallys>> getPaymentByAmendments() async {
+    return parsePaymentByResponse(
+      await apiService.get('AmendmentPaymentBy/Get'),
+    );
+  }
+
+  /// The payment-by feed has no child lists — one master row is one request.
+  static List<AmendmentBallys> parsePaymentByResponse(
+    Map<String, dynamic> response,
+  ) {
+    if (response['success'] != true) return [];
+    return _rows(response['master']).map(AmendmentBallys.fromJson).toList();
   }
 
   /// Rebuilds the air feed: tickets under their master, and guests, classes
@@ -102,9 +117,9 @@ class AmendmentRepository {
   /// Moves one amendment to [status] ("Checked" / "Approved" / "Rejected").
   ///
   /// POSTs to the endpoint that matches the feed and the status —
-  /// `AmendmentAir/UpdateChecked`, `AmendmentHotel/UpdateRejected` and so on.
-  /// The row is addressed by its master row id, which is what the two feeds
-  /// hang their tickets and rooms off.
+  /// `AmendmentAir/UpdateChecked`, `AmendmentHotel/UpdateRejected`,
+  /// `AmendmentPaymentBy/UpdateApproved` and so on. The row is addressed by
+  /// its master row id.
   Future<AmendmentStatusResult> updateStatus({
     required AmendmentBallys amendment,
     required String status,
@@ -118,8 +133,7 @@ class AmendmentRepository {
       );
     }
 
-    final endpoint =
-        '${amendment.isHotel ? 'AmendmentHotel' : 'AmendmentAir'}/$action';
+    final endpoint = '${_feedSegment(amendment.kind)}/$action';
     final actionedBy = await StorageUtil.getUserName() ?? '';
 
     final response = await apiService.post(endpoint, {
@@ -131,15 +145,25 @@ class AmendmentRepository {
     // The amendment endpoints answer `success`; the older insert endpoints
     // answer `Status`. Accept either, so one shape changing does not read as
     // a failed action.
-    final success =
-        response['success'] == true || response['Status'] == true;
+    final success = response['success'] == true || response['Status'] == true;
 
     return AmendmentStatusResult(
       success: success,
-      message: (response['Message'] ?? response['message'] ??
-              response['statusMsg'])
-          ?.toString(),
+      message:
+          (response['Message'] ?? response['message'] ?? response['statusMsg'])
+              ?.toString(),
     );
+  }
+
+  static String _feedSegment(AmendmentKind kind) {
+    switch (kind) {
+      case AmendmentKind.hotel:
+        return 'AmendmentHotel';
+      case AmendmentKind.paymentBy:
+        return 'AmendmentPaymentBy';
+      case AmendmentKind.airTicket:
+        return 'AmendmentAir';
+    }
   }
 
   /// The URL segment for [status], or null when it is not an action the API

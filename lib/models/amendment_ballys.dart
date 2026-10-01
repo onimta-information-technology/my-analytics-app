@@ -1,8 +1,10 @@
-/// Models for the two amendment feeds — `AmendmentAir/Get` and
-/// `AmendmentHotel/Get`.
+/// Models for the amendment feeds — `AmendmentAir/Get`, `AmendmentHotel/Get`
+/// and `AmendmentPaymentBy/Get`.
 ///
-/// Both endpoints answer with the same shape: a flat `master` list plus flat
-/// child lists that point back at their parent by row id. [AmendmentBallys]
+/// The air and hotel endpoints answer with the same shape: a flat `master`
+/// list plus flat child lists that point back at their parent by row id. The
+/// payment-by feed is a `master` list only — each row carries its own guest
+/// and the payment change. [AmendmentBallys]
 /// stitches those back into one object per amendment request, so the screens
 /// never have to join rows themselves.
 library;
@@ -365,7 +367,7 @@ class AmendmentHotelRoom {
 }
 
 /// What the amendment was raised against — decides which child list is filled.
-enum AmendmentKind { airTicket, hotel }
+enum AmendmentKind { airTicket, hotel, paymentBy }
 
 /// One amendment request: the `master` row plus its rebuilt children.
 class AmendmentBallys {
@@ -373,7 +375,7 @@ class AmendmentBallys {
   final String masterId;
   final String reservationNo;
 
-  /// Raw `amendment_on` — "AirTicket" or "Hotel".
+  /// Raw `amendment_on` — "AirTicket", "Hotel" or "PaymentBy".
   final String amendmentOn;
   final String userName;
   final String deviceId;
@@ -384,6 +386,9 @@ class AmendmentBallys {
   final String checkedRemark;
   final String checkedBy;
   final DateTime? checkedDate;
+  final String approvedRemark;
+  final String approvedBy;
+  final DateTime? approvedDate;
   final String rejectRemark;
   final String rejectedBy;
   final DateTime? rejectedDate;
@@ -393,6 +398,16 @@ class AmendmentBallys {
 
   /// Filled for [AmendmentKind.hotel]; empty otherwise.
   final List<AmendmentHotelRoom> rooms;
+
+  // Filled for [AmendmentKind.paymentBy]; blank otherwise. That feed has no
+  // child rows, so the guest and the change sit on the master itself.
+  final String bmNumber;
+  final String guestName;
+  final String currentPaymentBy;
+  final String newPaymentBy;
+  final String requestRemarks;
+  final String marketingCode;
+  final String salesCode;
 
   const AmendmentBallys({
     required this.rowId,
@@ -406,11 +421,21 @@ class AmendmentBallys {
     required this.checkedRemark,
     required this.checkedBy,
     this.checkedDate,
+    this.approvedRemark = '',
+    this.approvedBy = '',
+    this.approvedDate,
     required this.rejectRemark,
     required this.rejectedBy,
     this.rejectedDate,
     this.tickets = const [],
     this.rooms = const [],
+    this.bmNumber = '',
+    this.guestName = '',
+    this.currentPaymentBy = '',
+    this.newPaymentBy = '',
+    this.requestRemarks = '',
+    this.marketingCode = '',
+    this.salesCode = '',
   });
 
   factory AmendmentBallys.fromJson(
@@ -432,28 +457,73 @@ class AmendmentBallys {
       checkedRemark: _asString(json['CheckedRemark']),
       checkedBy: _asString(json['CheckedBy']),
       checkedDate: _asDate(json['CheckedDate']),
+      approvedRemark: _asString(json['ApprovedRemark']),
+      approvedBy: _asString(json['ApprovedBy']),
+      approvedDate: _asDate(json['ApprovedDate']),
       rejectRemark: _asString(json['RejectRemark']),
       rejectedBy: _asString(json['RejectedBy']),
       rejectedDate: _asDate(json['RejectedDate']),
       tickets: tickets,
       rooms: rooms,
+      bmNumber: _asString(json['bm_number']),
+      guestName: _asString(json['guest_name']),
+      currentPaymentBy: _asString(json['current_payment_by']),
+      newPaymentBy: _asString(json['payment_by']),
+      requestRemarks: _asString(json['remarks']),
+      marketingCode: _asString(json['marketing_code']),
+      salesCode: _asString(json['sales_code']),
     );
   }
 
-  AmendmentKind get kind => amendmentOn.toLowerCase().contains('hotel')
-      ? AmendmentKind.hotel
-      : AmendmentKind.airTicket;
+  AmendmentKind get kind {
+    final on = amendmentOn.toLowerCase();
+    if (on.contains('hotel')) return AmendmentKind.hotel;
+    if (on.contains('payment')) return AmendmentKind.paymentBy;
+    return AmendmentKind.airTicket;
+  }
 
   bool get isHotel => kind == AmendmentKind.hotel;
+  bool get isPaymentBy => kind == AmendmentKind.paymentBy;
 
-  /// "Air Ticket" / "Hotel" — what the card and detail header show.
-  String get kindLabel => isHotel ? 'Hotel' : 'Air Ticket';
+  /// "Air Ticket" / "Hotel" / "Payment By" — what the card and detail header
+  /// show.
+  String get kindLabel {
+    switch (kind) {
+      case AmendmentKind.hotel:
+        return 'Hotel';
+      case AmendmentKind.paymentBy:
+        return 'Payment By';
+      case AmendmentKind.airTicket:
+        return 'Air Ticket';
+    }
+  }
 
-  /// How many rows the request carries, whichever type it is.
-  int get lineCount => isHotel ? rooms.length : tickets.length;
+  /// How many rows the request carries, whichever type it is. A payment-by
+  /// request is always the one change.
+  int get lineCount {
+    switch (kind) {
+      case AmendmentKind.hotel:
+        return rooms.length;
+      case AmendmentKind.paymentBy:
+        return 1;
+      case AmendmentKind.airTicket:
+        return tickets.length;
+    }
+  }
 
   /// Everyone named across every row, de-duplicated by BM number + name.
   List<AmendmentGuest> get allGuests {
+    if (isPaymentBy) {
+      if (bmNumber.isEmpty && guestName.isEmpty) return const [];
+      return [
+        AmendmentGuest(
+          rowId: rowId,
+          parentRowId: rowId,
+          bmNumber: bmNumber,
+          guestName: guestName,
+        ),
+      ];
+    }
     final all = isHotel
         ? rooms.expand((r) => r.guests)
         : tickets.expand((t) => t.guests);
@@ -466,6 +536,9 @@ class AmendmentBallys {
   /// The distinct categories asked for, so a card can summarise the request
   /// without opening it.
   List<String> get categories {
+    if (isPaymentBy) {
+      return newPaymentBy.isEmpty ? const [] : [newPaymentBy];
+    }
     final all = isHotel
         ? rooms.map((r) => r.amendmentCategory)
         : tickets.map((t) => t.amendmentCategory);
@@ -477,8 +550,10 @@ class AmendmentBallys {
     switch (status) {
       case 'Rejected':
         return rejectedBy.isEmpty ? null : rejectedBy;
-      case 'Checked':
       case 'Approved':
+        if (approvedBy.isNotEmpty) return approvedBy;
+        return checkedBy.isEmpty ? null : checkedBy;
+      case 'Checked':
         return checkedBy.isEmpty ? null : checkedBy;
       default:
         return null;
@@ -489,8 +564,9 @@ class AmendmentBallys {
     switch (status) {
       case 'Rejected':
         return rejectedDate;
-      case 'Checked':
       case 'Approved':
+        return approvedDate ?? checkedDate;
+      case 'Checked':
         return checkedDate;
       default:
         return null;
@@ -501,8 +577,10 @@ class AmendmentBallys {
     switch (status) {
       case 'Rejected':
         return rejectRemark.isEmpty ? null : rejectRemark;
-      case 'Checked':
       case 'Approved':
+        if (approvedRemark.isNotEmpty) return approvedRemark;
+        return checkedRemark.isEmpty ? null : checkedRemark;
+      case 'Checked':
         return checkedRemark.isEmpty ? null : checkedRemark;
       default:
         return null;

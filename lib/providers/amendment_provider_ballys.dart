@@ -12,8 +12,9 @@ const List<String> kAmendmentStatuses = [
   'Rejected',
 ];
 
-/// Holds every raised amendment — air ticket and hotel together — bucketed by
-/// status the same way [reservationBallysProvider] buckets reservations.
+/// Holds every raised amendment — air ticket, hotel and payment by together —
+/// bucketed by status the same way [reservationBallysProvider] buckets
+/// reservations.
 class AmendmentBallysNotifier
     extends StateNotifier<Map<String, List<AmendmentBallys>>> {
   final AmendmentRepository amendmentRepository;
@@ -24,17 +25,18 @@ class AmendmentBallysNotifier
     for (final status in kAmendmentStatuses) status: <AmendmentBallys>[],
   };
 
-  /// Pulls both feeds, merges them newest-first and re-buckets by status.
+  /// Pulls every feed, merges them newest-first and re-buckets by status.
   ///
-  /// The two calls run together — neither feed depends on the other, and the
-  /// screen only draws once both have landed.
+  /// The calls run together — no feed depends on another, and the screen
+  /// only draws once all have landed.
   Future<void> getAmendments() async {
     final results = await Future.wait([
       amendmentRepository.getAirAmendments(),
       amendmentRepository.getHotelAmendments(),
+      amendmentRepository.getPaymentByAmendments(),
     ]);
 
-    final all = [...results[0], ...results[1]]
+    final all = [...results.expand((feed) => feed)]
       ..sort((a, b) {
         final aDate = a.createdDate;
         final bDate = b.createdDate;

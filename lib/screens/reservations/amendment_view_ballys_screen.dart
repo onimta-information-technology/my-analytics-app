@@ -92,7 +92,9 @@ class _AmendmentViewBallysScreenState
                 const SizedBox(height: 12),
                 _buildHeaderCard(),
                 const SizedBox(height: 12),
-                if (_amendment.isHotel)
+                if (_amendment.isPaymentBy)
+                  _buildPaymentByCard()
+                else if (_amendment.isHotel)
                   ..._amendment.rooms.map(_buildRoomCard)
                 else
                   ..._amendment.tickets.map(_buildTicketCard),
@@ -139,7 +141,11 @@ class _AmendmentViewBallysScreenState
           Row(
             children: [
               Icon(
-                _amendment.isHotel ? Icons.hotel : Icons.flight,
+                _amendment.isPaymentBy
+                    ? Icons.payments
+                    : _amendment.isHotel
+                    ? Icons.hotel
+                    : Icons.flight,
                 color: Constants.kPrimaryColor,
               ),
               const SizedBox(width: 8),
@@ -162,10 +168,11 @@ class _AmendmentViewBallysScreenState
               'Requested on ',
               _dateTimeFormat.format(_amendment.createdDate!),
             ),
-          _row(
-            _amendment.isHotel ? 'Rooms amended' : 'Tickets amended',
-            '${_amendment.lineCount}',
-          ),
+          if (!_amendment.isPaymentBy)
+            _row(
+              _amendment.isHotel ? 'Rooms amended' : 'Tickets amended',
+              '${_amendment.lineCount}',
+            ),
           if (guests.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
@@ -399,6 +406,30 @@ class _AmendmentViewBallysScreenState
             ),
           if (room.extras.isNotEmpty)
             _row('Extras', room.extras, highlight: true),
+        ],
+      ),
+    );
+  }
+
+  // ── Payment by ────────────────────────────────────────────────────────────
+
+  Widget _buildPaymentByCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _lineHeader('Payment By', '', ''),
+          const Divider(height: 20),
+          if (_amendment.currentPaymentBy.isNotEmpty)
+            _row('Current', _amendment.currentPaymentBy),
+          if (_amendment.newPaymentBy.isNotEmpty)
+            _row('New', _amendment.newPaymentBy, highlight: true),
+          if (_amendment.marketingCode.isNotEmpty)
+            _row('Marketing code', _amendment.marketingCode),
+          if (_amendment.salesCode.isNotEmpty)
+            _row('Sales code', _amendment.salesCode),
+          if (_amendment.requestRemarks.isNotEmpty)
+            _row('Remarks', _amendment.requestRemarks),
         ],
       ),
     );

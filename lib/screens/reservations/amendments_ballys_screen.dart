@@ -9,13 +9,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 /// Which feed the list is showing.
-enum _AmendmentFilter { all, airTicket, hotel }
+enum _AmendmentFilter { all, airTicket, hotel, paymentBy }
 
 /// The raised amendments, in the same four-tab workflow the Ballys reservation
 /// list uses: Pending & Checked → For Approval → Approved → Rejected.
 ///
-/// Air ticket and hotel amendments come from two endpoints but read as one
-/// queue here — the person clearing it works through both — with a filter for
+/// Air ticket, hotel and payment-by amendments come from three endpoints but
+/// read as one queue here — the person clearing it works through both — with a filter for
 /// when only one type matters.
 class AmendmentsBallysScreen extends ConsumerStatefulWidget {
   const AmendmentsBallysScreen({super.key});
@@ -108,10 +108,13 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
 
       switch (_filter) {
         case _AmendmentFilter.airTicket:
-          if (amendment.isHotel) return false;
+          if (amendment.kind != AmendmentKind.airTicket) return false;
           break;
         case _AmendmentFilter.hotel:
           if (!amendment.isHotel) return false;
+          break;
+        case _AmendmentFilter.paymentBy:
+          if (!amendment.isPaymentBy) return false;
           break;
         case _AmendmentFilter.all:
           break;
@@ -123,6 +126,7 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
         amendment.masterId,
         amendment.userName,
         amendment.kindLabel,
+        amendment.currentPaymentBy,
         ...amendment.categories,
         ...amendment.allGuests.map((g) => '${g.bmNumber} ${g.guestName}'),
       ].join(' ').toLowerCase();
@@ -286,8 +290,8 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
     );
   }
 
-  /// Air ticket / hotel filter. Both feeds share the queue, so this is the only
-  /// way to look at one of them on its own.
+  /// Air ticket / hotel / payment-by filter. The feeds share the queue, so this
+  /// is the only way to look at one of them on its own.
   Widget _buildFilterBar() {
     final fontSettings = ref.watch(fontSettingsProvider);
 
@@ -314,13 +318,16 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
       );
     }
 
-    return Padding(
+    // Four chips outgrow a phone's width, so the row scrolls instead.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
       child: Row(
         children: [
           chip('All', _AmendmentFilter.all, Icons.all_inbox),
           chip('Air Ticket', _AmendmentFilter.airTicket, Icons.flight),
           chip('Hotel', _AmendmentFilter.hotel, Icons.hotel),
+          chip('Payment By', _AmendmentFilter.paymentBy, Icons.payments),
         ],
       ),
     );
@@ -385,16 +392,14 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: amendment.isHotel
-                              ? Colors.teal
-                              : Colors.indigo,
+                          color: _kindColor(amendment.kind),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              amendment.isHotel ? Icons.hotel : Icons.flight,
+                              _kindIcon(amendment.kind),
                               size: 16,
                               color: Colors.white,
                             ),
@@ -463,25 +468,31 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
                             ),
                           ),
                         ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          amendment.isHotel
-                              ? '${amendment.lineCount} room(s)'
-                              : '${amendment.lineCount} ticket(s)',
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize - 1,
-                            color: Colors.black87,
+                      // A payment-by request is one change, so it shows
+                      // what it moves from instead of a row count.
+                      if (!amendment.isPaymentBy ||
+                          amendment.currentPaymentBy.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            amendment.isPaymentBy
+                                ? 'From: ${amendment.currentPaymentBy}'
+                                : amendment.isHotel
+                                ? '${amendment.lineCount} room(s)'
+                                : '${amendment.lineCount} ticket(s)',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 1,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -628,6 +639,28 @@ class _AmendmentsBallysScreenState extends ConsumerState<AmendmentsBallysScreen>
         },
       ),
     );
+  }
+
+  static IconData _kindIcon(AmendmentKind kind) {
+    switch (kind) {
+      case AmendmentKind.hotel:
+        return Icons.hotel;
+      case AmendmentKind.paymentBy:
+        return Icons.payments;
+      case AmendmentKind.airTicket:
+        return Icons.flight;
+    }
+  }
+
+  static Color _kindColor(AmendmentKind kind) {
+    switch (kind) {
+      case AmendmentKind.hotel:
+        return Colors.teal;
+      case AmendmentKind.paymentBy:
+        return Colors.deepPurple;
+      case AmendmentKind.airTicket:
+        return Colors.indigo;
+    }
   }
 
   static Color _statusColor(String status) {

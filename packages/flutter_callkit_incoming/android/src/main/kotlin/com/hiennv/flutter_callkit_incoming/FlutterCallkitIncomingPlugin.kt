@@ -82,9 +82,32 @@ class FlutterCallkitIncomingPlugin : FlutterPlugin, MethodCallHandler, ActivityA
             if (uiHandlers.isNotEmpty()) {
                 Log.d(TAG, "Sending UI event: $event")
                 uiHandlers.forEach { it.send(event, body) }
-            } else if (CallkitBackgroundExecutor.registered) {
+            } else if (CallkitBackgroundExecutor.registered || startBackgroundExecutor()) {
                 Log.d(TAG, "Sending background event: $event (no UI handlers)")
                 CallkitBackgroundExecutor.send(event, body)
+            } else {
+                Log.w(TAG, "Dropped event: $event (no UI handlers, no background handler)")
+            }
+        }
+
+        /**
+         * The background executor is only started by `registerBackgroundHandler`,
+         * which runs from the app's `main()`. When the app was killed and an FCM
+         * push woke the process just to ring, `main()` never ran, so a decline from
+         * the ring would be dropped and the caller left ringing. Starts it from the
+         * handle saved by an earlier `registerBackgroundHandler` instead.
+         */
+        private fun startBackgroundExecutor(): Boolean {
+            val ctx = getInstance()?.context ?: return false
+            val handle = getPluginCallbackHandle(ctx) ?: 0L
+            if (handle == 0L) return false
+            if (Looper.myLooper() != Looper.getMainLooper()) return false
+            return try {
+                CallkitBackgroundExecutor.start(ctx, handle)
+                CallkitBackgroundExecutor.registered
+            } catch (e: Exception) {
+                Log.e(TAG, "Background executor start failed", e)
+                false
             }
         }
 

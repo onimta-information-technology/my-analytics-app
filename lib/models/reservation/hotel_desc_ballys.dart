@@ -137,8 +137,8 @@ class HotelDescipBallys {
       'room_category_name': roomCategoryName,
       'room_type': roomTypeId,
       'room_type_name': roomTypeName,
-      'guest_count': guestCount,
-      'children_count': childrenCount,
+      // Guest / child counts are no longer asked for, so not sent either;
+      // still read back from older rows.
       'room_count': roomCount,
       'no_of_nights': noOfNights,
       'arrival_date': arrivalDate?.toIso8601String(),

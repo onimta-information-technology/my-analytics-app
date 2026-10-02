@@ -63,12 +63,26 @@ class AccompanyingMember {
   /// `IsSharedAmount` so an empty amount no longer has to stand in for it.
   final bool sharedPackage;
 
+  /// How many of each kind of family member travel with this member, keyed in
+  /// once [hasFamilyMembers] is ticked.
+  final int wifeCount;
+  final int childCount;
+  final int friendCount;
+
+  /// BM numbers of the members this one shares their package with, picked
+  /// when [sharedPackage] is ticked. Sent as `SharedWith`.
+  final List<String> sharedWith;
+
   const AccompanyingMember({
     required this.mid,
     required this.guestName,
     this.hasFamilyMembers = false,
     this.packageAmount = '',
     this.sharedPackage = false,
+    this.wifeCount = 0,
+    this.childCount = 0,
+    this.friendCount = 0,
+    this.sharedWith = const [],
   });
 
   factory AccompanyingMember.fromJson(Map<String, dynamic> json) {
@@ -85,6 +99,10 @@ class AccompanyingMember {
       // Records saved before the flag existed only marked a shared package by
       // leaving the amount out, so that still stands in when it is absent.
       sharedPackage: json['IsSharedAmount'] as bool? ?? amount.isEmpty,
+      wifeCount: familyCountFromJson(json['WifeCount']),
+      childCount: familyCountFromJson(json['ChildCount']),
+      friendCount: familyCountFromJson(json['FriendCount']),
+      sharedWith: sharedWithFromJson(json['SharedWith']),
     );
   }
 
@@ -94,6 +112,10 @@ class AccompanyingMember {
     bool? hasFamilyMembers,
     String? packageAmount,
     bool? sharedPackage,
+    int? wifeCount,
+    int? childCount,
+    int? friendCount,
+    List<String>? sharedWith,
   }) {
     return AccompanyingMember(
       mid: mid ?? this.mid,
@@ -101,6 +123,10 @@ class AccompanyingMember {
       hasFamilyMembers: hasFamilyMembers ?? this.hasFamilyMembers,
       packageAmount: packageAmount ?? this.packageAmount,
       sharedPackage: sharedPackage ?? this.sharedPackage,
+      wifeCount: wifeCount ?? this.wifeCount,
+      childCount: childCount ?? this.childCount,
+      friendCount: friendCount ?? this.friendCount,
+      sharedWith: sharedWith ?? this.sharedWith,
     );
   }
 }
@@ -132,6 +158,16 @@ class GuestReservationEntryBallys {
   /// guest on a shared package may still have an amount of their own.
   final bool sharedPackage;
 
+  /// Family members travelling with THIS guest, keyed in once
+  /// [hasFamilyMembers] is ticked — see [AccompanyingMember.wifeCount].
+  final int wifeCount;
+  final int childCount;
+  final int friendCount;
+
+  /// BM numbers this guest shares their package with — see
+  /// [AccompanyingMember.sharedWith].
+  final List<String> sharedWith;
+
   GuestReservationEntryBallys({
     required this.mid,
     required this.guestName,
@@ -146,6 +182,10 @@ class GuestReservationEntryBallys {
     this.accompanyingMembers = const [],
     this.packageAmount = '',
     this.sharedPackage = false,
+    this.wifeCount = 0,
+    this.childCount = 0,
+    this.friendCount = 0,
+    this.sharedWith = const [],
   });
 
   /// Simplified guest entry sent inside the `guests` array.
@@ -159,6 +199,10 @@ class GuestReservationEntryBallys {
       'PackageAmount': packageAmountToInt(packageAmount),
       'CurrencyType': packageAmountCurrency(packageAmount),
       'IsSharedAmount': sharedPackage,
+      'WifeCount': hasFamilyMembers ? wifeCount : 0,
+      'ChildCount': hasFamilyMembers ? childCount : 0,
+      'FriendCount': hasFamilyMembers ? friendCount : 0,
+      'SharedWith': sharedPackage ? sharedWith : const <String>[],
     };
   }
 
@@ -186,6 +230,10 @@ class GuestReservationEntryBallys {
           'PackageAmount': packageAmountToInt(m.packageAmount),
           'CurrencyType': packageAmountCurrency(m.packageAmount),
           'IsSharedAmount': m.sharedPackage,
+          'WifeCount': m.hasFamilyMembers ? m.wifeCount : 0,
+          'ChildCount': m.hasFamilyMembers ? m.childCount : 0,
+          'FriendCount': m.hasFamilyMembers ? m.friendCount : 0,
+          'SharedWith': m.sharedPackage ? m.sharedWith : const <String>[],
         },
       ),
     ];
@@ -247,6 +295,10 @@ class GuestReservationEntryBallys {
     List<AccompanyingMember>? accompanyingMembers,
     String? packageAmount,
     bool? sharedPackage,
+    int? wifeCount,
+    int? childCount,
+    int? friendCount,
+    List<String>? sharedWith,
   }) {
     return GuestReservationEntryBallys(
       mid: mid ?? this.mid,
@@ -262,6 +314,33 @@ class GuestReservationEntryBallys {
       accompanyingMembers: accompanyingMembers ?? this.accompanyingMembers,
       packageAmount: packageAmount ?? this.packageAmount,
       sharedPackage: sharedPackage ?? this.sharedPackage,
+      wifeCount: wifeCount ?? this.wifeCount,
+      childCount: childCount ?? this.childCount,
+      friendCount: friendCount ?? this.friendCount,
+      sharedWith: sharedWith ?? this.sharedWith,
     );
   }
+}
+
+/// A family-member count off the API, which may come back as a number, a
+/// numeric string or not at all.
+int familyCountFromJson(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim()) ?? 0;
+  return 0;
+}
+
+/// The `SharedWith` BM numbers off the API: a list, or a comma-separated
+/// string from older rows, or nothing at all.
+List<String> sharedWithFromJson(dynamic value) {
+  final Iterable<dynamic> raw = value is List
+      ? value
+      : value is String
+          ? value.split(',')
+          : const [];
+  return raw
+      .map((v) => v?.toString().trim() ?? '')
+      .where((v) => v.isNotEmpty)
+      .toList();
 }

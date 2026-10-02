@@ -691,30 +691,6 @@ class _AirTicketsSelectionBallysScreenState
       });    }
   }
 
-  void _updateAdults(count) {
-    if (_headCountsLocked) return;
-    if (count >= 1) {
-      setState(() {
-        numberOfGuests = count;
-      });    }
-  }
-
-  void _updateChildren(count) {
-    if (_headCountsLocked) return;
-    if (count >= 0) {
-      setState(() {
-        numberOfChildren = count;
-      });    }
-  }
-
-  void _updateInfants(count) {
-    if (_headCountsLocked) return;
-    if (count >= 0) {
-      setState(() {
-        numberOfInfants = count;
-      });    }
-  }
-
   void _updateRooms(count) {
     if (count >= 1) {
       setState(() {
@@ -1822,66 +1798,6 @@ class _AirTicketsSelectionBallysScreenState
 
   /// A head count. [enabled] false shows the number but takes the buttons away,
   /// for a count the ticket's guests have already settled.
-  Widget _buildCounter(
-      String label, int count, int type, Function(int) onCountChange,
-      {bool enabled = true}) {
-    final buttonColor = enabled ? Colors.grey : Colors.grey.shade300;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: enabled ? null : Colors.grey)),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: enabled ? () => onCountChange(count - 1) : null,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: buttonColor,
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: const Icon(Icons.remove, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 40,
-                  child: Text(
-                    count.toString(),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: enabled ? null : Colors.grey,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: enabled ? () => onCountChange(count + 1) : null,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: buttonColor,
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: const Icon(Icons.add, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final hotelsDropDownKey = GlobalKey<DropdownSearchState>();
@@ -1912,29 +1828,9 @@ class _AirTicketsSelectionBallysScreenState
                         const SizedBox(height: 8),
                         _guestAssignment(),
                       ],
-                      const SizedBox(height: 16),
-                      _buildCounter("Guests", numberOfGuests, 1,
-                          (count) => _updateAdults(count),
-                          enabled: !_headCountsLocked),
-                      const SizedBox(height: 12),
-                      _buildCounter("Children", numberOfChildren, 2,
-                          (count) => _updateChildren(count),
-                          enabled: !_headCountsLocked),
-                      const SizedBox(height: 12),
-                      _buildCounter("Infants", numberOfInfants, 3,
-                          (count) => _updateInfants(count),
-                          enabled: !_headCountsLocked),
-                      if (_headCountsLocked) ...[
-                        const SizedBox(height: 8),
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "This ticket is for the selected guest only — no family members to add",
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.black54),
-                          ),
-                        ),
-                      ],
+                      // Guest / child / infant counts are not asked for
+                      // any more; a ticket being edited keeps what it was
+                      // saved with.
                       const SizedBox(height: 20),
                       const Align(
                         alignment: Alignment.topLeft,

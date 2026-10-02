@@ -404,6 +404,10 @@ class ReservationBallys {
               ? 'Yes'
               : 'No',
           hasFamilyMembers: g['HasFamilyMembers'] as bool? ?? false,
+          wifeCount: familyCountFromJson(g['WifeCount']),
+          childCount: familyCountFromJson(g['ChildCount']),
+          friendCount: familyCountFromJson(g['FriendCount']),
+          sharedWith: sharedWithFromJson(g['SharedWith']),
           packageAmount: amount,
           // Rows written before the tick was sent only showed a shared package
           // by carrying no amount, so that still stands in when it is absent.

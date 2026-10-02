@@ -321,9 +321,8 @@ class FlightBookingBallys {
 
   Map<String, dynamic> toJson() {
     return {
-      'guest_count': guestCount,
-      'children_count': childrenCount,
-      'infant_count': infantCount,
+      // Guest / child / infant counts are no longer asked for, so not sent
+      // either; still read back from older rows.
       // Every class on the ticket with its own seat count. This replaces the
       // single `air_ticket_class` / `air_ticket_class_name` pair, which is no
       // longer sent — reading them back is still supported for older rows.

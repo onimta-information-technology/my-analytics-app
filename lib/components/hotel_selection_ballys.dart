@@ -316,20 +316,6 @@ String selectedEcLcoFacility = 'NA';
     }
   }
 
-  void _updateAdults(int count) {
-    if (count >= 1) {
-      setState(() => numberOfAdults = count);
-      _clearSelectedCost();
-    }
-  }
-
-  void _updateChildren(int count) {
-    if (count >= 0) {
-      setState(() => numberOfChildren = count);
-      _clearSelectedCost();
-    }
-  }
-
   void _updateRooms(int count) {
     if (_roomCountLocked) return;
     if (count >= 1) {
@@ -1394,14 +1380,8 @@ String selectedEcLcoFacility = 'NA';
                         const SizedBox(height: 16),
 
                         // ── Counters ───────────────────────────
-                        _buildCounter("Adults", numberOfAdults, _updateAdults),
-                        const SizedBox(height: 16),
-                        _buildCounter(
-                          "Children",
-                          numberOfChildren,
-                          _updateChildren,
-                        ),
-                        const SizedBox(height: 16),
+                        // Guest / child counts are not asked for any more; a
+                        // room being edited keeps the counts it was saved with.
                         _buildCounter(
                           "Rooms",
                           numberOfRooms,
@@ -2050,20 +2030,6 @@ const SizedBox(height: 16),
                                                     spacing: 20,
                                                     runSpacing: 4,
                                                     children: [
-                                                      Text(
-                                                        "Guest Count: ${hotel.guestCount}",
-                                                        style: const TextStyle(
-                                                          fontSize: 18,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        "Children: ${hotel.childrenCount ?? 0}",
-                                                        style: const TextStyle(
-                                                          fontSize: 18,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
                                                       Text(
                                                         "Rooms: ${hotel.roomCount}",
                                                         style: const TextStyle(

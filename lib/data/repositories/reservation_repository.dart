@@ -187,7 +187,7 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUserName();
     final deviceId = await DeviceId.get();
-
+    final marketingCode = await StorageUtil.getMarketingCode();
     return {
       'master_id': masterId,
       'bm_number': newReservation.bmNumber,
@@ -209,6 +209,7 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
       'sales_code': (newReservation.salesCodeOverride?.trim().isNotEmpty ?? false)
           ? newReservation.salesCodeOverride!.trim()
           : salesCode,
+      'marketing_code': marketingCode,
       'user_name': userName,
       'device_id': deviceId,
       'selected_marketing_person':

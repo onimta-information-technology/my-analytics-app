@@ -845,15 +845,16 @@ class _ReservationViewScreenBallysState
       (sum, hotel) => sum + (hotel.roomCount ?? 0),
     );
 
-    String txt =
-        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
-    if (totalChildren > 0) {
-      txt += totalChildren == 1
-          ? ", $totalChildren CHILD"
-          : ", $totalChildren CHILDREN";
-    }
-    txt += totalRooms == 1 ? ", $totalRooms ROOM" : ", $totalRooms ROOMS";
-    return txt;
+    // Guest / child counts are no longer sent, so new rows come back with 0 —
+    // only older rows that carry them still show them.
+    final parts = <String>[
+      if (totalGuests > 0)
+        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS",
+      if (totalChildren > 0)
+        totalChildren == 1 ? "$totalChildren CHILD" : "$totalChildren CHILDREN",
+      totalRooms == 1 ? "$totalRooms ROOM" : "$totalRooms ROOMS",
+    ];
+    return parts.join(", ");
   }
 
   String getGuestAndTicketCounts(List<FlightBookingBallys> flights) {
@@ -870,17 +871,16 @@ class _ReservationViewScreenBallysState
       (sum, f) => sum + (f.totalTicketCount > 0 ? f.totalTicketCount : 1),
     );
 
-    String txt =
-        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS";
-    if (totalChildren > 0) {
-      txt += totalChildren == 1
-          ? ", $totalChildren CHILD"
-          : ", $totalChildren CHILDREN";
-    }
-    txt += totalTickets == 1
-        ? ", $totalTickets TICKET"
-        : ", $totalTickets TICKETS";
-    return txt;
+    // Guest / child counts are no longer sent, so new rows come back with 0 —
+    // only older rows that carry them still show them.
+    final parts = <String>[
+      if (totalGuests > 0)
+        totalGuests == 1 ? "$totalGuests GUEST" : "$totalGuests GUESTS",
+      if (totalChildren > 0)
+        totalChildren == 1 ? "$totalChildren CHILD" : "$totalChildren CHILDREN",
+      totalTickets == 1 ? "$totalTickets TICKET" : "$totalTickets TICKETS",
+    ];
+    return parts.join(", ");
   }
 
   /// A guest's package amount as it should be shown. Guests who carry no
@@ -906,6 +906,20 @@ class _ReservationViewScreenBallysState
     final formatted = NumberFormat('#,##0').format(numeric);
     final label = currency.isEmpty ? formatted : '$currency $formatted';
     return shared ? '$label (Shared)' : label;
+  }
+
+  /// "Family members: 1 wife, 1 child, 2 friends". Rows saved before the
+  /// counts existed carry none, so they still read as plain Included.
+  String _familyLabel(bool included, int wife, int child, int friend) {
+    if (!included) return "Family members: Not included";
+    final parts = [
+      if (wife > 0) "$wife wife",
+      if (child > 0) "$child ${child == 1 ? 'child' : 'children'}",
+      if (friend > 0) "$friend ${friend == 1 ? 'friend' : 'friends'}",
+    ];
+    return parts.isEmpty
+        ? "Family members: Included"
+        : "Family members: ${parts.join(', ')}";
   }
 
   /// A guest's / room's own stay, shown only when it differs from the
@@ -964,6 +978,12 @@ class _ReservationViewScreenBallysState
       String name,
       String package,
       bool hasFamilyMembers,
+      // Who travels with them, sent once Family Members is ticked.
+      int wifeCount,
+      int childCount,
+      int friendCount,
+      // BM numbers picked in "Shared with" when their Shared box was ticked.
+      List<String> sharedWith,
       String? stay,
       // Whose package this person is on — null for a guest on their own.
       String? sharesWith,
@@ -999,6 +1019,10 @@ class _ReservationViewScreenBallysState
           shared: guest.sharedPackage,
         ),
         hasFamilyMembers: guest.hasFamilyMembers,
+        wifeCount: guest.wifeCount,
+        childCount: guest.childCount,
+        friendCount: guest.friendCount,
+        sharedWith: guest.sharedPackage ? guest.sharedWith : const [],
         stay: stay,
         sharesWith: null,
         passports: passportsFor(guest.mid),
@@ -1013,6 +1037,10 @@ class _ReservationViewScreenBallysState
             shared: member.sharedPackage,
           ),
           hasFamilyMembers: member.hasFamilyMembers,
+          wifeCount: member.wifeCount,
+          childCount: member.childCount,
+          friendCount: member.friendCount,
+          sharedWith: member.sharedPackage ? member.sharedWith : const [],
           stay: stay,
           sharesWith: owner,
           passports: passportsFor(member.mid),
@@ -1113,11 +1141,24 @@ class _ReservationViewScreenBallysState
                       fontWeight: fontSettings.fontWeight,
                     ),
                   ),
+                  if (card.sharedWith.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      "Shared with: ${card.sharedWith.join(', ')}",
+                      style: TextStyle(
+                        fontSize: fontSettings.fontSize,
+                        fontWeight: fontSettings.fontWeight,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 2),
                   Text(
-                    card.hasFamilyMembers
-                        ? "Family members: Included"
-                        : "Family members: Not included",
+                    _familyLabel(
+                      card.hasFamilyMembers,
+                      card.wifeCount,
+                      card.childCount,
+                      card.friendCount,
+                    ),
                     style: TextStyle(
                       fontSize: fontSettings.fontSize,
                       fontWeight: fontSettings.fontWeight,
@@ -2279,14 +2320,17 @@ class _ReservationViewScreenBallysState
                                         spacing: 20,
                                         runSpacing: 4,
                                         children: [
-                                          Text(
-                                            "Guests: ${hotel.guestCount}",
-                                            style: TextStyle(
-                                              fontSize: fontSettings.fontSize,
-                                              fontWeight:
-                                                  fontSettings.fontWeight,
+                                          // Guest counts are no longer sent, so
+                                          // only older rooms carry one.
+                                          if ((hotel.guestCount ?? 0) > 0)
+                                            Text(
+                                              "Guests: ${hotel.guestCount}",
+                                              style: TextStyle(
+                                                fontSize: fontSettings.fontSize,
+                                                fontWeight:
+                                                    fontSettings.fontWeight,
+                                              ),
                                             ),
-                                          ),
                                           if ((hotel.childrenCount ?? 0) > 0)
                                             Text(
                                               "Children: ${hotel.childrenCount}",

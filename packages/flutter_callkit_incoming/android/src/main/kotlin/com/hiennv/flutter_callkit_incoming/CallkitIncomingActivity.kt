@@ -59,11 +59,11 @@ class CallkitIncomingActivity : Activity() {
         fun getIntentEnded(context: Context, isAccepted: Boolean): Intent {
             val intent = Intent("${context.packageName}.${ACTION_ENDED_CALL_INCOMING}")
             intent.putExtra("ACCEPTED", isAccepted)
+            // Package only, no component: a broadcast with a component set is
+            // delivered to that manifest component alone and never reaches the
+            // receiver this activity registers at runtime, so the lock-screen
+            // ring stayed up after the caller hung up.
             intent.setPackage(context.packageName)
-            intent.setClassName(
-                context.packageName,
-                "com.hiennv.flutter_callkit_incoming.CallkitIncomingActivity"
-            )
             return intent
         }
     }

@@ -520,6 +520,80 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     );
   }
 
+  /// Tapping a call in the log asks first, the way WhatsApp does: a sheet
+  /// with the chat's name and one big button, so a stray tap while scrolling
+  /// doesn't ring anyone.
+  void _confirmCallBack(CallMedia media) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final isVideo = media == CallMedia.video;
+    final fontSettings = ref.read(chatFontSettingsProvider);
+
+    showModalBottomSheet(
+      context: _chatModalContext,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              child: Text(
+                widget.contact.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: fontSettings.fontSize + 6,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ChatColors.accent,
+                    foregroundColor: Colors.black,
+                    shape: const StadiumBorder(),
+                  ),
+                  icon: Icon(isVideo ? Icons.videocam : Icons.call),
+                  label: Text(
+                    isVideo ? 'Video call' : 'Call',
+                    style: TextStyle(
+                      fontSize: fontSettings.fontSize,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _startCall(media);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// A group call rings everyone, so the header buttons ask first in a
+  /// group; a one-to-one call starts straight away.
+  void _onHeaderCall(CallMedia media) {
+    if (widget.isGroup) {
+      _confirmCallBack(media);
+    } else {
+      _startCall(media);
+    }
+  }
+
   void _joinActiveCall() {
     final call = _activeCall;
     if (call == null) return;
@@ -5606,7 +5680,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 borderRadius: BorderRadius.circular(20),
                 // Same as WhatsApp: the whole row calls back, in the medium
                 // the logged call used.
-                onTap: () => _startCall(media),
+                onTap: () => _confirmCallBack(media),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 10, 6),
                   // The time sits in the bottom-right corner, where every
@@ -5688,7 +5762,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(6),
                             tooltip: isVideo ? 'Video call back' : 'Call back',
-                            onPressed: () => _startCall(media),
+                            onPressed: () => _confirmCallBack(media),
                           ),
                         ],
                       ),
@@ -6379,12 +6453,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       IconButton(
                         icon: const Icon(Icons.videocam_outlined),
                         tooltip: 'Video call',
-                        onPressed: () => _startCall(CallMedia.video),
+                        onPressed: () => _onHeaderCall(CallMedia.video),
                       ),
                       IconButton(
                         icon: const Icon(Icons.call_outlined),
                         tooltip: 'Voice call',
-                        onPressed: () => _startCall(CallMedia.audio),
+                        onPressed: () => _onHeaderCall(CallMedia.audio),
                       ),
                       IconButton(
                         icon: const Icon(Icons.search),

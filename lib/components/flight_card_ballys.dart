@@ -100,7 +100,7 @@ class FlightCardBallys extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         // Bounded so a multi-sector route ("CMB → DXB → LHR")
-                        // wraps instead of running into the guest counts.
+                        // wraps instead of overflowing the card.
                         Expanded(
                           child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,50 +160,8 @@ class FlightCardBallys extends StatelessWidget {
                           ],
                           ),
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.person, color: Colors.grey),
-                            const SizedBox(height: 4),
-                            const Text(
-                              "Guests",
-                              style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "${flight.guestCount}",
-                              style: const TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            // Only worth the space once someone is travelling
-                            // with children / infants.
-                            if ((flight.childrenCount ?? 0) > 0) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                "Children: ${flight.childrenCount}",
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                            if ((flight.infantCount ?? 0) > 0) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                "Infants: ${flight.infantCount}",
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                        // Guest / child / infant counts are no longer asked
+                        // for when a ticket is added, so they are not shown.
                       ],
                     ),
                     const SizedBox(height: 5),

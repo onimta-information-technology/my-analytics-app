@@ -84,6 +84,21 @@ class CallApiService {
     }
   }
 
+  /// Rings someone new into a call we are on — even someone outside the
+  /// chat. The call becomes a group call from here on; the invitee only joins
+  /// this call, not the chat. 403 we are not joined, 409 they already are.
+  static Future<void> invite(
+    String callId, {
+    required String inviteeUserId,
+    required int inviteeAppType,
+  }) async {
+    await _send('POST', '/api/calls/$callId/invite', {
+      ...await _identity(),
+      'inviteeUserId': inviteeUserId,
+      'inviteeAppType': inviteeAppType,
+    });
+  }
+
   static Future<void> decline(String callId) async {
     await _send('POST', '/api/calls/$callId/decline', await _identity());
   }

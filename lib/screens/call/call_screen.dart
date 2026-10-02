@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/data/services/call_audio_router.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
+import 'package:ballys_reservation_app/screens/call/add_call_participant_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' show RTCVideoViewObjectFit;
@@ -124,23 +125,40 @@ class _CallScreenState extends State<CallScreen> {
                       ),
                     ),
                   ),
-                // Flip camera sits up top, WhatsApp style, leaving the
-                // controls bar room for screen sharing.
-                if (c.isVideo &&
-                    c.cameraEnabled &&
-                    c.room != null &&
-                    c.phase != CallPhase.ended)
+                // Add person and flip camera sit up top, WhatsApp style,
+                // leaving the controls bar room for screen sharing. The group
+                // voice layout has its own header there, with add person in
+                // its participants sheet.
+                if (c.room != null && c.phase != CallPhase.ended)
                   SafeArea(
                     child: Align(
                       alignment: Alignment.topRight,
-                      child: IconButton(
-                        tooltip: 'Switch camera',
-                        icon: const Icon(
-                          Icons.cameraswitch,
-                          color: Colors.white,
-                          size: 26,
-                        ),
-                        onPressed: CallManager.instance.switchCamera,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (c.phase == CallPhase.connected &&
+                              !_showsGroupAudioStage(c))
+                            IconButton(
+                              tooltip: 'Add person',
+                              icon: const Icon(
+                                Icons.person_add_alt_1,
+                                color: Colors.white,
+                                size: 26,
+                              ),
+                              onPressed: () =>
+                                  showAddCallParticipantSheet(context, c),
+                            ),
+                          if (c.isVideo && c.cameraEnabled)
+                            IconButton(
+                              tooltip: 'Switch camera',
+                              icon: const Icon(
+                                Icons.cameraswitch,
+                                color: Colors.white,
+                                size: 26,
+                              ),
+                              onPressed: CallManager.instance.switchCamera,
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -675,6 +693,16 @@ class _GroupAudioStage extends StatelessWidget {
         muted: !c.micEnabled,
         speaking: c.micEnabled && (local?.isSpeaking ?? false),
       ),
+      // Added to the call and not picked up yet.
+      for (final i in c.invited.values)
+        _GroupMember(
+          name: i.name,
+          avatarUrl: i.avatarUrl,
+          color: colorOf(i.identity),
+          muted: false,
+          speaking: false,
+          ringing: true,
+        ),
     ];
   }
 
@@ -731,12 +759,16 @@ class _GroupMember {
   final bool muted;
   final bool speaking;
 
+  /// Added to the call, still being rung.
+  final bool ringing;
+
   const _GroupMember({
     required this.name,
     required this.avatarUrl,
     required this.color,
     required this.muted,
     required this.speaking,
+    this.ringing = false,
   });
 }
 
@@ -757,7 +789,7 @@ class _GroupHeader extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  c.title,
+                  c.displayTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -790,6 +822,8 @@ class _GroupHeader extends StatelessWidget {
   }
 
   void _showParticipants(BuildContext context) {
+    // The call screen's own context — the sheet's is gone once it closes.
+    final screenContext = context;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF1F2C34),
@@ -808,7 +842,7 @@ class _GroupHeader extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Text(
-                    '${members.length} in call',
+                    '${members.where((m) => !m.ringing).length} in call',
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -820,6 +854,25 @@ class _GroupHeader extends StatelessWidget {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
+                      ListTile(
+                        leading: const CircleAvatar(
+                          radius: 20,
+                          backgroundColor: ChatColors.accent,
+                          child: Icon(
+                            Icons.person_add_alt_1,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        title: const Text(
+                          'Add person',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          showAddCallParticipantSheet(screenContext, controller);
+                        },
+                      ),
                       for (final m in members)
                         ListTile(
                           leading: _Avatar(
@@ -831,11 +884,16 @@ class _GroupHeader extends StatelessWidget {
                             m.name,
                             style: const TextStyle(color: Colors.white),
                           ),
-                          trailing: Icon(
-                            m.muted ? Icons.mic_off : Icons.mic,
-                            color: Colors.white54,
-                            size: 20,
-                          ),
+                          trailing: m.ringing
+                              ? const Text(
+                                  'Ringing…',
+                                  style: TextStyle(color: Colors.white54),
+                                )
+                              : Icon(
+                                  m.muted ? Icons.mic_off : Icons.mic,
+                                  color: Colors.white54,
+                                  size: 20,
+                                ),
                         ),
                     ],
                   ),
@@ -875,7 +933,10 @@ class _GroupTile extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _Avatar(name: m.name, url: m.avatarUrl, radius: 46),
+                  Opacity(
+                    opacity: m.ringing ? 0.5 : 1,
+                    child: _Avatar(name: m.name, url: m.avatarUrl, radius: 46),
+                  ),
                   SizedBox(
                     height: 22,
                     child: m.speaking
@@ -893,6 +954,14 @@ class _GroupTile extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  if (m.ringing)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Ringing…',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1000,7 +1069,7 @@ class _TopBar extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            c.title,
+            c.displayTitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

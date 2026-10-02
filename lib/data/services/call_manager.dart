@@ -49,7 +49,14 @@ class CallController extends ChangeNotifier {
   final String title;
   final String? avatarUrl;
   final CallMedia media;
-  final bool isGroupCall;
+
+  /// Not final: adding someone to a 1:1 call turns it into a group call, and
+  /// from then on it outlives any one person leaving.
+  bool isGroupCall;
+
+  /// How the call began — a 1:1 call later made a group has no group name to
+  /// show, so it is titled after the people on it instead.
+  final bool startedAsGroup;
   final bool isOutgoing;
 
   /// Answered from the OS call UI (CallKit / Android's full-screen ring),
@@ -100,6 +107,10 @@ class CallController extends ChangeNotifier {
   /// Our own profile photo, for the "You" tile.
   String? myAvatarUrl;
 
+  /// People this device added to the call who have not picked up yet, keyed
+  /// by LiveKit identity. Cleared as they join, decline, or ring out.
+  final Map<String, CallInvitee> invited = {};
+
   CallController({
     required this.callId,
     required this.chatId,
@@ -110,12 +121,31 @@ class CallController extends ChangeNotifier {
     required this.phase,
     this.avatarUrl,
     this.viaSystem = false,
-  });
+  }) : startedAsGroup = isGroupCall;
 
   bool get isVideo => media == CallMedia.video;
 
   List<RemoteParticipant> get remoteParticipants =>
       room?.remoteParticipants.values.toList() ?? const [];
+
+  /// The call's name on screen: the chat's title, or for a 1:1 call that
+  /// became a group, everyone else on it ("Jane, John").
+  String get displayTitle {
+    if (startedAsGroup || !isGroupCall) return title;
+    final names = [
+      for (final p in remoteParticipants) nameOf(p),
+      for (final i in invited.values) i.name,
+    ].where((n) => n.isNotEmpty && n != 'Participant').toSet();
+    return names.isEmpty ? title : names.join(', ');
+  }
+
+  /// LiveKit identities of everyone already on or ringing into the call,
+  /// us included — who "Add person" should not offer.
+  Set<String> get identitiesOnCall => {
+        ...?room?.remoteParticipants.values.map((p) => p.identity),
+        if (room?.localParticipant != null) room!.localParticipant!.identity,
+        ...invited.keys,
+      };
 
   String nameOf(Participant p) {
     if (p.name.isNotEmpty) return p.name;
@@ -131,6 +161,27 @@ class CallController extends ChangeNotifier {
   Route<void>? _route;
 
   void update() => notifyListeners();
+}
+
+/// Someone added to the call from this device, still ringing.
+class CallInvitee {
+  final String userUuid;
+  final int appType;
+  final String name;
+  final String? avatarUrl;
+
+  /// Drops the "Ringing…" entry once their ring window is over — an invitee
+  /// who lets it ring out is never reported back to us.
+  Timer? expiry;
+
+  CallInvitee({
+    required this.userUuid,
+    required this.appType,
+    required this.name,
+    this.avatarUrl,
+  });
+
+  String get identity => '$userUuid|$appType';
 }
 
 /// Owns the device's single active call. Every entry point — the chat
@@ -603,6 +654,99 @@ class CallManager {
     await track.setCameraPosition(c.cameraPosition);
   }
 
+  /// How long a person added to the call shows as "Ringing…" — the same ring
+  /// window every other ring gets.
+  static const _inviteTimeout = Duration(seconds: 45);
+
+  /// Rings [userUuid] into the call we are on, WhatsApp's "Add participant".
+  /// Works on a 1:1 call too, which becomes a group call from here on — the
+  /// invitee joins only the call, never the chat behind it.
+  Future<void> addParticipant({
+    required String userUuid,
+    required int appType,
+    required String name,
+    String? avatarUrl,
+  }) async {
+    final c = _current;
+    final id = c?.callId;
+    if (c == null || id == null || !_isLive(c) ||
+        c.phase != CallPhase.connected) {
+      return;
+    }
+    final invitee = CallInvitee(
+      userUuid: userUuid,
+      appType: appType,
+      name: name,
+      avatarUrl: avatarUrl,
+    );
+    if (c.identitiesOnCall.contains(invitee.identity)) {
+      _toast('$name is already on the call');
+      return;
+    }
+    // Shown as ringing straight away; taken back if the server refuses.
+    final wasGroup = c.isGroupCall;
+    c.invited[invitee.identity] = invitee;
+    c.isGroupCall = true;
+    c.update();
+    try {
+      await CallApiService.invite(
+        id,
+        inviteeUserId: userUuid,
+        inviteeAppType: appType,
+      );
+    } on CallApiException catch (e) {
+      if (!_isLive(c)) return;
+      c.invited.remove(invitee.identity);
+      c.isGroupCall = wasGroup || c.remoteParticipants.length > 1;
+      c.update();
+      _toast(switch (e.statusCode) {
+        409 => '$name is already on the call',
+        403 => 'Only people on the call can add someone',
+        _ => e.isOver ? 'This call has already ended' : 'Could not add $name',
+      });
+      return;
+    }
+    if (!_isLive(c)) return;
+    invitee.expiry = Timer(_inviteTimeout, () {
+      if (identical(c.invited[invitee.identity], invitee)) {
+        c.invited.remove(invitee.identity);
+        c.update();
+        _endIfAlone(c);
+      }
+    });
+    _toast('Ringing $name…');
+  }
+
+  /// A 1:1 call that people were added to is over once everyone else has
+  /// left and nobody is still ringing in — there is no group to stay in. A
+  /// call that began in a group chat keeps the existing behaviour.
+  void _endIfAlone(CallController c) {
+    if (c.startedAsGroup ||
+        !c.isGroupCall ||
+        !_isLive(c) ||
+        c.phase != CallPhase.connected) {
+      return;
+    }
+    if (c.remoteParticipants.isNotEmpty || c.invited.isNotEmpty) return;
+    _hangUp(c, reason: 'hangup', message: 'Call ended');
+  }
+
+  /// [CallController.invited] minus whoever has since joined the room, or
+  /// turned down / missed the ring according to the server.
+  void _settleInvites(CallController c, [List<CallParticipantInfo>? snapshot]) {
+    if (c.invited.isEmpty) return;
+    final inRoom = c.remoteParticipants.map((p) => p.identity).toSet();
+    final settled = {
+      for (final p in snapshot ?? const <CallParticipantInfo>[])
+        if (p.status != 'ringing') p.identity,
+    };
+    c.invited.removeWhere((identity, invitee) {
+      final done = inRoom.contains(identity) || settled.contains(identity);
+      if (done) invitee.expiry?.cancel();
+      return done;
+    });
+  }
+
   // ─── Pushes ──────────────────────────────────────────────────────────────
 
   /// A call push that arrived while the app was in the foreground.
@@ -665,6 +809,12 @@ class CallManager {
         // picked up on another of our devices.
         if (c.phase == CallPhase.incoming && !c.isGroupCall) {
           _finish(c, 'Answered on another device');
+        } else if (c.phase == CallPhase.connected) {
+          // Someone added to the call picked up.
+          if (details['isGroupCall']?.toString() == 'true') {
+            c.isGroupCall = true;
+          }
+          unawaited(_refreshNames(c));
         }
       case CallPushType.declined:
         _finish(c, 'Call declined');
@@ -824,6 +974,10 @@ class CallManager {
           _timeoutTimer?.cancel();
           _pollTimer?.cancel();
         }
+        // A third person in the room: someone was added to what began as a
+        // 1:1 call — by us or by the other side — so it is a group call now.
+        if (room.remoteParticipants.length > 1) c.isGroupCall = true;
+        _settleInvites(c);
         c.update();
         unawaited(_refreshNames(c));
       })
@@ -837,6 +991,7 @@ class CallManager {
           _hangUp(c, reason: 'hangup', message: 'Call ended');
         } else {
           c.update();
+          _endIfAlone(c);
         }
       })
       ..on<ParticipantConnectionQualityUpdatedEvent>((e) {
@@ -928,6 +1083,10 @@ class CallManager {
     _lostTimer = null;
     _routeTimer?.cancel();
     _routeTimer = null;
+    for (final invitee in c.invited.values) {
+      invitee.expiry?.cancel();
+    }
+    c.invited.clear();
     if (c.screenSharing) {
       c.screenSharing = false;
       _screenShareChannel.invokeMethod('stop').ignore();
@@ -1090,7 +1249,12 @@ class CallManager {
         final name = p.name.isNotEmpty ? p.name : p.firstName;
         if (name.isNotEmpty) c.names[p.identity] = name;
       }
+      // The other side of our 1:1 call may have added someone.
+      if (snap.call.isGroupCall) c.isGroupCall = true;
+      _settleInvites(c, snap.participants);
       if (_isLive(c)) c.update();
+      // The last person we added turned the ring down.
+      _endIfAlone(c);
       if (c.isGroupCall) await _refreshAvatars(c, snap.participants);
     } catch (_) {}
   }

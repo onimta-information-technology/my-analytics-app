@@ -90,8 +90,8 @@ class QuickHotelEntry {
       'room_category_name': roomCategory,
       'room_type': roomTypeId,
       'room_type_name': roomType,
-      'guest_count': int.tryParse(noOfPax) ?? 1,
-      'children_count': int.tryParse(noOfChildren) ?? 0,
+      // Guest / child counts are no longer asked for, so not sent — the same
+      // as HotelDescipBallys.toJson().
       'room_count': int.tryParse(noOfRooms) ?? 1,
       'no_of_nights': nights,
       'arrival_date': arrDt?.toIso8601String(),

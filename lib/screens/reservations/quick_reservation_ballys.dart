@@ -186,6 +186,16 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// their own on each card.
   bool _sharedHasFamilyMembers = false;
 
+  /// How many wives / children / friends travel with the guest in the form —
+  /// shown once Family Members Included is ticked.
+  final _sharedWifeCount = TextEditingController();
+  final _sharedChildCount = TextEditingController();
+  final _sharedFriendCount = TextEditingController();
+
+  /// BM numbers ticked in the "Shared with" picker that opens when Shared is
+  /// ticked for the guest in the form.
+  final Set<String> _sharedWith = {};
+
   // ── HOTEL members list ──────────────────────────────────────────────────────
   // Each member now has a 'hotels' list (List<QuickHotelEntry>) plus identity fields.
   List<Map<String, dynamic>> _hotelMembers = [];
@@ -573,6 +583,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _sharedMidNumber,
       _sharedGuestName,
       _sharedPackageAmount,
+      _sharedWifeCount,
+      _sharedChildCount,
+      _sharedFriendCount,
       // _sharedReservationNo,
       _h_noOfRooms,
       _h_noOfPax,
@@ -775,11 +788,15 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _sharedGuestName.clear();
     _sharedGuestCardVisible = false;
     _sharedHasFamilyMembers = false;
+    _sharedWifeCount.clear();
+    _sharedChildCount.clear();
+    _sharedFriendCount.clear();
   }
 
   void _resetHotelFields() {
     _sharedPackageAmount.clear();
     _sharedPackageShared = false;
+    _sharedWith.clear();
     // _sharedReservationNo.clear();
     _h_noOfRooms.text = '1';
     _h_noOfPax.text = '1';
@@ -935,6 +952,8 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'packageAmount': _sharedPackageAmount.text,
       'sharedPackage': _sharedPackageShared,
       'hasFamilyMembers': _sharedHasFamilyMembers,
+      ..._sharedFamilyCounts(),
+      'sharedWith': _sharedWith.toList(),
       // 'reservationNo': _sharedReservationNo.text,
       ..._captureCurrentAirTicket(),
     };
@@ -1406,6 +1425,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         'packageAmount': row.packageAmountController.text.trim(),
         'sharedPackage': row.sharedPackage,
         'hasFamilyMembers': row.hasFamilyMembers,
+        'wifeCount': _countOf(row.wifeCountController),
+        'childCount': _countOf(row.childCountController),
+        'friendCount': _countOf(row.friendCountController),
+        'sharedWith': row.sharedWith.toList(),
         // Only the Airport Service tab asks for these; the other tabs' bodies
         // never read them, so an untouched row simply reports nobody.
         // A guest whose tick is off brings nobody, whatever the counts behind
@@ -2188,8 +2211,6 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   Arrival              : ${h.arrival}
   Departure            : ${h.departure}
   No of Room/s         : ${h.noOfRooms}
-  No Of Pax            : ${h.noOfPax}
-  No Of Children       : ${h.noOfChildren}
   Room Type            : ${h.roomType}
   Room Category        : ${h.roomCategory}${h.hotelCategory.isEmpty ? '' : ' ${h.hotelCategory}'}
   Meal Plan            : ${h.mealPlan.isEmpty ? 'NA' : h.mealPlan}
@@ -2206,8 +2227,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     buf.writeln('Membership No        : ${m['memberId']}');
     buf.writeln('Reservation No       : ${m['reservationNo'] ?? ''}');
     buf.writeln('Package Amount       : ${_packageAmountText(m)}');
-    buf.writeln(
-        'Family Members       : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}');
+    buf.writeln('Family Members       : ${_familyText(m)}');
     if (!_isBellagio) {
       buf.writeln(
           'Hamoos Contact       : ${(_h_hamoueContactPerson ?? '').isEmpty ? 'NA' : _h_hamoueContactPerson}');
@@ -2225,6 +2245,137 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _appendExtraMembersText(buf, _h_extraMembers);
     buf.write('*');
     return buf.toString();
+  }
+
+  /// "Yes (1 wife, 2 children)" for a copied message, or "No".
+  String _familyText(Map<String, dynamic> m) {
+    if (!(m['hasFamilyMembers'] as bool? ?? false)) return 'No';
+    final wife = m['wifeCount'] as int? ?? 0;
+    final child = m['childCount'] as int? ?? 0;
+    final friend = m['friendCount'] as int? ?? 0;
+    final parts = [
+      if (wife > 0) '$wife wife',
+      if (child > 0) '$child ${child == 1 ? 'child' : 'children'}',
+      if (friend > 0) '$friend ${friend == 1 ? 'friend' : 'friends'}',
+    ];
+    return parts.isEmpty ? 'Yes' : 'Yes (${parts.join(', ')})';
+  }
+
+  /// A count field's value, blank or unparseable read as 0.
+  int _countOf(TextEditingController controller) =>
+      int.tryParse(controller.text.trim()) ?? 0;
+
+  /// The form guest's family counts, keyed the way the repository reads them.
+  Map<String, dynamic> _sharedFamilyCounts() => {
+        'wifeCount': _countOf(_sharedWifeCount),
+        'childCount': _countOf(_sharedChildCount),
+        'friendCount': _countOf(_sharedFriendCount),
+      };
+
+  /// Every member already keyed into the tab, as BM number → name: the guest
+  /// in the form and the "Add More Guest" [rows]. [exclude] — the member whose
+  /// Shared box was ticked — is left out.
+  Map<String, String> _enteredBmNumbers(
+    List<_ExtraMember> rows, {
+    required String exclude,
+  }) {
+    final found = <String, String>{};
+    void add(String mid, String name) {
+      final id = mid.trim();
+      if (id.isEmpty || id == exclude.trim()) return;
+      found.putIfAbsent(id, () => name.trim());
+    }
+
+    add(_sharedMemberId.text, _sharedGuestName.text);
+    for (final row in rows) {
+      add(row.fullMid(numericOnly: _isNumericOnlyLocation),
+          row.nameController.text);
+    }
+    return found;
+  }
+
+  /// Ticking Shared opens the picker of BM numbers already entered; cancelling
+  /// it leaves the box unticked. Unticking clears what was picked.
+  Future<void> _toggleShared({
+    required bool value,
+    required List<_ExtraMember> rows,
+    required String ownMid,
+    required Set<String> sharedWith,
+    required void Function(bool) setShared,
+  }) async {
+    if (!value) {
+      setState(() {
+        setShared(false);
+        sharedWith.clear();
+      });
+      return;
+    }
+    final picked =
+        await _pickSharedMembers(rows, ownMid: ownMid, initial: sharedWith);
+    if (picked == null || !mounted) return;
+    setState(() {
+      setShared(true);
+      sharedWith
+        ..clear()
+        ..addAll(picked);
+    });
+  }
+
+  /// Lists the BM numbers already on the tab with a tick box each. Returns the
+  /// ticked ones, or null when cancelled. With nothing else entered there is
+  /// nothing to pick, so the box is simply ticked.
+  Future<Set<String>?> _pickSharedMembers(
+    List<_ExtraMember> rows, {
+    required String ownMid,
+    required Set<String> initial,
+  }) async {
+    final members = _enteredBmNumbers(rows, exclude: ownMid);
+    if (members.isEmpty) return <String>{};
+
+    final selected = {...initial}..retainAll(members.keys);
+    return showDialog<Set<String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Shared with'),
+          contentPadding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: members.entries
+                  .map(
+                    (m) => CheckboxListTile(
+                      value: selected.contains(m.key),
+                      activeColor: const Color(0xFFCC963A),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(m.key),
+                      subtitle: m.value.isEmpty ? null : Text(m.value),
+                      onChanged: (checked) => setDialogState(() {
+                        if (checked ?? false) {
+                          selected.add(m.key);
+                        } else {
+                          selected.remove(m.key);
+                        }
+                      }),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(selected),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// How a member's package reads in a copied message. A shared package is
@@ -2248,8 +2399,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         ..write('\nMembership No      : ${e['memberId']}')
         ..write('\nGuest Name         : ${e['guestName']}')
         ..write('\nPackage Amount     : $amount')
-        ..write(
-            '\nFamily Members     : ${(e['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}');
+        ..write('\nFamily Members     : ${_familyText(e)}');
     }
   }
 
@@ -2269,6 +2419,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'packageAmount': _sharedPackageAmount.text,
       'sharedPackage': _sharedPackageShared,
       'hasFamilyMembers': _sharedHasFamilyMembers,
+      ..._sharedFamilyCounts(),
       // 'reservationNo': _sharedReservationNo.text,
       'hotels': currentHotels,
     };
@@ -2316,13 +2467,10 @@ BM                       : ${m['memberId']}
 Guest Name        : ${m['guestName']}
 Reservation No    : ${m['reservationNo'] ?? ''}
 Package Amount : ${_packageAmountText(m)}
-Family Members : ${(m['hasFamilyMembers'] as bool? ?? false) ? 'Yes' : 'No'}
+Family Members : ${_familyText(m)}
 Sector                  : $sector
 Arr Date              : ${m['arrDate']}
 Dep Date             : ${m['depDate']}
-No of Seats         : ${m['noOfSeats']}
-No of Children     : ${m['noOfChildren'] ?? '0'}
-No of Infants       : ${m['noOfInfants'] ?? '0'}
 Class                    : ${m['class']}
 Airline                  : ${m['airline']}
 Multi Sector         : ${isMultiSector ? 'Yes' : 'No'}
@@ -2353,6 +2501,9 @@ Remarks              : ${m['remarks']}''';
             'packageAmount': current['packageAmount'],
             'sharedPackage': current['sharedPackage'],
             'hasFamilyMembers': current['hasFamilyMembers'],
+            'wifeCount': current['wifeCount'],
+            'childCount': current['childCount'],
+            'friendCount': current['friendCount'],
             ...t,
           }),
       if (_pendingAirTickets.isEmpty || _hasCurrentAirTicket) current,
@@ -2540,6 +2691,8 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
       _resetSharedGuest();
       _sharedPackageAmount.clear();
       _sharedPackageShared = false;
+      _sharedWith.clear();
+    _sharedWith.clear();
       // _sharedReservationNo.clear();
       _resetAirTicketFields();
       // The reservation is saved, so its remark, contact person and approver go
@@ -2874,6 +3027,7 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
   void _resetAirportServiceFields() {
     _sharedPackageAmount.clear();
     _sharedPackageShared = false;
+    _sharedWith.clear();
     _as_packageAmountKey = UniqueKey();
     _as_service = null;
     _as_legType = 'Arrival';
@@ -3106,6 +3260,8 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
           'memberId': _sharedMemberId.text,
           'packageAmount': _sharedPackageAmount.text,
           'sharedPackage': _sharedPackageShared,
+          ..._sharedFamilyCounts(),
+          'sharedWith': _sharedWith.toList(),
           // 'reservationNo': _sharedReservationNo.text,
           'hotels': currentHotels,
         },
@@ -3972,8 +4128,19 @@ Widget _extraMemberCard(
               // A shared member can still be billed an amount of their own, so
               // ticking Shared records that and leaves the picker usable.
               allowAmountWhenShared: true,
-              onNoPackageChanged: (value) =>
-                  state.setState(() => row.sharedPackage = value),
+              // The hotel and air ticket tabs ask who the package is shared
+              // with; the rest just record the tick.
+              onNoPackageChanged: showFamilyMembers
+                  ? (value) => state._toggleShared(
+                        value: value,
+                        rows: rows,
+                        ownMid: row.fullMid(
+                            numericOnly: state._isNumericOnlyLocation),
+                        sharedWith: row.sharedWith,
+                        setShared: (v) => row.sharedPackage = v,
+                      )
+                  : (value) =>
+                      state.setState(() => row.sharedPackage = value),
               textStyle: kInputTextStyle,
               accent: accent,
               decoration: _fieldDeco(
@@ -3982,6 +4149,15 @@ Widget _extraMemberCard(
                 accent: accent,
               ),
             ),
+            if (showFamilyMembers && row.sharedPackage)
+              _sharedWithSummary(
+                state: state,
+                rows: rows,
+                ownMid:
+                    row.fullMid(numericOnly: state._isNumericOnlyLocation),
+                sharedWith: row.sharedWith,
+                accent: accent,
+              ),
           ],
           if (showFamilyMembers) ...[
             const SizedBox(height: 12),
@@ -3991,6 +4167,14 @@ Widget _extraMemberCard(
               onChanged: (value) =>
                   state.setState(() => row.hasFamilyMembers = value),
             ),
+            if (row.hasFamilyMembers)
+              _familyCountsRow(
+                state: state,
+                accent: accent,
+                wife: row.wifeCountController,
+                child: row.childCountController,
+                friend: row.friendCountController,
+              ),
           ],
           if (showAirportService) ...[
             const SizedBox(height: 12),
@@ -4743,6 +4927,242 @@ Widget _familyMembersTick({
   );
 }
 
+/// Wife / Children / Friends under a ticked Family Members box, laid out the
+/// way the new reservation screen does it: a Wife tick (sent as a count of 0
+/// or 1) and a stepper each for children and friends.
+Widget _familyCountsRow({
+  required _QuickReservationBallysScreenState state,
+  required Color accent,
+  required TextEditingController wife,
+  required TextEditingController child,
+  required TextEditingController friend,
+}) {
+  final hasWife = (int.tryParse(wife.text.trim()) ?? 0) > 0;
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _familyTickCard(
+          accent: accent,
+          checked: hasWife,
+          icon: Icons.favorite_outline,
+          label: 'Wife',
+          onChanged: (value) =>
+              state.setState(() => wife.text = value ? '1' : ''),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _FamilyStepperField(
+                controller: child,
+                label: 'Children',
+                icon: Icons.child_care_outlined,
+                accent: accent,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _FamilyStepperField(
+                controller: friend,
+                label: 'Friends',
+                icon: Icons.groups_outlined,
+                accent: accent,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _familyTickCard({
+  required Color accent,
+  required bool checked,
+  required IconData icon,
+  required String label,
+  required ValueChanged<bool> onChanged,
+}) {
+  return InkWell(
+    onTap: () => onChanged(!checked),
+    borderRadius: BorderRadius.circular(10),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: checked ? accent : Colors.grey.shade300,
+          width: checked ? 1.6 : 1,
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(4, 2, 12, 2),
+      child: Row(
+        children: [
+          Checkbox(
+            value: checked,
+            activeColor: accent,
+            onChanged: (value) => onChanged(value ?? false),
+          ),
+          Icon(icon, size: 20, color: accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// A 0–99 count with − / + buttons, matching the new reservation screen's
+/// family stepper. 0 is written to [controller] as blank.
+class _FamilyStepperField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final Color accent;
+
+  const _FamilyStepperField({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.accent,
+  });
+
+  @override
+  State<_FamilyStepperField> createState() => _FamilyStepperFieldState();
+}
+
+class _FamilyStepperFieldState extends State<_FamilyStepperField> {
+  static const _max = 99;
+
+  int get _value => int.tryParse(widget.controller.text.trim()) ?? 0;
+
+  void _change(int delta) {
+    final next = (_value + delta).clamp(0, _max);
+    setState(() => widget.controller.text = next > 0 ? '$next' : '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = widget.accent;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDADDE3)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(widget.icon, size: 18, color: accent),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _stepButton(Icons.remove, _value > 0, () => _change(-1)),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '$_value',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ),
+              _stepButton(Icons.add, _value < _max, () => _change(1)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepButton(IconData icon, bool enabled, VoidCallback onTap) {
+    final accent = widget.accent;
+    return Material(
+      color: enabled ? accent.withOpacity(0.1) : Colors.grey.shade100,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Icon(
+            icon,
+            size: 22,
+            color: enabled ? accent : Colors.grey.shade400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The BM numbers picked for a ticked Shared box, shown under the package
+/// amount. Tapping it reopens the picker.
+Widget _sharedWithSummary({
+  required _QuickReservationBallysScreenState state,
+  required List<_ExtraMember> rows,
+  required String ownMid,
+  required Set<String> sharedWith,
+  required Color accent,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () async {
+        final picked = await state._pickSharedMembers(rows,
+            ownMid: ownMid, initial: sharedWith);
+        if (picked == null || !state.mounted) return;
+        state.setState(() => sharedWith
+          ..clear()
+          ..addAll(picked));
+      },
+      child: Row(
+        children: [
+          Icon(Icons.group_outlined, size: 18, color: accent),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              sharedWith.isEmpty
+                  ? 'Shared with: tap to pick members'
+                  : 'Shared with: ${sharedWith.join(', ')}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Icon(Icons.edit_outlined, size: 18, color: accent),
+        ],
+      ),
+    ),
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Airport dropdown
 // ─────────────────────────────────────────────────────────────────────────────
@@ -5276,8 +5696,13 @@ class _HotelForm extends StatelessWidget {
             // Shared only records that the package is shared — an amount can
             // still be picked alongside it.
             allowAmountWhenShared: true,
-            onNoPackageChanged: (v) =>
-                state.setState(() => state._sharedPackageShared = v),
+            onNoPackageChanged: (v) => state._toggleShared(
+              value: v,
+              rows: state._h_extraMembers,
+              ownMid: state._sharedMemberId.text.trim(),
+              sharedWith: state._sharedWith,
+              setShared: (shared) => state._sharedPackageShared = shared,
+            ),
             textStyle: kInputTextStyle,
             accent: accent,
             decoration: _fieldDeco(
@@ -5302,6 +5727,14 @@ class _HotelForm extends StatelessWidget {
           //     accent: accent,
           //   ),
           // ),
+          if (state._sharedPackageShared)
+            _sharedWithSummary(
+              state: state,
+              rows: state._h_extraMembers,
+              ownMid: state._sharedMemberId.text.trim(),
+              sharedWith: state._sharedWith,
+              accent: accent,
+            ),
           const SizedBox(height: 12),
 
           // ── Family members of THIS guest ────────────────────────────────────
@@ -5311,6 +5744,14 @@ class _HotelForm extends StatelessWidget {
             onChanged: (v) =>
                 state.setState(() => state._sharedHasFamilyMembers = v),
           ),
+          if (state._sharedHasFamilyMembers)
+            _familyCountsRow(
+              state: state,
+              accent: accent,
+              wife: state._sharedWifeCount,
+              child: state._sharedChildCount,
+              friend: state._sharedFriendCount,
+            ),
           const SizedBox(height: 12),
 
           // ── Extra guests on the SAME package ────────────────────────────────
@@ -5673,31 +6114,17 @@ class _HotelForm extends StatelessWidget {
             },
           ),
             const SizedBox(height: 12),
-          _rowPair(
-            _StepperField(
-              controller: state._h_noOfRooms,
-              label: 'No of Rooms',
-              icon: Icons.door_back_door_outlined,
-              accent: accent,
-              // One room per ticked guest, so the count is the assignment's to
-              // set once there is one.
-              locked: state._roomCountLocked,
-              lockedHint: 'One room per assigned guest',
-            ),
-            _StepperField(
-              controller: state._h_noOfPax,
-              label: 'No of Pax',
-              icon: Icons.group_outlined,
-              accent: accent,
-            ),
-          ),
-          const SizedBox(height: 12),
+          // Pax / children counts are not asked for any more, matching the new
+          // reservation screen's hotel sheet.
           _StepperField(
-            controller: state._h_noOfChildren,
-            label: 'No of Children',
-            icon: Icons.child_care_outlined,
+            controller: state._h_noOfRooms,
+            label: 'No of Rooms',
+            icon: Icons.door_back_door_outlined,
             accent: accent,
-            min: 0,
+            // One room per ticked guest, so the count is the assignment's to
+            // set once there is one.
+            locked: state._roomCountLocked,
+            lockedHint: 'One room per assigned guest',
           ),
           const SizedBox(height: 12),
           _hotelLocationPicker(accent),
@@ -6212,8 +6639,13 @@ class _AirForm extends StatelessWidget {
             // Shared only records that the package is shared — an amount can
             // still be picked alongside it.
             allowAmountWhenShared: true,
-            onNoPackageChanged: (v) =>
-                state.setState(() => state._sharedPackageShared = v),
+            onNoPackageChanged: (v) => state._toggleShared(
+              value: v,
+              rows: state._a_extraMembers,
+              ownMid: state._sharedMemberId.text.trim(),
+              sharedWith: state._sharedWith,
+              setShared: (shared) => state._sharedPackageShared = shared,
+            ),
             textStyle: kInputTextStyle,
             accent: accent,
             decoration: _fieldDeco(
@@ -6238,6 +6670,14 @@ class _AirForm extends StatelessWidget {
           //     accent: accent,
           //   ),
           // ),
+          if (state._sharedPackageShared)
+            _sharedWithSummary(
+              state: state,
+              rows: state._a_extraMembers,
+              ownMid: state._sharedMemberId.text.trim(),
+              sharedWith: state._sharedWith,
+              accent: accent,
+            ),
           const SizedBox(height: 12),
 
           // ── Family members of THIS guest ────────────────────────────────────
@@ -6247,6 +6687,14 @@ class _AirForm extends StatelessWidget {
             onChanged: (v) =>
                 state.setState(() => state._sharedHasFamilyMembers = v),
           ),
+          if (state._sharedHasFamilyMembers)
+            _familyCountsRow(
+              state: state,
+              accent: accent,
+              wife: state._sharedWifeCount,
+              child: state._sharedChildCount,
+              friend: state._sharedFriendCount,
+            ),
           const SizedBox(height: 12),
 
           // ── Extra guests on the SAME package ────────────────────────────────
@@ -6395,8 +6843,10 @@ class _AirForm extends StatelessWidget {
                             ),
                           ),
                           Text(
+                            // The class summary already carries each
+                            // class's seat count ("Economy x2").
                             '${t['arrDate']} → ${t['depDate']}  |  '
-                            '${t['class']}  |  ${t['noOfSeats']} seat(s)',
+                            '${t['class']}',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
@@ -6667,40 +7117,9 @@ class _AirForm extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 12),
-          // Once the ticket is assigned to guests who bring no family there is
-          // nobody on it but the guests themselves — one seat each, no children,
-          // no infants — so the counters follow the ticks. A guest who brings
-          // family hands them back, since the family flies on this ticket too.
-          _StepperField(
-            controller: state._a_noOfSeats,
-            label: 'No of Adults',
-            icon: Icons.event_seat_outlined,
-            accent: accent,
-            locked: state._seatCountLocked,
-            lockedHint: 'One seat per assigned guest',
-          ),
-          const SizedBox(height: 12),
-          _rowPair(
-            _StepperField(
-              controller: state._a_noOfChildren,
-              label: 'Children',
-              icon: Icons.child_care_outlined,
-              accent: accent,
-              min: 0,
-              locked: state._seatCountLocked,
-              lockedHint: 'Tick a guest with family to add',
-            ),
-            _StepperField(
-              controller: state._a_noOfInfants,
-              label: 'Infants',
-              icon: Icons.child_friendly_outlined,
-              accent: accent,
-              min: 0,
-              locked: state._seatCountLocked,
-              lockedHint: 'Tick a guest with family to add',
-            ),
-          ),
+          // Adults / children / infants counts are not asked for any more,
+          // matching the new reservation screen's air ticket sheet — the seats
+          // are counted per class below.
           const SizedBox(height: 12),
           // A ticket can mix cabin classes — Economy x2 plus Business x1 is one
           // ticket, not two — so each class is ticked with its own seat count.
@@ -8032,6 +8451,14 @@ class _ExtraMember {
   /// air ticket tabs, matching the new reservation screen's member card.
   bool hasFamilyMembers;
 
+  /// Wife / child / friend counts, shown once [hasFamilyMembers] is ticked.
+  final TextEditingController wifeCountController = TextEditingController();
+  final TextEditingController childCountController = TextEditingController();
+  final TextEditingController friendCountController = TextEditingController();
+
+  /// BM numbers ticked in the "Shared with" picker for this member.
+  final Set<String> sharedWith = {};
+
   /// Who walks through the airport with THIS guest, asked for on the Airport
   /// Service tab: the airport is told how many people to expect, so the wife
   /// tick and the two counts are kept per guest rather than per request.
@@ -8084,6 +8511,9 @@ class _ExtraMember {
     packageAmountController.dispose();
     childrenCountController.dispose();
     friendsCountController.dispose();
+    wifeCountController.dispose();
+    childCountController.dispose();
+    friendCountController.dispose();
   }
 }
 

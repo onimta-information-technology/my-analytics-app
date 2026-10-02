@@ -124,6 +124,8 @@ class QuickReservationRepository {
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
         'IsSharedAmount': m['sharedPackage'] as bool? ?? false,
+        ..._familyCountsJson(m, hasFamilyMembers),
+        'SharedWith': _sharedWithJson(m),
       };
     }).toList();
 
@@ -148,11 +150,14 @@ class QuickReservationRepository {
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
         'IsSharedAmount': e['sharedPackage'] as bool? ?? false,
+        ..._familyCountsJson(e, e['hasFamilyMembers'] as bool? ?? false),
+        'SharedWith': _sharedWithJson(e),
       });
     }
 
     return {
       ...await _requestEnvelope(),
+      'marketing_code': await StorageUtil.getMarketingCode(),
       'bm_number': primary['memberId'],
       'guest_name': primary['guestName'],
       'arrival_date': firstHotel?.arrivalDate?.toIso8601String(),
@@ -281,6 +286,8 @@ class QuickReservationRepository {
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
         'IsSharedAmount': m['sharedPackage'] as bool? ?? false,
+        ..._familyCountsJson(m, hasFamilyMembers),
+        'SharedWith': _sharedWithJson(m),
       };
     }).toList();
 
@@ -301,11 +308,14 @@ class QuickReservationRepository {
         'PackageAmount': packageAmountToInt(amount),
         'CurrencyType': packageAmountCurrency(amount),
         'IsSharedAmount': e['sharedPackage'] as bool? ?? false,
+        ..._familyCountsJson(e, e['hasFamilyMembers'] as bool? ?? false),
+        'SharedWith': _sharedWithJson(e),
       });
     }
 
     return {
       ...await _requestEnvelope(),
+        'marketing_code': await StorageUtil.getMarketingCode(),
       'bm_number': primaryMemberId,
       'guest_name': primaryGuestName,
       'arrival_date': primaryArrival?.toIso8601String(),
@@ -339,17 +349,13 @@ class QuickReservationRepository {
     final returnTo = m['returnToData'] as Airport?;
     final arrDate = m['arrDateObj'] as DateTime?;
     final depDate = m['depDateObj'] as DateTime?;
-    final seats = int.tryParse(m['noOfSeats'] as String? ?? '1') ?? 1;
-    final children = int.tryParse(m['noOfChildren'] as String? ?? '0') ?? 0;
-    final infants = int.tryParse(m['noOfInfants'] as String? ?? '0') ?? 0;
     final ticketClasses = (m['ticketClasses'] as List<AirTicketClassCount>?) ??
         const <AirTicketClassCount>[];
     final assigned =
         (m['assignedGuests'] as List<AssignedGuest>?) ?? const <AssignedGuest>[];
     return {
-      'guest_count': seats,
-      'children_count': children,
-      'infant_count': infants,
+      // Guest / child / infant counts are no longer asked for, so not sent —
+      // the same as FlightBookingBallys.toJson().
       // Every class on the ticket with its own seat count, replacing the single
       // `air_ticket_class` / `air_ticket_class_name` pair — the same shape
       // FlightBookingBallys.toJson() sends.
@@ -728,5 +734,24 @@ class QuickReservationRepository {
       success: success,
       message: message ?? (success ? null : fallbackError),
     );
+  }
+
+  /// The BM numbers a guest's package is shared with — empty unless their
+  /// Shared box is ticked, as the new reservation screen sends it.
+  List<String> _sharedWithJson(Map<String, dynamic> m) {
+    if (!(m['sharedPackage'] as bool? ?? false)) return const [];
+    return List<String>.from(m['sharedWith'] as List? ?? const []);
+  }
+
+  /// `WifeCount` / `ChildCount` / `FriendCount` for one guest row — all 0 when
+  /// the guest's Family Members box is unticked.
+  Map<String, dynamic> _familyCountsJson(
+      Map<String, dynamic> m, bool hasFamilyMembers) {
+    int count(String key) => hasFamilyMembers ? (m[key] as int? ?? 0) : 0;
+    return {
+      'WifeCount': count('wifeCount'),
+      'ChildCount': count('childCount'),
+      'FriendCount': count('friendCount'),
+    };
   }
 }

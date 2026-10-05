@@ -15,6 +15,7 @@ import java.io.File
 class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "developer_mode"
     private val CLIPBOARD_CHANNEL = "image_clipboard"
+    private val SECURE_STORAGE_CHANNEL = "secure_storage_recovery"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         CallKeepAlive.onActivityCreated()
@@ -58,6 +59,25 @@ class MainActivity : FlutterFragmentActivity() {
                 result.notImplemented()
             }
         }
+
+        // flutter_secure_storage cannot reset a store EncryptedSharedPreferences
+        // fails to decrypt — its own reset goes through the same decrypt. Clearing
+        // the raw files (data and Tink keysets) lets the plugin start over clean.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURE_STORAGE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "wipe") {
+                    try {
+                        for (name in listOf("FlutterSecureStorage", "FlutterSecureKeyStorage")) {
+                            getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
+                        }
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("WIPE_FAILED", e.message, null)
+                    }
+                } else {
+                    result.notImplemented()
+                }
+            }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CLIPBOARD_CHANNEL)
             .setMethodCallHandler { call, result ->

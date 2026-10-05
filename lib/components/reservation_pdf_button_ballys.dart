@@ -272,7 +272,11 @@ class _ReservationPdfButtonBallysState
                   spacing: 16,
                   runSpacing: 4,
                   children: [
-                    pw.Text('Guests: ${hotel.guestCount}', style: cardValueStyle),
+                    // Guest counts are no longer sent, so only older rooms
+                    // carry one.
+                    if ((hotel.guestCount ?? 0) > 0)
+                      pw.Text('Guests: ${hotel.guestCount}',
+                          style: cardValueStyle),
                     if ((hotel.childrenCount ?? 0) > 0)
                       pw.Text(
                         'Children: ${hotel.childrenCount}',
@@ -487,6 +491,11 @@ class _ReservationPdfButtonBallysState
                     ],
                   ),
                 ),
+                // Guest / child / infant counts are no longer sent, so new
+                // tickets come back with 0 — only older ones show the column.
+                if (flight.guestCount > 0 ||
+                    flight.childrenCount > 0 ||
+                    flight.infantCount > 0)
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
@@ -563,6 +572,10 @@ class _ReservationPdfButtonBallysState
             shared: guest.sharedPackage,
           ),
           hasFamilyMembers: guest.hasFamilyMembers,
+          wifeCount: guest.wifeCount,
+          childCount: guest.childCount,
+          friendCount: guest.friendCount,
+          sharedWith: guest.sharedPackage ? guest.sharedWith : const [],
           stay: stay,
           sharesWith: null,
           airTicket: guest.airTicketRequisition,
@@ -578,6 +591,10 @@ class _ReservationPdfButtonBallysState
               shared: member.sharedPackage,
             ),
             hasFamilyMembers: member.hasFamilyMembers,
+            wifeCount: member.wifeCount,
+            childCount: member.childCount,
+            friendCount: member.friendCount,
+            sharedWith: member.sharedPackage ? member.sharedWith : const [],
             stay: stay,
             sharesWith: owner,
             // Rooms, tickets and dates sit on the owner, so a member carries
@@ -633,11 +650,12 @@ class _ReservationPdfButtonBallysState
               // ],
               pw.SizedBox(height: 4),
               cardRichRow('Package', card.package),
+              if (card.sharedWith.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                cardRichRow('Shared with', card.sharedWith.join(', ')),
+              ],
               pw.SizedBox(height: 4),
-              cardRichRow(
-                'Family members',
-                card.hasFamilyMembers ? 'Included' : 'Not included',
-              ),
+              cardRichRow('Family members', card.familyLabel),
               // A guest travelling on their own dates rather than the
               // reservation's.
               if (card.stay != null) ...[
@@ -1041,6 +1059,14 @@ class _PdfGuestCard {
   final String package;
   final bool hasFamilyMembers;
 
+  /// Who travels with them, sent once Family Members is ticked.
+  final int wifeCount;
+  final int childCount;
+  final int friendCount;
+
+  /// BM numbers picked in "Shared with" when their Shared box was ticked.
+  final List<String> sharedWith;
+
   /// The guest's own stay, or null when it matches the reservation's.
   final String? stay;
 
@@ -1059,9 +1085,26 @@ class _PdfGuestCard {
     required this.name,
     required this.package,
     required this.hasFamilyMembers,
+    this.wifeCount = 0,
+    this.childCount = 0,
+    this.friendCount = 0,
+    this.sharedWith = const [],
     required this.stay,
     required this.sharesWith,
     required this.airTicket,
     required this.remarks,
   });
+
+  /// "1 wife, 1 child, 2 friends". Rows saved before the counts existed carry
+  /// none, so they still read as plain Included.
+  String get familyLabel {
+    if (!hasFamilyMembers) return 'Not included';
+    final parts = [
+      if (wifeCount > 0) '$wifeCount wife',
+      if (childCount > 0) '$childCount ${childCount == 1 ? 'child' : 'children'}',
+      if (friendCount > 0)
+        '$friendCount ${friendCount == 1 ? 'friend' : 'friends'}',
+    ];
+    return parts.isEmpty ? 'Included' : parts.join(', ');
+  }
 }

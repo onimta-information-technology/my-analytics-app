@@ -52,10 +52,12 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   final Map<String, GlobalKey> _cardKeys = {};
 
   // ── Visibility gating ──
-  // Sales code AD001 sees every transport request; everyone else only sees the
+  // Sales code AD001 sees every transport request; Transport_App users see
+  // their own plus those awaiting their approval; everyone else only sees the
   // requests they raised themselves.
   String? _userSalesCode;
   String? _userName;
+  bool _isTransportApprover = false;
   bool _accessLoaded = false;
 
   @override
@@ -110,11 +112,13 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   Future<void> _loadAccessSettings() async {
     final salesCode = await StorageUtil.getSalesCode();
     final userName = await StorageUtil.getUName();
+    final isTransportApprover = await StorageUtil.getTransportApp();
     print('Loaded access settings: salesCode=$salesCode, userName=$userName');
     if (!mounted) return;
     setState(() {
       _userSalesCode = salesCode;
       _userName = userName;
+      _isTransportApprover = isTransportApprover;
       _accessLoaded = true;
     });
     _revealHighlighted();
@@ -123,10 +127,12 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
   bool get _canSeeAllRequests =>
       (_userSalesCode ?? '').trim().toUpperCase() == 'AD001';
 
-  /// AD001 sees everything; other users only see requests whose `user_name`
-  /// matches their own login.
+  /// AD001 sees everything. Transport_App users also see every request still
+  /// waiting on approval; beyond that, only requests whose `user_name`
+  /// matches the user's own login.
   bool _isVisibleToUser(TransportReservation reservation) {
     if (_canSeeAllRequests) return true;
+    if (_isTransportApprover && reservation.isAwaitingApproval) return true;
     final loggedInUser = (_userName ?? '').trim().toLowerCase();
     print(
       'Logged-in user: $loggedInUser, Reservation user: ${reservation.userName.trim().toLowerCase()}',

@@ -12,14 +12,17 @@ class TransportRepository {
 
   /// GET `{baseUrl}/Transport_Get_Data` — Bellagio only.
   ///
-  /// AD001 (admin) sees every request, so it calls the endpoint unfiltered.
-  /// Any other user is scoped to their own sales code via `?salesCode=`.
+  /// AD001 (admin) and Transport_App approvers call the endpoint unfiltered;
+  /// the transport screen then narrows an approver's list to their own
+  /// requests plus those awaiting approval. Any other user is scoped via
+  /// `?salesCode=`.
   Future<List<TransportReservation>> getTransportData() async {
     final salesCode = (await StorageUtil.getSalesCode())?.trim() ?? '';
      final marketingCode = (await StorageUtil.getMarketingCode())?.trim() ?? '';
     final isAdmin = salesCode.toUpperCase() == 'AD001';
+    final isApprover = await StorageUtil.getTransportApp();
 
-    final endpoint = (isAdmin || salesCode.isEmpty)
+    final endpoint = (isAdmin || isApprover || salesCode.isEmpty)
         ? 'Transport_Get_Data'
         : 'Transport_Get_Data?salesCode=${Uri.encodeQueryComponent(marketingCode)}';
 

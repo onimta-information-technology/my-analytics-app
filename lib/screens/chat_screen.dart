@@ -81,6 +81,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   /// GET /api/users/{uuid}. Null until it loads, or when none is set.
   String? _myAvatarUrl;
   String? _selectedContactId;
+
+  /// True while a conversation is being opened. Opening a 1:1 chat waits on
+  /// [FirebaseApiService.createChat] before pushing, so without this a second
+  /// tap in that gap pushes the same chat screen twice.
+  bool _isOpeningChat = false;
   bool _hasProcessedNotification = false;
 
   /// How many conversations can be pinned at once, matching WhatsApp.
@@ -352,6 +357,9 @@ if (message.data['msg_type'] == '35') {
     Navigator.of(context).popUntil(
       (route) => route == chatListRoute || route.isFirst,
     );
+    // The popped chat's `.then` clears this only after a microtask, which is
+    // too late for the chat the notification opens right after this.
+    _isOpeningChat = false;
   }
 
   ChatGroup? _groupForId(String chatId) => _groups.cast<ChatGroup?>().firstWhere(
@@ -1122,10 +1130,24 @@ if (message.data['msg_type'] == '35') {
             return;
           }
 
-          final chatId = await FirebaseApiService.createChat(
-            contact.userUuid,
-            userAppType: contact.appType,
-          );
+          if (_isOpeningChat) return;
+          _isOpeningChat = true;
+
+          final String? chatId;
+          try {
+            chatId = await FirebaseApiService.createChat(
+              contact.userUuid,
+              userAppType: contact.appType,
+            );
+          } catch (_) {
+            _isOpeningChat = false;
+            rethrow;
+          }
+
+          if (!mounted) {
+            _isOpeningChat = false;
+            return;
+          }
 
           final contactWithChatId = contact.copyWith(
             chatUuid: chatId ?? contact.chatUuid,
@@ -1146,6 +1168,7 @@ if (message.data['msg_type'] == '35') {
                 ),
               )
               .then((_) {
+                _isOpeningChat = false;
                 // Both lists, not just chats: a message can have been
                 // forwarded from this conversation into a group, and the
                 // All/Unread tabs sort chats and groups together.
@@ -1572,6 +1595,9 @@ if (message.data['msg_type'] == '35') {
   /// naming the user — what tapping the "@" marker does — instead of at the
   /// end of the conversation.
   void _openGroupChat(ChatGroup group, {bool jumpToMentions = false}) {
+    if (_isOpeningChat) return;
+    _isOpeningChat = true;
+
     final groupContact = ChatContact(
       id: group.groupId,
       chatUuid: group.groupId,
@@ -1605,7 +1631,10 @@ if (message.data['msg_type'] == '35') {
           ),
         )
         // Forwarding out of a group updates 1:1 chats too, so refresh both.
-        .then((_) => _refreshChatsAndGroups());
+        .then((_) {
+          _isOpeningChat = false;
+          _refreshChatsAndGroups();
+        });
   }
 
   Widget _buildGroupList(FontSettings fontSettings) {
@@ -2092,6 +2121,16 @@ if (message.data['msg_type'] == '35') {
   /// Creates (or reuses) the 1:1 chat and opens it. On a backend failure it
   /// still opens the conversation, so the tap is not simply lost.
   Future<void> _startChatWith(ChatContact contact) async {
+    if (_isOpeningChat) return;
+    _isOpeningChat = true;
+    try {
+      await _pushChatWith(contact);
+    } finally {
+      _isOpeningChat = false;
+    }
+  }
+
+  Future<void> _pushChatWith(ChatContact contact) async {
     final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 

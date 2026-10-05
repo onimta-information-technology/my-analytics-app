@@ -30,6 +30,12 @@ class TransportReservation {
   final String? rejectedBy;
   final DateTime? rejectedDate;
 
+  /// Set once a Transport_App user has approved the request.
+  final bool isApproved;
+  final String? approveRemark;
+  final String? approvedBy;
+  final DateTime? approvedDate;
+
   /// Note left by the airport representative on this request.
   final String? airportRepRemark;
   final String? airportRepRemarkBy;
@@ -68,6 +74,10 @@ class TransportReservation {
     this.rejectRemark,
     this.rejectedBy,
     this.rejectedDate,
+    this.isApproved = false,
+    this.approveRemark,
+    this.approvedBy,
+    this.approvedDate,
     this.airportRepRemark,
     this.airportRepRemarkBy,
     this.airportRepRemarkDate,
@@ -94,6 +104,25 @@ class TransportReservation {
   /// or by its `reservation_status`.
   bool get hasRejection =>
       isRejected || status == TransportStatus.rejected;
+
+  /// True once the request has been approved, by flag or by the approver
+  /// fields being filled in.
+  bool get hasApproval =>
+      isApproved || approvedBy != null || approvedDate != null;
+
+  /// True when the request needs a Transport_App user's approval: it has an
+  /// airport pickup, or a vehicle other than a Normal Car.
+  bool get needsApproval =>
+      hasAirportPickup ||
+      details.any((d) {
+        final car = d.carType.trim().toLowerCase();
+        return car.isNotEmpty && car != 'normal car';
+      });
+
+  /// True when the Approve action applies: still Requested, needs approval
+  /// and not approved yet.
+  bool get isAwaitingApproval =>
+      status == TransportStatus.requested && needsApproval && !hasApproval;
 
   /// True once the airport representative has left a remark.
   bool get hasAirportRepRemark =>
@@ -165,6 +194,10 @@ class TransportReservation {
       rejectRemark: _parseText(json['reject_remark']),
       rejectedBy: _parseText(json['rejected_by']),
       rejectedDate: _parseDate(json['rejected_date']),
+      isApproved: _isTruthy(_parseText(json['is_approved'])),
+      approveRemark: _parseText(json['approve_remark']),
+      approvedBy: _parseText(json['approved_by']),
+      approvedDate: _parseDate(json['approved_date']),
       airportRepRemark: _parseText(json['airport_rep_remark']),
       airportRepRemarkBy: _parseText(json['airport_rep_remark_by']),
       airportRepRemarkDate: _parseDate(json['airport_rep_remark_date']),

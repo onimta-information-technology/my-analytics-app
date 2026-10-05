@@ -18,6 +18,9 @@ class User {
   final bool? bgApp;
   final bool? bgChk;
   final bool? marketingP;
+  /// Transport_App — Bellagio only. Lets the user approve transport requests
+  /// that need sign-off (airport pickups / non-standard vehicles).
+  final bool? transportApp;
   User({
     required this.userName,
     this.uName,
@@ -36,6 +39,7 @@ class User {
     this.bgApp,
     this.bgChk,
     this.marketingP,
+    this.transportApp,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,7 @@ class User {
       bgApp: json['BG_APP'],
       bgChk: json['BG_CHK'],
       marketingP: parseMarketingP(json),
+      transportApp: parseTransportApp(json),
     );
   }
 
@@ -71,6 +76,15 @@ class User {
     final value = raw?.toString().trim() ?? '';
     if (value.isEmpty || value.toLowerCase() == 'null') return null;
     return value;
+  }
+
+  /// Bellagio sends Transport_App; Ballys doesn't, so it comes back null there.
+  /// Read as a bool or a "True"/"False" string, like [parseMarketingP].
+  static bool? parseTransportApp(Map<String, dynamic> json) {
+    final raw = json['Transport_App'];
+    if (raw == null) return null;
+    if (raw is bool) return raw;
+    return raw.toString().toLowerCase() == 'true';
   }
 
   // The login response spells this key "MArketing_P" and may send it as a bool

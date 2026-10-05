@@ -114,6 +114,37 @@ class TransportViewScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSummaryCard(transport, fontSettings),
+                    // Requested airport pickups / non-Normal Car requests wait
+                    // on approval. Everyone sees the button; only Transport_App
+                    // users (Bellagio login) can press it.
+                    if (transport.isAwaitingApproval) ...[
+                      const SizedBox(height: 12),
+                      FutureBuilder<bool>(
+                        future: StorageUtil.getTransportApp(),
+                        builder: (context, snapshot) {
+                          final canApprove = snapshot.data == true;
+                          return SizedBox(
+                            width: double.infinity,
+                            child: _actionButton(
+                              icon: Icons.check_circle_outline,
+                              label: 'Approve',
+                              color: Colors.green.shade700,
+                              fontSettings: fontSettings,
+                              onPressed: canApprove
+                                  ? () => showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (_) => _ApproveDialog(
+                                          transport: transport,
+                                          fontSettings: fontSettings,
+                                        ),
+                                      )
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                     // A rejected request can't be amended or rejected again, so
                     // the Rejected tab opens this screen without either action.
                     if (transport.status != TransportStatus.rejected) ...[
@@ -207,7 +238,7 @@ class TransportViewScreen extends ConsumerWidget {
     required String label,
     required Color color,
     required FontSettings fontSettings,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return OutlinedButton.icon(
       icon: Icon(icon),
@@ -487,6 +518,30 @@ class TransportViewScreen extends ConsumerWidget {
                       'Reject remark',
                       transport.rejectRemark ?? '',
                       Colors.red,
+                      fontSettings,
+                    ),
+                  ],
+                  if (transport.hasApproval) ...[
+                    const Divider(height: 20),
+                    _infoRow(
+                      Icons.verified_user_outlined,
+                      'Approved by',
+                      transport.approvedBy ?? '',
+                      Colors.green,
+                      fontSettings,
+                    ),
+                    _infoRow(
+                      Icons.event_available,
+                      'Approved',
+                      _formatDateTime(transport.approvedDate),
+                      Colors.green,
+                      fontSettings,
+                    ),
+                    _infoRow(
+                      Icons.comment_outlined,
+                      'Approve remark',
+                      transport.approveRemark ?? '',
+                      Colors.green,
                       fontSettings,
                     ),
                   ],
@@ -1482,6 +1537,245 @@ class _RejectDialogState extends ConsumerState<_RejectDialog> {
               : const Text('Reject'),
         ),
       ],
+    );
+  }
+}
+
+/// Approves a request (Transport_App users only). The remark is mandatory — Submit refuses an empty one.
+class _ApproveDialog extends ConsumerStatefulWidget {
+  const _ApproveDialog({required this.transport, required this.fontSettings});
+
+  final TransportReservation transport;
+  final FontSettings fontSettings;
+
+  @override
+  ConsumerState<_ApproveDialog> createState() => _ApproveDialogState();
+}
+
+class _ApproveDialogState extends ConsumerState<_ApproveDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final remark = _controller.text.trim();
+    if (remark.isEmpty) {
+      setState(() => _error = 'Remark is required');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      final repo = TransportRepository(
+        ApiService(SecureStorage.instance),
+      );
+      final result = await repo.approveTransport(
+        masterId: widget.transport.masterId,
+        mid: widget.transport.mid,
+        guestName: widget.transport.guestName,
+        remark: remark,
+      );
+      if (!mounted) return;
+
+      if (result.success) {
+        // Refresh so the request drops its Approve action and shows who
+        // approved it.
+        await _refreshSelectedTransport(ref, widget.transport.masterId);
+        if (!mounted) return;
+
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Transport request approved'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _submitting = false;
+        _error = result.message ?? 'Failed to approve request';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  // Same look as the Ballys reservation Approve/Reject remarks popup.
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = Colors.green.shade700;
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    size: 38,
+                    color: accentColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Approve Transport',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Please provide remarks to continue.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _controller,
+                  enabled: !_submitting,
+                  autofocus: true,
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    hintText: 'Enter your remarks here...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
+                    errorText: _error,
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: accentColor, width: 1.5),
+                    ),
+                  ),
+                  onChanged: (_) {
+                    if (_error != null) setState(() => _error = null);
+                  },
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _submitting
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _submitting ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Confirm',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

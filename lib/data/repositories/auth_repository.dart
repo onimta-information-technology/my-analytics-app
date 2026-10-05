@@ -126,6 +126,7 @@ print("hellooo");
           bgApp: tableData['BG_APP'],
           bgChk: tableData['BG_CHK'],
           marketingP: User.parseMarketingP(tableData),
+          transportApp: User.parseTransportApp(tableData),
         );
       } else {
         // Handle login failure cases

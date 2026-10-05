@@ -29,6 +29,7 @@ class StorageUtil {
     bool? marketingP, {
     String? uName,
     String? coordinatorId,
+    bool? transportApp,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await _clearPreservingDeviceConfig(prefs);
@@ -73,6 +74,10 @@ class StorageUtil {
     }
     if (marketingP != null) {
       await prefs.setBool('marketingP', marketingP);
+    }
+    // Bellagio only — Ballys logins don't carry Transport_App.
+    if (transportApp != null) {
+      await prefs.setBool('transportApp', transportApp);
     }
     final now = DateTime.now();
     final expiryTime = now.add(const Duration(days: 365));
@@ -266,6 +271,13 @@ class StorageUtil {
   static Future<bool?> getBgApp() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('bgApp');
+  }
+
+  /// Transport_App from the Bellagio login — true lets the user approve
+  /// transport requests. False when absent (Ballys, or older sessions).
+  static Future<bool> getTransportApp() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('transportApp') ?? false;
   }
 
   static Future<bool?> getBgChk() async {

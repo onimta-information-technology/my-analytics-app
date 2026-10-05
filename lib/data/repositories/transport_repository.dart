@@ -129,6 +129,41 @@ class TransportRepository {
       message: response['Message'] as String?,
     );
   }
+
+  /// Approve endpoint, resolved against the current CRM base URL — i.e.
+  /// `https://bty.world/api/Bellagio/CRM/Transport_Approve`.
+  static const String approveEndpoint = 'Transport_Approve';
+
+  /// POST `{baseUrl}/Transport_Approve` — approves a Requested transport
+  /// request (airport pickup / non-Normal Car) with a mandatory remark. Only
+  /// Transport_App users reach this.
+  Future<TransportInsertResult> approveTransport({
+    required String masterId,
+    required String mid,
+    required String guestName,
+    required String remark,
+  }) async {
+    final userName = await StorageUtil.getUName();
+    final deviceId = await DeviceId.get();
+
+    final body = <String, Object?>{
+      'master_id': masterId,
+      'mid': mid,
+      'guest_name': guestName,
+      'remark': remark,
+      'user_name': userName,
+      'device_id': deviceId,
+    };
+
+    print('Approve payload → ${jsonEncode(body)}');
+    final response = await apiService.post(approveEndpoint, body);
+    print('Approve result → $response');
+
+    return TransportInsertResult(
+      success: response['Status'] as bool? ?? false,
+      message: response['Message'] as String?,
+    );
+  }
 }
 
 /// Outcome of a `Transport_Insert` call.

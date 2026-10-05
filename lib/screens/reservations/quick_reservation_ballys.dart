@@ -321,6 +321,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// Meal requirement, asked for only while Meal is Yes.
   final _a_mealRemarkCtrl = TextEditingController();
 
+  /// How many people on the ticket need a Visa / Silk Route / Gold Route.
+  /// Asked for — and sent — only while the matching option is Yes.
+  final _a_visaCountCtrl = TextEditingController(text: '1');
+  final _a_silkRouteCountCtrl = TextEditingController(text: '1');
+  final _a_goldRouteCountCtrl = TextEditingController(text: '1');
+
   // ── Payment By & Hamoos contact person ────────────────────────────────────
   // Both describe the reservation rather than an individual room or ticket, so
   // they are asked once per tab and sent at the top of the body. Each tab saves
@@ -602,6 +608,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _a_noOfChildren,
       _a_noOfInfants,
       _a_mealRemarkCtrl,
+      _a_visaCountCtrl,
+      _a_silkRouteCountCtrl,
+      _a_goldRouteCountCtrl,
       _a_arrCtrl,
       _a_depCtrl,
       _a_remarksCtrl,
@@ -1051,6 +1060,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'silkRouteType': _a_silkRouteType,
       'goldRouteType': _a_goldRouteType,
       'mealRemark': _a_mealRemarkCtrl.text.trim(),
+      'visaCount': _countOf(_a_visaCountCtrl),
+      'silkRouteCount': _countOf(_a_silkRouteCountCtrl),
+      'goldRouteCount': _countOf(_a_goldRouteCountCtrl),
       'hamoueContactPerson': _a_hamoueContactPerson ?? '',
       'passportFiles': _allAirPassports().map((f) => f.fileName).join(', '),
       // typed fields used when building API body
@@ -1197,6 +1209,9 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
     _a_silkRouteType = 'Arrival';
     _a_goldRouteType = 'Arrival';
     _a_mealRemarkCtrl.clear();
+    _a_visaCountCtrl.text = '1';
+    _a_silkRouteCountCtrl.text = '1';
+    _a_goldRouteCountCtrl.text = '1';
     // The contact person is NOT cleared here: it belongs to the reservation
     // rather than to the ticket being banked. _clearAllAirForm drops it once
     // the reservation is actually saved.
@@ -1541,6 +1556,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       _a_silkRouteAllowed ? _a_skipRouteFacility : 'No';
   String get _a_effectiveGoldRoute =>
       _a_goldRouteAllowed ? _a_goldRoute : 'No';
+
+  /// Turning a Visa / Silk / Gold Route on starts its count at one per ticked
+  /// guest — the usual answer — leaving it to be stepped up for family.
+  void _a_startCount(TextEditingController ctrl) =>
+      ctrl.text = (_a_assignedGuestKeys.isEmpty ? 1 : _a_assignedGuestKeys.length)
+          .toString();
 
   /// Guests who already hold one of the hotels banked with "Add Another Hotel".
   /// They are shown greyed out rather than offered again — a guest sleeps in one
@@ -2508,12 +2529,12 @@ Class                    : ${m['class']}
 Airline                  : ${m['airline']}
 Multi Sector         : ${isMultiSector ? 'Yes' : 'No'}
 Round Trip           : ${isRound ? 'Yes' : 'No'}
-Slik Route Facility : ${m['skipRouteFacility']}${(m['skipRouteFacility'] as String?) == 'Yes' ? ' (${m['silkRouteType'] ?? ''})' : ''}
+Slik Route Facility : ${m['skipRouteFacility']}${(m['skipRouteFacility'] as String?) == 'Yes' ? ' (${m['silkRouteType'] ?? ''}, x${m['silkRouteCount'] ?? 1})' : ''}
 Airport Transport   : ${m['airportTransport']}
-Visa                     : ${m['visa']}
+Visa                     : ${m['visa']}${(m['visa'] as String?) == 'Yes' ? ' (x${m['visaCount'] ?? 1})' : ''}
 Meal                     : ${m['meal']}${(m['meal'] as String?) == 'Yes' && (m['mealRemark'] as String? ?? '').isNotEmpty ? ' (${m['mealRemark']})' : ''}
 Extra Legroom Seat  : ${m['extraLegroomSeat']}
-Gold Route            : ${m['goldRoute']}${(m['goldRoute'] as String?) == 'Yes' ? ' (${m['goldRouteType'] ?? ''})' : ''}
+Gold Route            : ${m['goldRoute']}${(m['goldRoute'] as String?) == 'Yes' ? ' (${m['goldRouteType'] ?? ''}, x${m['goldRouteCount'] ?? 1})' : ''}
 Hamoue Contact   : ${(m['hamoueContactPerson'] as String? ?? '').isEmpty ? 'NA' : m['hamoueContactPerson']}
 Payment By          : $_a_paymentBy
 Passport File/s      : ${(m['passportFiles'] as String? ?? '').isEmpty ? 'None' : m['passportFiles']}
@@ -7200,7 +7221,10 @@ class _AirForm extends StatelessWidget {
             // clears the other.
             onChanged: (v) => state.setState(() {
               state._a_skipRouteFacility = v;
-              if (v == 'Yes') state._a_goldRoute = 'No';
+              if (v == 'Yes') {
+                state._a_goldRoute = 'No';
+                state._a_startCount(state._a_silkRouteCountCtrl);
+              }
             }),
           ),
             const SizedBox(height: 10),
@@ -7213,7 +7237,10 @@ class _AirForm extends StatelessWidget {
               disabledHint: 'Needs package INR 10M / USD 50,000+',
               onChanged: (v) => state.setState(() {
                 state._a_goldRoute = v;
-                if (v == 'Yes') state._a_skipRouteFacility = 'No';
+                if (v == 'Yes') {
+                  state._a_skipRouteFacility = 'No';
+                  state._a_startCount(state._a_goldRouteCountCtrl);
+                }
               }),
             ),
           const SizedBox(height: 10),
@@ -7231,7 +7258,10 @@ class _AirForm extends StatelessWidget {
             icon: Icons.badge_outlined,
             value: state._a_visa,
             accent: accent,
-            onChanged: (v) => state.setState(() => state._a_visa = v),
+            onChanged: (v) => state.setState(() {
+              state._a_visa = v;
+              if (v == 'Yes') state._a_startCount(state._a_visaCountCtrl);
+            }),
           ),
           // Ballys-only options (hidden for Bellagio)
           if (!state._isBellagio) ...[
@@ -7258,7 +7288,23 @@ class _AirForm extends StatelessWidget {
           // ── Follow-ups for the Yes answers above ────────────────────────────
           // Full width, one per row: the leg pickers and the meal note need
           // more space than the half-width option rows.
+          if (state._a_visa == 'Yes') ...[
+            const SizedBox(height: 12),
+            _StepperField(
+              controller: state._a_visaCountCtrl,
+              label: 'Visa Count',
+              icon: Icons.badge_outlined,
+              accent: accent,
+            ),
+          ],
           if (state._a_effectiveSilkRoute == 'Yes') ...[
+            const SizedBox(height: 12),
+            _StepperField(
+              controller: state._a_silkRouteCountCtrl,
+              label: 'Silk Route Count',
+              icon: Icons.alt_route_rounded,
+              accent: accent,
+            ),
             const SizedBox(height: 12),
             _LegSelector(
               label: 'Slik Route Facility For',
@@ -7269,6 +7315,13 @@ class _AirForm extends StatelessWidget {
             ),
           ],
           if (!state._isBellagio && state._a_effectiveGoldRoute == 'Yes') ...[
+            const SizedBox(height: 12),
+            _StepperField(
+              controller: state._a_goldRouteCountCtrl,
+              label: 'Gold Route Count',
+              icon: Icons.route_rounded,
+              accent: accent,
+            ),
             const SizedBox(height: 12),
             _LegSelector(
               label: 'Gold Route For',

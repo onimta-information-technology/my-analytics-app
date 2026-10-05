@@ -661,6 +661,17 @@ class _AirTicketsSelectionBallysScreenState
   final List<FlightSectorEntry> _departureSectors = [];
   final List<FlightSectorEntry> _returnSectors = [];
   bool _visa = false;
+
+  /// How many people on the ticket need a Visa / Silk Route / Gold Route.
+  /// Asked for — and sent — only while the matching option is on.
+  int _visaCount = 1;
+  int _silkRouteCount = 1;
+  int _goldRouteCount = 1;
+
+  /// Turning a Visa / Silk / Gold Route on starts its count at one per ticked
+  /// guest — the usual answer — leaving it to be stepped up for family.
+  int get _startCount =>
+      _assignedGuestKeys.isEmpty ? 1 : _assignedGuestKeys.length;
   bool _meal = false;
   bool _extraLegroomSeat = false;
   bool _goldRoute = false;
@@ -891,6 +902,10 @@ class _AirTicketsSelectionBallysScreenState
           ? flight.goldRouteType!
           : "Arrival";
       _mealRemarkController.text = flight.mealRemark ?? "";
+      // Tickets saved before the counts existed carry 0 — one is the floor.
+      _visaCount = flight.visaCount < 1 ? 1 : flight.visaCount;
+      _silkRouteCount = flight.silkRouteCount < 1 ? 1 : flight.silkRouteCount;
+      _goldRouteCount = flight.goldRouteCount < 1 ? 1 : flight.goldRouteCount;
 
       _departureFromAirport = flight.airports!.departure?.dFrom.toAirport();
       _departureToAirport = flight.airports!.departure?.dTo.toAirport();
@@ -1145,6 +1160,9 @@ class _AirTicketsSelectionBallysScreenState
       silkRouteType: _silkRouteFacility == "Yes" ? _silkRouteType : null,
       goldRouteType: _goldRoute ? _goldRouteType : null,
       mealRemark: _meal ? _mealRemarkController.text.trim() : null,
+      visaCount: _visa ? _visaCount : 0,
+      silkRouteCount: _silkRouteFacility == "Yes" ? _silkRouteCount : 0,
+      goldRouteCount: _goldRoute ? _goldRouteCount : 0,
       isMultiSector: _isMultiSector,
       departureSectors: _isMultiSector ? _sectorInfos(_departureSectors) : const [],
       // No return leg means the return stops describe nothing.
@@ -1501,6 +1519,47 @@ class _AirTicketsSelectionBallysScreenState
     );
   }
 
+  /// A "how many" row for the Visa / Silk / Gold Route counts: label on the
+  /// left, − count + on the right, never below one.
+  Widget _buildCountStepper({
+    required String label,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDADDE3)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.remove_circle_outline),
+            color: Constants.kPrimaryColor,
+            onPressed: value > 1 ? () => onChanged(value - 1) : null,
+          ),
+          Text(
+            "$value",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            color: Constants.kPrimaryColor,
+            onPressed: value < 99 ? () => onChanged(value + 1) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Full-width Arrival / Departure picker for the Silk and Gold Route
   /// facilities: two tap targets side by side, the chosen one filled and
   /// ticked, so the answer is readable at a glance instead of hunting for
@@ -1615,6 +1674,9 @@ class _AirTicketsSelectionBallysScreenState
       _silkRouteType = "Arrival";
       _goldRouteType = "Arrival";
       _mealRemarkController.clear();
+      _visaCount = 1;
+      _silkRouteCount = 1;
+      _goldRouteCount = 1;
 
       _departureFromAirport = null;
       _departureToAirport = ref
@@ -2157,7 +2219,10 @@ class _AirTicketsSelectionBallysScreenState
                         _buildYesNoOption(
                           label: "Visa",
                           value: _visa,
-                          onChanged: (value) => setState(() => _visa = value),
+                          onChanged: (value) => setState(() {
+                            _visa = value;
+                            if (value) _visaCount = _startCount;
+                          }),
                         ),
                         _buildYesNoOption(
                           label: "Airport Transpotation",
@@ -2175,7 +2240,10 @@ class _AirTicketsSelectionBallysScreenState
                           // turning one on clears the other.
                           onChanged: (value) => setState(() {
                             _silkRouteFacility = value ? "Yes" : "No";
-                            if (value) _goldRoute = false;
+                            if (value) {
+                              _goldRoute = false;
+                              _silkRouteCount = _startCount;
+                            }
                           }),
                         ),
 
@@ -2200,7 +2268,10 @@ class _AirTicketsSelectionBallysScreenState
                                 "Needs package INR 10M / USD 50,000+",
                             onChanged: (value) => setState(() {
                               _goldRoute = value;
-                              if (value) _silkRouteFacility = "No";
+                              if (value) {
+                                _silkRouteFacility = "No";
+                                _goldRouteCount = _startCount;
+                              }
                             }),
                           ),
                         ],
@@ -2209,8 +2280,23 @@ class _AirTicketsSelectionBallysScreenState
                       // ── Follow-ups for the Yes answers above ──────────
                       // Full width, one per row: the leg pickers and the meal
                       // note need more space than a half-width grid cell.
+                      if (_visa) ...[
+                        const SizedBox(height: 20),
+                        _buildCountStepper(
+                          label: "Visa Count",
+                          value: _visaCount,
+                          onChanged: (v) => setState(() => _visaCount = v),
+                        ),
+                      ],
                       if (_silkRouteFacility == "Yes") ...[
                         const SizedBox(height: 20),
+                        _buildCountStepper(
+                          label: "Silk Route Count",
+                          value: _silkRouteCount,
+                          onChanged: (v) =>
+                              setState(() => _silkRouteCount = v),
+                        ),
+                        const SizedBox(height: 12),
                         _buildLegSelector(
                           label: "Silk Route Facility For",
                           value: _silkRouteType,
@@ -2220,6 +2306,13 @@ class _AirTicketsSelectionBallysScreenState
                       ],
                       if (_isBallys && _goldRoute) ...[
                         const SizedBox(height: 20),
+                        _buildCountStepper(
+                          label: "Gold Route Count",
+                          value: _goldRouteCount,
+                          onChanged: (v) =>
+                              setState(() => _goldRouteCount = v),
+                        ),
+                        const SizedBox(height: 12),
                         _buildLegSelector(
                           label: "Gold Route For",
                           value: _goldRouteType,

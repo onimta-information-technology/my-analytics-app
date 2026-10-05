@@ -382,6 +382,15 @@ class QuickReservationRepository {
       'meal_remark': (m['meal'] as String?) == 'Yes'
           ? (m['mealRemark'] as String? ?? '')
           : '',
+      // How many on the ticket need each one; 0 while it is No.
+      'visa_count':
+          (m['visa'] as String?) == 'Yes' ? (m['visaCount'] as int? ?? 1) : 0,
+      'silk_route_count': (m['skipRouteFacility'] as String?) == 'Yes'
+          ? (m['silkRouteCount'] as int? ?? 1)
+          : 0,
+      'gold_route_count': (m['goldRoute'] as String?) == 'Yes'
+          ? (m['goldRouteCount'] as int? ?? 1)
+          : 0,
       'airport_transportation':
           (m['airportTransport'] as String?) == 'Yes' ? 1 : 0,
       'arrival_date': arrDate?.toIso8601String(),

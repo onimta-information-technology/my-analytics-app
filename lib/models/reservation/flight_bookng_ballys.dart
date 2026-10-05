@@ -46,6 +46,12 @@ class FlightBookingBallys {
   /// Free-text meal requirement, captured only when [meal] is true.
   final String? mealRemark;
 
+  /// How many people on the ticket need a visa / Silk Route / Gold Route.
+  /// Only meaningful while the matching option is on.
+  final int visaCount;
+  final int silkRouteCount;
+  final int goldRouteCount;
+
   /// The guest is not flying direct — the ticket routes through one or more
   /// transit airports. Only meaningful together with [departureSectors] /
   /// [returnSectors].
@@ -93,6 +99,9 @@ class FlightBookingBallys {
     this.silkRouteType,
     this.goldRouteType,
     this.mealRemark,
+    this.visaCount = 0,
+    this.silkRouteCount = 0,
+    this.goldRouteCount = 0,
     this.isMultiSector = false,
     this.departureSectors = const [],
     this.returnSectors = const [],
@@ -157,6 +166,9 @@ class FlightBookingBallys {
       silkRouteType: json['silk_route_type'] as String?,
       goldRouteType: json['gold_route_type'] as String?,
       mealRemark: json['meal_remark'] as String?,
+      visaCount: _toInt(json['visa_count']),
+      silkRouteCount: _toInt(json['silk_route_count']),
+      goldRouteCount: _toInt(json['gold_route_count']),
       isMultiSector: _toBool(json['is_multi_sector']),
       departureSectors: _parseSectors(json['departure_sectors']),
       returnSectors: _parseSectors(json['return_sectors']),
@@ -341,6 +353,9 @@ class FlightBookingBallys {
       'silk_route_type': silkRoute == 1 ? (silkRouteType ?? '') : '',
       'gold_route_type': goldRoute ? (goldRouteType ?? '') : '',
       'meal_remark': meal ? (mealRemark ?? '') : '',
+      'visa_count': visa ? visaCount : 0,
+      'silk_route_count': silkRoute == 1 ? silkRouteCount : 0,
+      'gold_route_count': goldRoute ? goldRouteCount : 0,
       'airport_transportation': airportTransportation,
       'arrival_date': arrivalDate?.toIso8601String(),
       'departure_date': departureDate?.toIso8601String(),

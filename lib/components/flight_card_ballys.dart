@@ -34,6 +34,13 @@ class FlightCardBallys extends StatelessWidget {
     return leg.isEmpty ? '' : ' ($leg)';
   }
 
+  /// " x2" after a facility that is on — blank for tickets saved before the
+  /// counts existed, which carry 0.
+  static String _count(dynamic count) {
+    final n = count is int ? count : 0;
+    return n > 0 ? ' x$n' : '';
+  }
+
   /// Costs are only carried by tickets saved while the cost calculator still
   /// existed, so the line is dropped when there is nothing to show.
   static String? _costText(dynamic cost) {
@@ -215,7 +222,7 @@ class FlightCardBallys extends StatelessWidget {
                     ],
                     const SizedBox(height: 5),
                     Text(
-                      "Visa: ${flight.visa == true ? 'Yes' : 'No'}",
+                      "Visa: ${flight.visa == true ? 'Yes${_count(flight.visaCount)}' : 'No'}",
                       style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
@@ -232,7 +239,7 @@ class FlightCardBallys extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       // The leg only means something once the facility is on.
-                      "Silk Route: ${flight.silkRoute == 1 ? 'Yes${_leg(flight.silkRouteType)}' : 'No'}",
+                      "Silk Route: ${flight.silkRoute == 1 ? 'Yes${_leg(flight.silkRouteType)}${_count(flight.silkRouteCount)}' : 'No'}",
                       style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
@@ -251,7 +258,7 @@ class FlightCardBallys extends StatelessWidget {
                     if (flight.goldRoute) ...[
                       const SizedBox(height: 5),
                       Text(
-                        "Gold Route: Yes${_leg(flight.goldRouteType)}",
+                        "Gold Route: Yes${_leg(flight.goldRouteType)}${_count(flight.goldRouteCount)}",
                         style: const TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.bold,

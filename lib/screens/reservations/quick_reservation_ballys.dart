@@ -38,6 +38,7 @@ import 'package:ballys_reservation_app/providers/airports_provider.dart';
 import 'package:ballys_reservation_app/providers/quick_reservation_provider_ballys.dart';
 // import 'package:ballys_reservation_app/providers/new_reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/utils/airport_route_tier.dart';
 import 'package:ballys_reservation_app/utils/amount_util.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:intl/intl.dart';
@@ -1039,12 +1040,12 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
       'airlineCode': _a_selectedAirline?.airlineCode ?? '',
       'iataCode': _a_selectedAirline?.iataCode ?? '',
       'remarks': _a_remarksCtrl.text,
-      'skipRouteFacility': _a_skipRouteFacility,
+      'skipRouteFacility': _a_effectiveSilkRoute,
       'airportTransport': _a_airportTransport,
       'visa': _a_visa,
       'meal': _a_meal,
       'extraLegroomSeat': _a_extraLegroomSeat,
-      'goldRoute': _a_goldRoute,
+      'goldRoute': _a_effectiveGoldRoute,
       // Follow-ups to the Yes answers above — only meaningful while their
       // option is Yes, which is where they are read back.
       'silkRouteType': _a_silkRouteType,
@@ -1481,6 +1482,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         hasFamilyMembers: _sharedHasFamilyMembers,
         packageAmount: _sharedPackageAmount.text.trim(),
         sharedPackage: _sharedPackageShared,
+        sharedWith: _sharedWith.toList(),
       ));
     }
 
@@ -1491,6 +1493,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
         hasFamilyMembers: row['hasFamilyMembers'] as bool? ?? false,
         packageAmount: row['packageAmount'] as String? ?? '',
         sharedPackage: row['sharedPackage'] as bool? ?? false,
+        sharedWith: (row['sharedWith'] as List?)?.cast<String>() ?? const [],
       ));
     }
 
@@ -1508,6 +1511,36 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
 
   List<AccompanyingMember> get _airAssignableGuests =>
       _reservationGuests(_a_extraMembers);
+
+  /// The airport route tier the ticket in the form is entitled to: the lowest
+  /// among its ticked guests, since each of them gets a copy of the ticket. A
+  /// guest on a shared package takes the tier of whoever they share it with.
+  /// Nobody ticked yet — nothing is unlocked.
+  AirportRouteTier get _a_routeTier {
+    final guests = _airAssignableGuests;
+    final tiers = routeTiersForGuests(guests);
+    final assigned = <AirportRouteTier>[
+      for (var i = 0; i < guests.length; i++)
+        if (_a_assignedGuestKeys.contains(_guestKey(guests[i]))) tiers[i],
+    ];
+    if (assigned.isEmpty) return AirportRouteTier.none;
+    return assigned.reduce((a, b) => a.index <= b.index ? a : b);
+  }
+
+  /// Silk Route: package of INR 2.5M / USD 10,000 or more (Gold covers it too).
+  bool get _a_silkRouteAllowed =>
+      _a_routeTier.index >= AirportRouteTier.silk.index;
+
+  /// Gold Route: package of INR 10M / USD 50,000 or more.
+  bool get _a_goldRouteAllowed => _a_routeTier == AirportRouteTier.gold;
+
+  /// The Silk / Gold Route answers as they may actually be booked: a Yes the
+  /// ticked guests don't qualify for reads as No, so re-ticking or changing a
+  /// package amount can never save a route nobody on the ticket is owed.
+  String get _a_effectiveSilkRoute =>
+      _a_silkRouteAllowed ? _a_skipRouteFacility : 'No';
+  String get _a_effectiveGoldRoute =>
+      _a_goldRouteAllowed ? _a_goldRoute : 'No';
 
   /// Guests who already hold one of the hotels banked with "Add Another Hotel".
   /// They are shown greyed out rather than offered again — a guest sleeps in one
@@ -7159,8 +7192,10 @@ class _AirForm extends StatelessWidget {
           _YesNoRadioRow(
             label: 'Slik Route Facility',
             icon: Icons.alt_route_rounded,
-            value: state._a_skipRouteFacility,
+            value: state._a_effectiveSilkRoute,
             accent: accent,
+            enabled: state._a_silkRouteAllowed,
+            disabledHint: 'Needs package INR 2.5M / USD 10,000+',
             // Silk and Gold Route are mutually exclusive — saying Yes to one
             // clears the other.
             onChanged: (v) => state.setState(() {
@@ -7172,8 +7207,10 @@ class _AirForm extends StatelessWidget {
             _YesNoRadioRow(
               label: 'Gold Route',
               icon: Icons.route_rounded,
-              value: state._a_goldRoute,
+              value: state._a_effectiveGoldRoute,
               accent: accent,
+              enabled: state._a_goldRouteAllowed,
+              disabledHint: 'Needs package INR 10M / USD 50,000+',
               onChanged: (v) => state.setState(() {
                 state._a_goldRoute = v;
                 if (v == 'Yes') state._a_skipRouteFacility = 'No';
@@ -7221,7 +7258,7 @@ class _AirForm extends StatelessWidget {
           // ── Follow-ups for the Yes answers above ────────────────────────────
           // Full width, one per row: the leg pickers and the meal note need
           // more space than the half-width option rows.
-          if (state._a_skipRouteFacility == 'Yes') ...[
+          if (state._a_effectiveSilkRoute == 'Yes') ...[
             const SizedBox(height: 12),
             _LegSelector(
               label: 'Slik Route Facility For',
@@ -7231,7 +7268,7 @@ class _AirForm extends StatelessWidget {
                   state.setState(() => state._a_silkRouteType = leg),
             ),
           ],
-          if (!state._isBellagio && state._a_goldRoute == 'Yes') ...[
+          if (!state._isBellagio && state._a_effectiveGoldRoute == 'Yes') ...[
             const SizedBox(height: 12),
             _LegSelector(
               label: 'Gold Route For',
@@ -8631,6 +8668,11 @@ class _YesNoRadioRow extends StatelessWidget {
   /// so the two sit level when paired half-width in a [_rowPair].
   final bool stacked;
 
+  /// When false the row is greyed out and can't be answered; [disabledHint]
+  /// says why under the label.
+  final bool enabled;
+  final String? disabledHint;
+
   const _YesNoRadioRow({
     required this.label,
     required this.icon,
@@ -8638,12 +8680,21 @@ class _YesNoRadioRow extends StatelessWidget {
     required this.accent,
     required this.onChanged,
     this.stacked = false,
+    this.enabled = true,
+    this.disabledHint,
   });
+
+  Widget? get _hint => !enabled && disabledHint != null
+      ? Text(
+          disabledHint!,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        )
+      : null;
 
   Widget _option(String text) {
     final selected = value == text;
     return InkWell(
-      onTap: () => onChanged(text),
+      onTap: enabled ? () => onChanged(text) : null,
       borderRadius: BorderRadius.circular(8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -8654,14 +8705,18 @@ class _YesNoRadioRow extends StatelessWidget {
             activeColor: accent,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             visualDensity: VisualDensity.compact,
-            onChanged: (v) => onChanged(v!),
+            onChanged: enabled ? (v) => onChanged(v!) : null,
           ),
           Text(
             text,
             style: TextStyle(
               fontSize: 14.5,
               fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-              color: selected ? accent : Colors.black87,
+              color: !enabled
+                  ? Colors.grey
+                  : selected
+                      ? accent
+                      : Colors.black87,
             ),
           ),
         ],
@@ -8686,21 +8741,22 @@ class _YesNoRadioRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(icon, size: 18, color: accent),
+                    Icon(icon, size: 18, color: enabled ? accent : Colors.grey),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         label,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: enabled ? Colors.black : Colors.grey,
                         ),
                       ),
                     ),
                   ],
                 ),
+                if (_hint != null) _hint!,
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 42,
@@ -8716,16 +8772,22 @@ class _YesNoRadioRow extends StatelessWidget {
             )
           : Row(
               children: [
-                Icon(icon, size: 18, color: accent),
+                Icon(icon, size: 18, color: enabled ? accent : Colors.grey),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.bold,
+                          color: enabled ? Colors.black : Colors.grey,
+                        ),
+                      ),
+                      if (_hint != null) _hint!,
+                    ],
                   ),
                 ),
                 _option('Yes'),

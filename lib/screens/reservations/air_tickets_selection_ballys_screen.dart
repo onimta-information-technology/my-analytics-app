@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/components/passport_upload_widget_ballys.
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/airport_repository.dart';
 import 'package:ballys_reservation_app/providers/selected_passport_provider_ballys.dart';
+import 'package:ballys_reservation_app/utils/airport_route_tier.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/models/airport_search_response.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
@@ -106,6 +107,7 @@ class _AirTicketsSelectionBallysScreenState
     _restorePassports(ref.read(selectedPassportBallysProvider));
     _preselectSoleGuest();
     _syncHeadCountsToGuests();
+    _dropIneligibleRoutes();
     _getAirports();
     _loadBrand();
     _loadAirlines();
@@ -259,6 +261,35 @@ class _AirTicketsSelectionBallysScreenState
     numberOfInfants = 0;
   }
 
+  /// The airport route tier the ticket's guests are entitled to: the lowest
+  /// among the ticked guests, since every one of them gets a copy of the
+  /// ticket. A guest on a shared package takes the tier of whoever they share
+  /// it with. Nobody ticked yet — nothing is unlocked.
+  AirportRouteTier get _ticketRouteTier {
+    final tiers = routeTiersForGuests(widget.guests);
+    final assigned = <AirportRouteTier>[
+      for (var i = 0; i < widget.guests.length; i++)
+        if (_assignedGuestKeys.contains(_guestKey(widget.guests[i]))) tiers[i],
+    ];
+    if (assigned.isEmpty) return AirportRouteTier.none;
+    return assigned.reduce((a, b) => a.index <= b.index ? a : b);
+  }
+
+  /// Silk Route: package of INR 2.5M / USD 10,000 or more (Gold covers it too).
+  bool get _silkRouteAllowed =>
+      _ticketRouteTier.index >= AirportRouteTier.silk.index;
+
+  /// Gold Route: package of INR 10M / USD 50,000 or more.
+  bool get _goldRouteAllowed => _ticketRouteTier == AirportRouteTier.gold;
+
+  /// Turns off a Silk / Gold Route the ticked guests no longer qualify for.
+  /// Call after every change to the assignment, alongside
+  /// [_syncHeadCountsToGuests].
+  void _dropIneligibleRoutes() {
+    if (!_silkRouteAllowed) _silkRouteFacility = "No";
+    if (!_goldRouteAllowed) _goldRoute = false;
+  }
+
   /// Unticking a guest can leave more seats on the ticket than the rest of them
   /// can hold, so the classes are pared back to fit — counts first, then whole
   /// classes off the end.
@@ -331,6 +362,7 @@ class _AirTicketsSelectionBallysScreenState
                       _guestAssignError = false;
                       _trimTicketClassesToLimit();
                       _syncHeadCountsToGuests();
+                      _dropIneligibleRoutes();
                     });
                   },
                   style: TextButton.styleFrom(
@@ -392,6 +424,7 @@ class _AirTicketsSelectionBallysScreenState
                 _guestAssignError = false;
                 _trimTicketClassesToLimit();
                 _syncHeadCountsToGuests();
+                _dropIneligibleRoutes();
               });
             },
       child: Padding(
@@ -416,6 +449,7 @@ class _AirTicketsSelectionBallysScreenState
                           _guestAssignError = false;
                           _trimTicketClassesToLimit();
                           _syncHeadCountsToGuests();
+                          _dropIneligibleRoutes();
                         });
                       },
               ),
@@ -885,6 +919,7 @@ class _AirTicketsSelectionBallysScreenState
 
       _applyAssignedGuests(flight.assignedGuests);
       _syncHeadCountsToGuests();
+      _dropIneligibleRoutes();
       _guestAssignError = false;
     });
   }
@@ -1426,15 +1461,19 @@ class _AirTicketsSelectionBallysScreenState
     required String label,
     required bool value,
     required ValueChanged<bool> onChanged,
+    bool enabled = true,
+    String? disabledHint,
   }) {
+    final textColor = enabled ? null : Colors.grey;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
+            color: textColor,
           ),
         ),
         Row(
@@ -1442,17 +1481,22 @@ class _AirTicketsSelectionBallysScreenState
             Radio<bool>(
               value: true,
               groupValue: value,
-              onChanged: (v) => onChanged(v!),
+              onChanged: enabled ? (v) => onChanged(v!) : null,
             ),
-            const Text("Yes", style: TextStyle(fontSize: 16)),
+            Text("Yes", style: TextStyle(fontSize: 16, color: textColor)),
             Radio<bool>(
               value: false,
               groupValue: value,
-              onChanged: (v) => onChanged(v!),
+              onChanged: enabled ? (v) => onChanged(v!) : null,
             ),
-            const Text("No", style: TextStyle(fontSize: 16)),
+            Text("No", style: TextStyle(fontSize: 16, color: textColor)),
           ],
         ),
+        if (!enabled && disabledHint != null)
+          Text(
+            disabledHint,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
       ],
     );
   }
@@ -1601,6 +1645,7 @@ class _AirTicketsSelectionBallysScreenState
       _assignedGuestKeys.clear();
       _preselectSoleGuest();
       _syncHeadCountsToGuests();
+      _dropIneligibleRoutes();
       _guestAssignError = false;
     });
   }
@@ -2123,6 +2168,9 @@ class _AirTicketsSelectionBallysScreenState
                           _buildYesNoOption(
                           label: "Silk Route Facility",
                           value: _silkRouteFacility == "Yes",
+                          enabled: _silkRouteAllowed,
+                          disabledHint:
+                              "Needs package INR 2.5M / USD 10,000+",
                           // Silk and Gold Route are mutually exclusive —
                           // turning one on clears the other.
                           onChanged: (value) => setState(() {
@@ -2147,6 +2195,9 @@ class _AirTicketsSelectionBallysScreenState
                           _buildYesNoOption(
                             label: "Gold Route",
                             value: _goldRoute,
+                            enabled: _goldRouteAllowed,
+                            disabledHint:
+                                "Needs package INR 10M / USD 50,000+",
                             onChanged: (value) => setState(() {
                               _goldRoute = value;
                               if (value) _silkRouteFacility = "No";

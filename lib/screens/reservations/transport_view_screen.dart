@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/data/repositories/transport_repository.da
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_transport_provider.dart';
 import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -113,7 +114,7 @@ class TransportViewScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSummaryCard(transport, fontSettings),
+                    _buildSummaryCard(context, ref, transport, fontSettings),
                     // Requested airport pickups / non-Normal Car requests wait
                     // on approval. Everyone sees the button; only Transport_App
                     // users (Bellagio login) can press it.
@@ -224,6 +225,8 @@ class TransportViewScreen extends ConsumerWidget {
                               index: entry.key + 1,
                               details: entry.value,
                               fontSettings: fontSettings,
+                              onMidTap: (mid) =>
+                                  _openTripHistory(context, ref, mid),
                             ),
                           ),
                   ],
@@ -261,7 +264,34 @@ class TransportViewScreen extends ConsumerWidget {
     );
   }
 
+  /// Loads the guest behind [mid] into [selectedGuestProvider] — which
+  /// TripHistoryScreen reads — then opens their trip history.
+  static Future<void> _openTripHistory(
+    BuildContext context,
+    WidgetRef ref,
+    String mid,
+  ) async {
+    final memberId = mid.trim();
+    if (memberId.isEmpty) return;
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    await ref
+        .read(selectedGuestProvider.notifier)
+        .setSelectedGuestWithId(memberId);
+    navigator.pop();
+    if (!context.mounted) return;
+    context.push('/home/profile/trip-history');
+  }
+
   Widget _buildSummaryCard(
+    BuildContext context,
+    WidgetRef ref,
     TransportReservation transport,
     FontSettings fontSettings,
   ) {
@@ -314,12 +344,29 @@ class TransportViewScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${transport.guestName} - ${transport.mid}',
-                          style: TextStyle(
-                            fontSize: fontSettings.fontSize + 2,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        // Tapping the BM number opens the guest's trip
+                        // history.
+                        GestureDetector(
+                          onTap: () =>
+                              _openTripHistory(context, ref, transport.mid),
+                          child: Text.rich(
+                            TextSpan(
+                              text: '${transport.guestName} - ',
+                              children: [
+                                TextSpan(
+                                  text: transport.mid,
+                                  style: const TextStyle(
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize + 2,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                         // const SizedBox(height: 2),
@@ -908,11 +955,15 @@ class _TripCard extends StatefulWidget {
     required this.index,
     required this.details,
     required this.fontSettings,
+    required this.onMidTap,
   });
 
   final int index;
   final List<TransportDetail> details;
   final FontSettings fontSettings;
+
+  /// Called with the card's BM number when it is tapped.
+  final ValueChanged<String> onMidTap;
 
   @override
   State<_TripCard> createState() => _TripCardState();
@@ -961,8 +1012,31 @@ class _TripCardState extends State<_TripCard> {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          '${base.mid} - ${base.guestName}',
+                        // The BM number opens trip history; the rest of the
+                        // header still expands/collapses the card.
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.baseline,
+                                baseline: TextBaseline.alphabetic,
+                                child: GestureDetector(
+                                  onTap: () => widget.onMidTap(base.mid),
+                                  child: Text(
+                                    base.mid,
+                                    style: TextStyle(
+                                      fontSize: fontSettings.fontSize + 1,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue.shade800,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: Colors.blue.shade800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              TextSpan(text: ' - ${base.guestName}'),
+                            ],
+                          ),
                           style: TextStyle(
                             fontSize: fontSettings.fontSize + 1,
                             fontWeight: FontWeight.bold,

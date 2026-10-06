@@ -30,7 +30,10 @@ import 'package:intl/intl.dart';
 final guestCountsProvider = StateProvider<Map<String, int?>>(
   (ref) => {"today": null, "yesterday": null, "monthly": null},
 );
-final homeScreenInitializedProvider = StateProvider<bool>((ref) => false);
+// "salesCode@apiUrl" the cached home data belongs to — null until the first
+// load. Keyed by user AND property, so logging out of Ballys and into
+// Bellagio (same sales code) does a full init instead of showing old counts.
+final homeScreenInitializedProvider = StateProvider<String?>((ref) => null);
 
 // 🔹 Single provider for active event
 final activeEventProvider = StateProvider<EventType?>((ref) => null);
@@ -45,7 +48,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver,ConnectivityMixin {
   String? userName;
-  bool _isLoadingData = false;
+  // Bumped on every guest-data load; responses from an older load are ignored
+  // so they can't overwrite the counts with stale (or empty → 0) values.
+  int _loadGeneration = 0;
+  AppMode? _lastRequestedMode;
   String? locationLogo;
   Timer? _eventTimer;
   @override
@@ -66,9 +72,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
       final userName = await StorageUtil.getUserName();
       final salesCode = await StorageUtil.getSalesCode();
+      final apiUrl = await StorageUtil.getCurrentApiUrl();
+
+      if (!mounted) return;
 
       if (userName == null || salesCode == null) {
-        ref.read(homeScreenInitializedProvider.notifier).state = false;
+        ref.read(homeScreenInitializedProvider.notifier).state = null;
         ref.read(guestsProvider.notifier).resetData();
         ref.read(guestCountsProvider.notifier).state = {
           "today": null,
@@ -78,38 +87,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return;
       }
 
-      final hasInitialized = ref.read(homeScreenInitializedProvider);
-      if (!hasInitialized) {
-        ref.read(homeScreenInitializedProvider.notifier).state = true;
-        _initializeAppMode();
-        _loadGuestData();
+      final cacheKey = '$salesCode@$apiUrl';
+      final initializedFor = ref.read(homeScreenInitializedProvider);
+      if (initializedFor != cacheKey) {
+        ref.read(homeScreenInitializedProvider.notifier).state = cacheKey;
         _checkAndShowEvent();
+        // Resolve the user's app mode BEFORE fetching, otherwise the first
+        // fetch runs with the default mode and gets thrown away.
+        await _initializeAppMode();
+        if (!mounted) return;
+        _loadGuestData();
       } else {
-    final guestsState = ref.read(guestsProvider);
-
-    // ✅ Restore whatever counts are already in guestsProvider immediately
-    ref.read(guestCountsProvider.notifier).state = {
-      "today": guestsState.todayGuests.isEmpty
-          ? null
-          : guestsState.todayGuests.where((g) => g.mid.isNotEmpty).length,
-      "yesterday": guestsState.yesterdayGuests.isEmpty
-          ? null
-          : guestsState.yesterdayGuests.where((g) => g.mid.isNotEmpty).length,
-      "monthly": guestsState.monthlyGuests.isEmpty
-          ? null
-          : guestsState.monthlyGuests.where((g) => g.mid.isNotEmpty).length,
-    };
-
-    // ✅ Only reload keys that are genuinely missing
-    final bool anyMissing =
-        guestsState.todayGuests.isEmpty ||
-        guestsState.yesterdayGuests.isEmpty ||
-        guestsState.monthlyGuests.isEmpty;
-
-    if (anyMissing) {
-      _loadMissingData(guestsState);
-    }
-  }
+        _restoreCounts();
+      }
     });
   }
 
@@ -251,22 +241,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ref.read(appNotificationsProvider.notifier).load();
     }
   }
-Future<void> _loadMissingData(GuestsState guestsState) async {
-  final currentMode = ref.read(appmodeSettingsProvider).appMode;
-  final scopeCode = await _guestScopeCode(currentMode);
-  if (scopeCode == null || scopeCode.isEmpty) return;
+  /// Coming back to Home: keep counts already shown, fall back to whatever
+  /// guestsProvider holds, and only fetch the ones still unknown. An empty
+  /// list is NOT treated as missing once its count is known — 0 is valid.
+  void _restoreCounts() {
+    final guestsState = ref.read(guestsProvider);
+    final current = ref.read(guestCountsProvider);
 
-  // Fire only the calls that are missing — don't touch already-loaded data
-  if (guestsState.todayGuests.isEmpty) {
-    unawaited(_fetchAndUpdateCount(9009, "today", scopeCode, currentMode));
+    int? countFor(String key, List<Guest> guests) => guests.isEmpty
+        ? current[key]
+        : guests.where((g) => g.mid.isNotEmpty).length;
+
+    final restored = {
+      "today": countFor("today", guestsState.todayGuests),
+      "yesterday": countFor("yesterday", guestsState.yesterdayGuests),
+      "monthly": countFor("monthly", guestsState.monthlyGuests),
+    };
+    ref.read(guestCountsProvider.notifier).state = restored;
+
+    final missing = [
+      for (final e in restored.entries)
+        if (e.value == null) e.key,
+    ];
+    if (missing.isNotEmpty) _loadMissingData(missing);
   }
-  if (guestsState.yesterdayGuests.isEmpty) {
-    unawaited(_fetchAndUpdateCount(9010, "yesterday", scopeCode, currentMode));
+
+  Future<void> _loadMissingData(List<String> keys) async {
+    final currentMode = ref.read(appmodeSettingsProvider).appMode;
+    final scopeCode = await _guestScopeCode(currentMode);
+    if (!mounted) return;
+    if (scopeCode == null || scopeCode.isEmpty) {
+      _setNullCountsTo(0);
+      return;
+    }
+
+    final generation = _loadGeneration;
+    _lastRequestedMode = currentMode;
+    for (final key in keys) {
+      unawaited(_fetchAndUpdateCount(
+          _iidFor[key]!, key, scopeCode, currentMode, generation));
+    }
   }
-  if (guestsState.monthlyGuests.isEmpty) {
-    unawaited(_fetchAndUpdateCount(9011, "monthly", scopeCode, currentMode));
+
+  static const _iidFor = {"today": 9009, "yesterday": 9010, "monthly": 9011};
+
+  /// Stops spinners that would otherwise never resolve.
+  void _setNullCountsTo(int value) {
+    ref.read(guestCountsProvider.notifier).state = {
+      for (final e in ref.read(guestCountsProvider).entries)
+        e.key: e.value ?? value,
+    };
   }
-}
 
   // Guest reports are scoped by sales code, except for marketing-permission
   // users viewing "My Data" — their guests hang off the marketing code.
@@ -277,7 +302,7 @@ Future<void> _loadMissingData(GuestsState guestsState) async {
     try {
       final salesCode = await StorageUtil.getSalesCode();
       if (salesCode != null) {
-        ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
+        await ref.read(appmodeSettingsProvider.notifier).setSalesCode(salesCode);
       }
     } catch (e) {
       // Handle error
@@ -354,78 +379,80 @@ Future<void> _loadMissingData(GuestsState guestsState) async {
   //     _isLoadingData = false;
   //   }
   // }
-Future<void> _loadGuestData() async {
-  if (_isLoadingData) return;
-  _isLoadingData = true;
+  Future<void> _loadGuestData() async {
+    final generation = ++_loadGeneration;
 
-  final currentMode = ref.read(appmodeSettingsProvider).appMode;
-  final scopeCode = await _guestScopeCode(currentMode);
-  if (scopeCode == null || scopeCode.isEmpty) {
-    _isLoadingData = false;
-    return;
-  }
+    final currentMode = ref.read(appmodeSettingsProvider).appMode;
+    _lastRequestedMode = currentMode;
+    final scopeCode = await _guestScopeCode(currentMode);
+    if (!mounted || generation != _loadGeneration) return;
 
-  ref.read(guestsProvider.notifier).resetData();
-  ref.read(guestCountsProvider.notifier).state = {
-    "today": null,
-    "yesterday": null,
-    "monthly": null,
-  };
+    ref.read(guestsProvider.notifier).resetData();
 
-  // 🔥 Fire all 3 in background — no await, does NOT block navigation
-  unawaited(_fetchAndUpdateCount(9009, "today", scopeCode, currentMode));
-  unawaited(_fetchAndUpdateCount(9010, "yesterday", scopeCode, currentMode));
-  unawaited(_fetchAndUpdateCount(9011, "monthly", scopeCode, currentMode));
-
-  _isLoadingData = false; // immediately released
-}
-
-Future<void> _fetchAndUpdateCount(
-  int iid,
-  String key,
-  String scopeCode,
-  AppMode mode,
-) async {
-  try {
-    await ref.read(guestsProvider.notifier).getGuestData(iid, scopeCode, mode);
-
-    if (!mounted) return; // user navigated away — do nothing
-
-    final guestsState = ref.read(guestsProvider);
-    final List<Guest> guests = switch (key) {
-      "today"     => guestsState.todayGuests,
-      "yesterday" => guestsState.yesterdayGuests,
-      "monthly"   => guestsState.monthlyGuests,
-      _           => [],
-    };
-
-    ref.read(guestCountsProvider.notifier).state = {
-      ...ref.read(guestCountsProvider),
-      key: guests.where((g) => g.mid.isNotEmpty).length,
-    };
-  } catch (_) {
-    if (!mounted) return;
-    ref.read(guestCountsProvider.notifier).state = {
-      ...ref.read(guestCountsProvider),
-      key: 0,
-    };
-  }
-}
-  Future<void> _manualRefresh() async {
-    if (_isLoadingData) return;
-
-    setState(() {
-      userName = null;
-    });
-
-    // 🔹 Reset run date so spinner shows while re-fetching
-    ref.read(runDateProvider.notifier).reset();
+    if (scopeCode == null || scopeCode.isEmpty) {
+      // Nothing to fetch — show 0 instead of spinning forever.
+      ref.read(guestCountsProvider.notifier).state = {
+        "today": 0,
+        "yesterday": 0,
+        "monthly": 0,
+      };
+      return;
+    }
 
     ref.read(guestCountsProvider.notifier).state = {
       "today": null,
       "yesterday": null,
       "monthly": null,
     };
+
+    // 🔥 Fire all 3 in background — no await, does NOT block navigation
+    for (final e in _iidFor.entries) {
+      unawaited(
+          _fetchAndUpdateCount(e.value, e.key, scopeCode, currentMode, generation));
+    }
+  }
+
+  Future<void> _fetchAndUpdateCount(
+    int iid,
+    String key,
+    String scopeCode,
+    AppMode mode,
+    int generation,
+  ) async {
+    int count;
+    try {
+      await ref.read(guestsProvider.notifier).getGuestData(iid, scopeCode, mode);
+      if (!mounted) return; // user navigated away — do nothing
+      // A newer load (refresh / mode switch) started meanwhile. Its own
+      // requests will set the count; writing ours would flash a stale or 0.
+      if (generation != _loadGeneration) return;
+
+      final guestsState = ref.read(guestsProvider);
+      final List<Guest> guests = switch (key) {
+        "today" => guestsState.todayGuests,
+        "yesterday" => guestsState.yesterdayGuests,
+        "monthly" => guestsState.monthlyGuests,
+        _ => [],
+      };
+      count = guests.where((g) => g.mid.isNotEmpty).length;
+    } catch (_) {
+      if (!mounted || generation != _loadGeneration) return;
+      count = 0;
+    }
+
+    ref.read(guestCountsProvider.notifier).state = {
+      ...ref.read(guestCountsProvider),
+      key: count,
+    };
+  }
+
+  Future<void> _manualRefresh() async {
+    setState(() {
+      userName = null;
+    });
+
+    // 🔹 Reset run date so spinner shows while re-fetching
+    ref.read(runDateProvider.notifier).reset();
 
     await Future.wait<void>([
       _loadUserName(),
@@ -637,12 +664,13 @@ Future<void> _fetchAndUpdateCount(
 
     ref.listen<AppModeSettings>(appmodeSettingsProvider, (prev, next) {
       if (prev?.appMode != next.appMode) {
-        ref.read(guestCountsProvider.notifier).state = {
-          "today": null,
-          "yesterday": null,
-          "monthly": null,
-        };
         Future.delayed(const Duration(milliseconds: 100), () {
+          // Skip if a load for this mode already started (e.g. the initial
+          // load after _initializeAppMode resolved the mode).
+          if (!mounted ||
+              ref.read(appmodeSettingsProvider).appMode == _lastRequestedMode) {
+            return;
+          }
           _loadGuestData();
         });
       }

@@ -117,7 +117,7 @@ class AppModeSettingsNotifier extends StateNotifier<AppModeSettings> {
     _saveSettings(mode);
   }
 
-  void setSalesCode(String salesCode) async {
+  Future<void> setSalesCode(String salesCode) async {
     if (_currentSalesCode != salesCode) {
       _currentSalesCode = salesCode;
       await _loadSettings(); // Reload settings for new user

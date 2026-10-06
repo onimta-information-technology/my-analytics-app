@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/data/services/device_config_service.dart'
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/screens/home_screen.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
@@ -51,6 +52,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with ConnectivityMixi
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(guestsProvider.notifier).resetData();
+      // Drop the previous session's home counts so the next login (maybe a
+      // different property) never shows them, even for a moment.
+      ref.read(homeScreenInitializedProvider.notifier).state = null;
+      ref.read(guestCountsProvider.notifier).state = {
+        "today": null,
+        "yesterday": null,
+        "monthly": null,
+      };
       _initializeBiometrics();
     });
   }

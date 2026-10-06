@@ -78,13 +78,11 @@ class _RoomAmendmentDraft {
 
   // ── Occupancy ──────────────────────────────────────────────────────────
   //
-  // Left blank means "unchanged", so a room moving from 2 adults to 3 without
-  // touching its children only fills in the one field. Occupancy asks for all
-  // three; a hotel change asks for the first two alongside the new room, since
-  // a room moving hotel is re-costed on who is in it.
-  /// Null is "not touched", which is what leaves a count as booked. Once a
-  /// count is stepped it holds the number asked for, even where that is back to
-  /// what the room already had.
+  // What the room holds now is worked out from the guests ticked on it (see
+  // `_occupancyOf`) — rooms no longer carry a guest count of their own. The
+  // counters open on that and are stepped to the new occupancy.
+  /// Null is "not touched", which is what leaves a count as it is. Once a
+  /// count is stepped it holds the number asked for.
   int? adults;
   int? children;
   int? rooms;
@@ -377,6 +375,102 @@ class _HotelAmendmentBallysScreenState
       return const [];
     }
     return [AssignedGuest(mid: owner.mid, guestName: owner.guestName)];
+  }
+
+  /// The family counts a guest was booked with, matched on BM number (or name
+  /// for a guest with none) across the reservation's guests and the members on
+  /// their packages. All zero when Family Members was not ticked.
+  ({int wife, int child, int friend}) _familyOf(AssignedGuest guest) {
+    const none = (wife: 0, child: 0, friend: 0);
+    final reservation = ref.read(selectedReservationBallysProvider);
+    if (reservation == null) return none;
+
+    final mid = guest.mid.trim();
+    final name = guest.guestName.trim();
+    bool matches(String otherMid, String otherName) => mid.isNotEmpty
+        ? otherMid.trim() == mid
+        : otherName.trim() == name;
+
+    for (final g in reservation.guests) {
+      if (matches(g.mid, g.guestName)) {
+        return g.hasFamilyMembers
+            ? (wife: g.wifeCount, child: g.childCount, friend: g.friendCount)
+            : none;
+      }
+      for (final m in g.accompanyingMembers) {
+        if (matches(m.mid, m.guestName)) {
+          return m.hasFamilyMembers
+              ? (wife: m.wifeCount, child: m.childCount, friend: m.friendCount)
+              : none;
+        }
+      }
+    }
+    return none;
+  }
+
+  /// Who the room holds for the guests ticked on it: every guest is an adult,
+  /// and so are their wife and friends; their children go as children.
+  ({int adults, int children}) _occupancyOf(
+    _AmendableRoom room,
+    _RoomAmendmentDraft draft,
+  ) {
+    var adults = 0;
+    var children = 0;
+    for (final i in draft.guests) {
+      if (i >= room.guests.length) continue;
+      final family = _familyOf(room.guests[i]);
+      adults += 1 + family.wife + family.friend;
+      children += family.child;
+    }
+    return (adults: adults, children: children);
+  }
+
+  /// "1 wife, 1 child, 2 friends" for a guest card; null when they bring nobody.
+  String? _familyText(AssignedGuest guest) {
+    final f = _familyOf(guest);
+    final parts = [
+      if (f.wife > 0) "${f.wife} wife",
+      if (f.child > 0) "${f.child} ${f.child == 1 ? 'child' : 'children'}",
+      if (f.friend > 0) "${f.friend} ${f.friend == 1 ? 'friend' : 'friends'}",
+    ];
+    return parts.isEmpty ? null : parts.join(', ');
+  }
+
+  /// The Adults / Children counters. "Currently" is what the ticked guests
+  /// bring — each guest plus their wife and friends as adults, their children
+  /// as children — and the counters step from there to the new occupancy.
+  Widget _occupancyCounters(
+    _AmendableRoom room,
+    _RoomAmendmentDraft draft,
+    FontSettings fontSettings,
+  ) {
+    final current = _occupancyOf(room, draft);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _counterField(
+            label: "Adults",
+            value: draft.adults,
+            current: current.adults,
+            minimum: 1,
+            fontSettings: fontSettings,
+            onChanged: (value) => setState(() => draft.adults = value),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _counterField(
+            label: "Children",
+            value: draft.children,
+            current: current.children,
+            minimum: 0,
+            fontSettings: fontSettings,
+            onChanged: (value) => setState(() => draft.children = value),
+          ),
+        ),
+      ],
+    );
   }
 
   void _toggleRoom(int index) {
@@ -1125,6 +1219,16 @@ class _HotelAmendmentBallysScreenState
                               ),
                             ),
                           ],
+                          if (_familyText(guest) != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              "Family: ${_familyText(guest)}",
+                              style: TextStyle(
+                                fontSize: fontSettings.fontSize - 2,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1460,32 +1564,7 @@ class _HotelAmendmentBallysScreenState
           // counter leaves that count as booked — neither change need also
           // move the occupancy.
           const SizedBox(height: 10.0),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _counterField(
-                  label: "Guests",
-                  value: draft.adults,
-                  current: hotel.guestCount,
-                  minimum: 1,
-                  fontSettings: fontSettings,
-                  onChanged: (value) => setState(() => draft.adults = value),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _counterField(
-                  label: "Children",
-                  value: draft.children,
-                  current: hotel.childrenCount,
-                  minimum: 0,
-                  fontSettings: fontSettings,
-                  onChanged: (value) => setState(() => draft.children = value),
-                ),
-              ),
-            ],
-          ),
+          _occupancyCounters(room, draft, fontSettings),
           const SizedBox(height: 10.0),
           _counterField(
             label: "Rooms",
@@ -1508,32 +1587,7 @@ class _HotelAmendmentBallysScreenState
           const SizedBox(height: 10.0),
           _roomTypeField(index, draft, hotel, fontSettings),
           const SizedBox(height: 10.0),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _counterField(
-                  label: "Adults",
-                  value: draft.adults,
-                  current: hotel.guestCount,
-                  minimum: 1,
-                  fontSettings: fontSettings,
-                  onChanged: (value) => setState(() => draft.adults = value),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _counterField(
-                  label: "Children",
-                  value: draft.children,
-                  current: hotel.childrenCount,
-                  minimum: 0,
-                  fontSettings: fontSettings,
-                  onChanged: (value) => setState(() => draft.children = value),
-                ),
-              ),
-            ],
-          ),
+          _occupancyCounters(room, draft, fontSettings),
           const SizedBox(height: 10.0),
           _counterField(
             label: "Rooms",
@@ -1599,6 +1653,7 @@ class _HotelAmendmentBallysScreenState
       if (draft.isOccupancy && !draft.hasDetail) {
         return "$label: change a count, or pick the new room type.";
       }
+
     }
     return null;
   }
@@ -1630,8 +1685,10 @@ class _HotelAmendmentBallysScreenState
         'room_type_name': hotel.roomTypeName,
         'arrival_date': hotel.arrivalDate?.toIso8601String(),
         'departure_date': hotel.departureDate?.toIso8601String(),
-        'guest_count': hotel.guestCount,
-        'children_count': hotel.childrenCount,
+        // What the room holds now, from the ticked guests — rooms are no
+        // longer saved with a guest count of their own.
+        'guest_count': _occupancyOf(room, draft).adults,
+        'children_count': _occupancyOf(room, draft).children,
         'room_count': hotel.roomCount,
         'assigned_guests': draft.guests
             .where((i) => i < room.guests.length)
@@ -1662,8 +1719,11 @@ class _HotelAmendmentBallysScreenState
         row['new_room_category_name'] = draft.newRoomCategoryName;
         row['new_room_type'] = draft.newRoomTypeId;
         row['new_room_type_name'] = draft.newRoomTypeName;
-        row['new_guest_count'] = draft.adults;
-        row['new_children_count'] = draft.children;
+        // The stepped count, or what the ticked guests bring when it was left
+        // alone.
+        final current = _occupancyOf(room, draft);
+        row['new_guest_count'] = draft.adults ?? current.adults;
+        row['new_children_count'] = draft.children ?? current.children;
         row['new_room_count'] = draft.rooms;
       }
 

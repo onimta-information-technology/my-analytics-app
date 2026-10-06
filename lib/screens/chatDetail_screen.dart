@@ -5834,18 +5834,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       clipBehavior: Clip.none,
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: ChatColors.chatBackground,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
           child: Row(
             children: [
               if (_previewPath != null)
@@ -5858,11 +5847,6 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               else if (_isRecording)
                 Expanded(child: _buildRecordingIndicator(fontSettings))
               else ...[
-                IconButton(
-                  icon: const Icon(Icons.camera_alt, color: Colors.grey),
-                  onPressed: _onCameraPressed,
-                ),
-                const SizedBox(width: 4),
                 Expanded(
                   // Capped so a pasted wall of text scrolls inside the field
                   // instead of growing the bar past the screen.
@@ -5887,12 +5871,29 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           horizontal: 20,
                           vertical: 10,
                         ),
-                        suffixIcon: IconButton(
-                          icon: const Icon(
-                            Icons.attach_file,
-                            color: Colors.grey,
-                          ),
-                          onPressed: _onAttachFilePressed,
+                        // WhatsApp-style: attach and camera sit inside the
+                        // pill, on its trailing edge.
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.attach_file,
+                                color: Colors.grey,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              onPressed: _onAttachFilePressed,
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.grey,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              onPressed: _onCameraPressed,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
                         ),
                       ),
                       minLines: 1,

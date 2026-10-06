@@ -1,57 +1,66 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:ballys_reservation_app/core/exceptions.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 /// Manages access token storage, retrieval, and refresh.
-/// Uses a lock [Completer] to prevent concurrent refresh calls.
 class TokenManager {
   final FlutterSecureStorage _storage;
 
-  // Prevents multiple simultaneous refresh requests (race condition guard)
-  Completer<String?>? _refreshCompleter;
+  /// The refresh currently in flight, shared by every [TokenManager].
+  ///
+  /// Static on purpose: each repository builds its own ApiService (and so its
+  /// own TokenManager). With a per-instance lock, the burst of requests a
+  /// screen fires after the token expires each called /Login on their own —
+  /// every new login invalidated the token the previous one had just stored,
+  /// the retries failed with it, and the user was logged out.
+  static Future<String?>? _inFlight;
 
   static const _accessTokenKey = 'access_token';
 
   TokenManager(this._storage);
 
   /// Returns the stored access token, or null if absent.
-   Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
-// Future<String?> getAccessToken() async {
-//   // TEMP: force expired token to test refresh flow
-//   return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxfQ.fake';
-// }
+  Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
+
   /// Clears the stored access token.
   Future<void> clearAccessToken() => _storage.delete(key: _accessTokenKey);
 
   /// Clears all stored credentials (used on force logout).
   Future<void> clearAll() => _storage.deleteAll();
 
-  /// Attempts to obtain a fresh access token from the auth endpoint.
+  /// Returns a token to retry with after [failedToken] was rejected.
   ///
-  /// If a refresh is already in flight, the caller awaits the same [Completer]
-  /// instead of issuing a duplicate request — this is the token refresh lock.
-  ///
-  /// Returns the new token string, or null if refresh failed.
-  Future<String?> refreshToken() async {
-    // If refresh is already in progress, wait for it
-    if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
-      return _refreshCompleter!.future;
+  /// If another request already replaced [failedToken] while this one was in
+  /// flight, that newer token is reused instead of logging in again.
+  Future<String?> refreshAfterFailure(String? failedToken) async {
+    final current = await getAccessToken();
+    if (current != null && current.isNotEmpty && current != failedToken) {
+      return current;
     }
+    return refreshToken();
+  }
 
-    _refreshCompleter = Completer<String?>();
+  /// Obtains a fresh access token from the auth endpoint, stores it in place
+  /// of the old one and returns it. Concurrent callers share one request.
+  ///
+  /// Returns null only when the server rejected the credentials — the caller
+  /// should log out. A network or server failure throws [NetworkException] /
+  /// [ServerException] instead, so a blip does not end the session.
+  Future<String?> refreshToken() {
+    return _inFlight ??= _doRefresh().whenComplete(() => _inFlight = null);
+  }
 
+  Future<String?> _doRefresh() async {
+    final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    // The device config is gone — the splash re-fetches it on next launch.
+    if (baseUrl.isEmpty) throw MissingApiUrlException();
+
+    final http.Response response;
     try {
-      final baseUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-      if (baseUrl.isEmpty) {
-        // Nothing to refresh against — the device config is gone. The splash
-        // re-fetches it on the next launch; failing here keeps the caller from
-        // reading this as a rejected credential.
-        _refreshCompleter!.complete(null);
-        return null;
-      }
-      final response = await http.post(
+      response = await http.post(
         Uri.parse('$baseUrl/Login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -59,26 +68,28 @@ class TokenManager {
           'PassWord': 'cRm_0987_@bL',
         }),
       );
+    } catch (e) {
+      throw NetworkException('Could not refresh session: $e');
+    }
 
-      if (response.statusCode == 200) {
+    if (response.statusCode >= 500) {
+      throw ServerException(
+        response.reasonPhrase ?? 'Server error',
+        response.statusCode,
+      );
+    }
+
+    if (response.statusCode == 200) {
+      try {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final token = data['Token']?['access_token'] as String?;
-
         if (token != null && token.isNotEmpty) {
           await _storage.write(key: _accessTokenKey, value: token);
-          _refreshCompleter!.complete(token);
           return token;
         }
-      }
-
-      _refreshCompleter!.complete(null);
-      return null;
-    } catch (_) {
-      _refreshCompleter!.complete(null);
-      return null;
-    } finally {
-      // Reset so future refreshes can proceed
-      _refreshCompleter = null;
+      } catch (_) {}
     }
+
+    return null;
   }
 }

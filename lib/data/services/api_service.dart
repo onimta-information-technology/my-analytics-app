@@ -26,9 +26,12 @@ void registerLogoutCallback(void Function() callback) {
 /// Flow:
 ///   1. Attach current access token and make the request.
 ///   2. If the response signals an expired/invalid token (401 / 406):
-///      a. Ask [TokenManager] for a fresh token (handles concurrent-refresh lock).
+///      a. Ask [TokenManager] for a fresh token (one shared refresh for all
+///         concurrent requests; the new token replaces the old in storage).
 ///      b. Retry the original request once with the new token.
-///      c. If the retry still fails auth → force logout and throw [UnauthorizedException].
+///      c. If the server won't issue a token, or rejects the new one → force
+///         logout and throw [UnauthorizedException]. A network/server error
+///         during refresh is thrown as-is and does not log out.
 ///   3. Any non-200 terminal response throws a typed exception.
 class ApiService {
   final TokenManager _tokenManager;
@@ -60,28 +63,9 @@ class ApiService {
     Map<String, Object?> body,
   ) async {
     try {
-      final token = await _tokenManager.getAccessToken();
-      var response = await _execute(endpoint, body, token);
-
-      // ── Token expired / invalid — attempt refresh then retry ─────────────
-      if (_isAuthFailure(response)) {
-        await _tokenManager.clearAccessToken();
-
-        final newToken = await _tokenManager.refreshToken();
-
-        if (newToken == null || newToken.isEmpty) {
-          await _forceLogout();
-          throw UnauthorizedException();
-        }
-
-        // One retry with the fresh token
-        response = await _execute(endpoint, body, newToken);
-
-        if (_isAuthFailure(response)) {
-          await _forceLogout();
-          throw UnauthorizedException();
-        }
-      }
+      final response = await _sendWithAuthRetry(
+        (token) => _execute(endpoint, body, token),
+      );
 print('API response for $endpoint: ${response.body}');
       // ── Success ───────────────────────────────────────────────────────────
   if (response.statusCode == 200) {
@@ -132,28 +116,9 @@ print('API response for $endpoint: ${response.body}');
   ///   [NetworkException]       — connectivity / socket error.
   Future<Map<String, dynamic>> get(String endpoint) async {
     try {
-      final token = await _tokenManager.getAccessToken();
-      var response = await _executeGet(endpoint, token);
-
-      // ── Token expired / invalid — attempt refresh then retry ─────────────
-      if (_isAuthFailure(response)) {
-        await _tokenManager.clearAccessToken();
-
-        final newToken = await _tokenManager.refreshToken();
-
-        if (newToken == null || newToken.isEmpty) {
-          await _forceLogout();
-          throw UnauthorizedException();
-        }
-
-        // One retry with the fresh token
-        response = await _executeGet(endpoint, newToken);
-print('API response for $endpoint: ${response.body}');
-        if (_isAuthFailure(response)) {
-          await _forceLogout();
-          throw UnauthorizedException();
-        }
-      }
+      final response = await _sendWithAuthRetry(
+        (token) => _executeGet(endpoint, token),
+      );
       print('API response for $endpoint: ${response.body}');
 
       // ── Success ───────────────────────────────────────────────────────────
@@ -193,7 +158,45 @@ print('API response for $endpoint: ${response.body}');
     }
   }
 
+  /// Authenticated GET that returns the raw response, for endpoints whose body
+  /// isn't a JSON object (e.g. a top-level list). Gets the same token
+  /// refresh/retry as [get]; status and body parsing are left to the caller.
+  Future<http.Response> getResponse(String endpoint) =>
+      _sendWithAuthRetry((token) => _executeGet(endpoint, token));
+
+  /// Authenticated POST that returns the raw response. See [getResponse].
+  Future<http.Response> postResponse(
+    String endpoint,
+    Map<String, Object?> body,
+  ) =>
+      _sendWithAuthRetry((token) => _execute(endpoint, body, token));
+
   // ── Private helpers ───────────────────────────────────────────────────────
+
+  /// Sends a request with the stored token. If the token is expired/invalid,
+  /// fetches a new one (replacing the old one in storage) and retries once.
+  /// Logs out only when the server refuses to issue a token, or rejects the
+  /// fresh one — a network or server failure during refresh just throws.
+  Future<http.Response> _sendWithAuthRetry(
+    Future<http.Response> Function(String? token) send,
+  ) async {
+    final token = await _tokenManager.getAccessToken();
+    final response = await send(token);
+    if (!_isAuthFailure(response)) return response;
+
+    final newToken = await _tokenManager.refreshAfterFailure(token);
+    if (newToken == null || newToken.isEmpty) {
+      await _forceLogout();
+      throw UnauthorizedException();
+    }
+
+    final retried = await send(newToken);
+    if (_isAuthFailure(retried)) {
+      await _forceLogout();
+      throw UnauthorizedException();
+    }
+    return retried;
+  }
 
   /// Executes the HTTP GET and returns the raw response.
   Future<http.Response> _executeGet(

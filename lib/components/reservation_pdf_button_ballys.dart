@@ -323,6 +323,10 @@ class _ReservationPdfButtonBallysState
             return value.isEmpty ? '' : ' ($value)';
           }
 
+          // " x2" — how many need the facility; blank on tickets saved before
+          // the counts existed, which carry 0.
+          String count(int n) => n > 0 ? ' x$n' : '';
+
           final airline = flight.airLine?.trim() ?? '';
           final contactPerson = flight.contactPerson?.trim() ?? '';
           final mealRemark = flight.mealRemark?.trim() ?? '';
@@ -333,17 +337,19 @@ class _ReservationPdfButtonBallysState
             if (airline.isNotEmpty) MapEntry('Airline', airline),
             // if (contactPerson.isNotEmpty)
             //   MapEntry('Contact Person', contactPerson),
-            MapEntry('Visa', flight.visa ? 'Yes' : 'No'),
+            MapEntry('Visa',
+                flight.visa ? 'Yes${count(flight.visaCount)}' : 'No'),
             MapEntry('Airport Transportation',
                 flight.airportTransportation == 1 ? 'Yes' : 'No'),
             MapEntry(
                 'Silk Route',
                 flight.silkRoute == 1
-                    ? 'Yes${leg(flight.silkRouteType)}'
+                    ? 'Yes${leg(flight.silkRouteType)}${count(flight.silkRouteCount)}'
                     : 'No'),
             if (flight.isMultiSector) const MapEntry('Multi Sector', 'Yes'),
             if (flight.goldRoute)
-              MapEntry('Gold Route', 'Yes${leg(flight.goldRouteType)}'),
+              MapEntry('Gold Route',
+                  'Yes${leg(flight.goldRouteType)}${count(flight.goldRouteCount)}'),
             if (flight.extraLegroomSeat)
               const MapEntry('Extra Legroom Seat', 'Yes'),
             if (flight.meal)
@@ -662,10 +668,10 @@ class _ReservationPdfButtonBallysState
                 pw.SizedBox(height: 4),
                 cardRichRow('Stay', card.stay!),
               ],
-              if (card.airTicket != null) ...[
-                pw.SizedBox(height: 4),
-                cardRichRow('Air Ticket', card.airTicket!),
-              ],
+              // if (card.airTicket != null) ...[
+              //   pw.SizedBox(height: 4),
+              //   cardRichRow('Air Ticket', card.airTicket!),
+              // ],
               if (card.remarks.trim().isNotEmpty) ...[
                 pw.SizedBox(height: 4),
                 cardRichRow('Remarks', card.remarks.trim()),

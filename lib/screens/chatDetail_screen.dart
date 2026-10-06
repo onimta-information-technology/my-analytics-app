@@ -6405,7 +6405,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                 ),
                             ],
                           ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 7),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -6450,26 +6450,51 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                     // Group info and refresh live in the overflow menu, which
                     // leaves room for the call buttons.
                     actions: [
-                      IconButton(
-                        icon: const Icon(Icons.videocam_outlined),
-                        tooltip: 'Video call',
-                        onPressed: () => _onHeaderCall(CallMedia.video),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.call_outlined),
-                        tooltip: 'Voice call',
-                        onPressed: () => _onHeaderCall(CallMedia.audio),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        tooltip: 'Search messages',
-                        onPressed: _openSearch,
+                      // WhatsApp-style: one call icon with a caret that
+                      // opens a voice / video picker.
+                      PopupMenuButton<CallMedia>(
+                        tooltip: 'Call',
+                        position: PopupMenuPosition.under,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        onSelected: _onHeaderCall,
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: CallMedia.audio,
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Icon(Icons.call_outlined),
+                              title: Text('Voice call'),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: CallMedia.video,
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Icon(Icons.videocam_outlined),
+                              title: Text('Video call'),
+                            ),
+                          ),
+                        ],
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.call_outlined),
+                              Icon(Icons.arrow_drop_down, size: 20),
+                            ],
+                          ),
+                        ),
                       ),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert),
                         tooltip: 'More',
                         onSelected: (value) {
                           switch (value) {
+                            case 'search':
+                              _openSearch();
                             case 'group_info':
                               _openGroupInfo();
                             case 'refresh':
@@ -6479,6 +6504,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           }
                         },
                         itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'search',
+                            child: Text('Search'),
+                          ),
                           if (widget.isGroup)
                             const PopupMenuItem(
                               value: 'group_info',

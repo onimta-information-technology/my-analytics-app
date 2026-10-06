@@ -5,6 +5,8 @@ class DutyManager {
   final String designation;
   final String inTime;
   final String status;
+  final String mobile;
+  final String date;
 
   DutyManager({
     required this.name,
@@ -12,6 +14,8 @@ class DutyManager {
     required this.designation,
     required this.inTime,
     required this.status,
+    required this.mobile,
+    required this.date,
   });
 
   factory DutyManager.fromJson(Map<String, dynamic> json) {
@@ -21,6 +25,8 @@ class DutyManager {
       designation: json['Designation']?.toString().trim() ?? '',
       inTime: json['InTime']?.toString().trim() ?? '',
       status: json['Status']?.toString().trim() ?? '',
+      mobile: json['Mobile']?.toString().trim() ?? '',
+      date: json['Date']?.toString().trim() ?? '',
     );
   }
 

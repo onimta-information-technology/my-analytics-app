@@ -33,7 +33,7 @@ class DutyManagerRepository {
       "SpName": spName,
       "con": "1"
     });
-
+print('DutyManagerRepository.getOnDutyManagers response: $response');
     if (response['CommonResult'] != null &&
         response['CommonResult']['Table'] is List) {
       final table = response['CommonResult']['Table'] as List;

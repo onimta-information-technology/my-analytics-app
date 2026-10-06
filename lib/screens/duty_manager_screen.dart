@@ -6,6 +6,7 @@ import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DutyManagerScreen extends ConsumerStatefulWidget {
   const DutyManagerScreen({super.key});
@@ -70,7 +71,7 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
                   setState(() => _searchQuery = value.trim().toLowerCase());
                 },
               )
-            : const Text('On Duty Manager'),
+            : const Text('On Duty Managers'),
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search, size: 28),
@@ -118,11 +119,14 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
             if (managers.isEmpty) {
               return _message('No matching managers');
             }
+            final date = all.first.date;
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              itemCount: managers.length,
-              itemBuilder: (context, index) => _managerCard(managers[index]),
+              itemCount: managers.length + 1,
+              itemBuilder: (context, index) => index == 0
+                  ? _dateHeader(date)
+                  : _managerCard(managers[index - 1]),
             );
           },
         ),
@@ -144,6 +148,88 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
         ),
       ],
     );
+  }
+
+  Widget _dateHeader(String date) {
+    if (date.isEmpty) return const SizedBox.shrink();
+    final fontSettings = ref.watch(fontSettingsProvider);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.calendar_today,
+              size: 18, color: Color.fromARGB(255, 21, 101, 192)),
+          const SizedBox(width: 8),
+          Text(
+            date,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mobile comes without a '+' (e.g. 94774776566).
+  String _digits(String mobile) => mobile.replaceAll(RegExp(r'[^0-9]'), '');
+
+  void _showCallOptions(DutyManager m) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Call ${m.name}',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.call, color: Colors.blue),
+              title: const Text('Normal Call'),
+              subtitle: Text('+${_digits(m.mobile)}'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _launch(Uri.parse('tel:+${_digits(m.mobile)}'));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat, color: Colors.green),
+              title: const Text('WhatsApp Call'),
+              subtitle: Text('+${_digits(m.mobile)}'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _launch(Uri.parse('https://wa.me/${_digits(m.mobile)}'));
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launch(Uri uri) async {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication)
+        .catchError((_) => false);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the app'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _managerCard(DutyManager m) {
@@ -187,7 +273,7 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
                   Row(
                     children: [
                       Text(
-                        'In Time : ',
+                        'Status : ',
                         style: TextStyle(
                           fontSize: fontSettings.fontSize - 1,
                           fontWeight: fontSettings.fontWeight,
@@ -195,7 +281,7 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
                         ),
                       ),
                       Text(
-                        m.inTime,
+                        m.status,
                         style: TextStyle(
                           fontSize: fontSettings.fontSize - 1,
                           fontWeight: fontSettings.fontWeight,
@@ -220,11 +306,34 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
                         style: TextStyle(
                           fontSize: fontSettings.fontSize - 1,
                           fontWeight: fontSettings.fontWeight,
-                          // color: Colors.green,
+                         // color: Colors.green,
                         ),
                       ),
                     ],
                   ),
+                  if (m.mobile.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () => _showCallOptions(m),
+                      child: Row(
+                        children: [
+                          Icon(Icons.phone,
+                              size: fontSettings.fontSize,
+                              color: const Color.fromARGB(255, 21, 101, 192)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '+${_digits(m.mobile)}',
+                            style: TextStyle(
+                              fontSize: fontSettings.fontSize - 1,
+                              fontWeight: fontSettings.fontWeight,
+                              color: const Color.fromARGB(255, 21, 101, 192),
+                             // decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   // Text(
                   //   m.department,
                   //   style: TextStyle(

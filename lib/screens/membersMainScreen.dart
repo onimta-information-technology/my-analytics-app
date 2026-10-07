@@ -1,6 +1,7 @@
 
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +17,25 @@ class MemberMainScreen extends ConsumerStatefulWidget {
 }
 
 class _MemberMainScreenState extends ConsumerState<MemberMainScreen> with ConnectivityMixin{
-  
+  /// Change Marketing Person is a Ballys-only card. Resolved up front since it
+  /// decides whether the card is drawn at all.
+  bool _isBallys = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveLocation();
+  }
+
+  Future<void> _resolveLocation() async {
+    final location = await StorageUtil.getCurrentLocation();
+    if (!mounted) return;
+    setState(() {
+      _isBallys =
+          location?.code.split('_').first.toUpperCase() == 'BALLYS';
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +149,55 @@ class _MemberMainScreenState extends ConsumerState<MemberMainScreen> with Connec
                     ),
                   ],
                 ),
+                if (_isBallys)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            context.go('/memberMain/change-marketing-person');
+                          },
+                          child: Card(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10.0),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color.fromARGB(255, 0, 128, 64),
+                                    Color.fromARGB(255, 120, 220, 90),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 30),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      FontAwesomeIcons.userPen,
+                                      size: 60,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      'Change Marketer',
+                                      style: TextStyle(
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
               ],
             ),
           ),

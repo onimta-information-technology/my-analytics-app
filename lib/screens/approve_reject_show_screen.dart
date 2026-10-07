@@ -17,13 +17,6 @@ class ApproveScreen extends ConsumerStatefulWidget {
 }
 
 class _ApproveScreenState extends ConsumerState<ApproveScreen> with ConnectivityMixin{
-  /// Group Reservation, Amendments, Visa, Airport Services and the Ballys
-  /// Transport list are Ballys-only, as on the Reservations screen.
-  bool _isBallys = false;
-
-  /// The shared Transport list is a Bellagio-only (bty.world) feature.
-  bool _isBellagio = false;
-
   @override
   void initState() {
     super.initState();
@@ -31,37 +24,6 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
   Future.microtask(() {
     ref.read(pendingCountProvider.notifier).fetch();
   });
-    _resolveLocation();
-  }
-
-  Future<void> _resolveLocation() async {
-    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-    final isBallys = await _isBallysLocation();
-    if (!mounted) return;
-    setState(() {
-      _isBellagio = apiUrl.contains('bty.world');
-      _isBallys = isBallys;
-    });
-  }
-
-  /// True when the logged-in device/user is on the Ballys location, which
-  /// keeps its own Reservations list.
-  Future<bool> _isBallysLocation() async {
-    final location = await StorageUtil.getCurrentLocation();
-    if (location == null) return false;
-    return location.code.split('_').first.toUpperCase() == 'BALLYS';
-  }
-
-  /// Ballys logins get their own Reservations screen; every other location
-  /// keeps the shared one.
-  Future<void> _openReservations() async {
-    final isBallys = await _isBallysLocation();
-    if (!mounted) return;
-    context.go(
-      isBallys
-          ? '/menu/approve-reject/reservations-ballys'
-          : '/menu/approve-reject/reservations',
-    );
   }
 
   @override
@@ -75,12 +37,10 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
       error: (e, st) => const PendingCounts(),
     );
 
-    // Laid out two per row in this order, so location-only cards fill the
-    // gaps instead of leaving half-empty rows.
     final cards = <Widget>[
       _CardWithBadge(
         count: counts.reservation,
-        onTap: _openReservations,
+        onTap: () => context.go('/menu/approve-reject/reservations-menu'),
         gradient: const LinearGradient(
           colors: [
             Color.fromARGB(255, 255, 149, 0),
@@ -114,13 +74,92 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         icon: FontAwesomeIcons.cakeCandles,
         label: 'Birthday Gifts',
       ),
+    ];
+
+    return _CardGridScaffold(
+      title: 'Approve',
+      onBack: () => context.go('/menu'),
+      cards: cards,
+    );
+  }
+}
+
+/// Approve → Reservations. Lists the reservation types to approve for the
+/// logged-in location: Ballys gets every type, Bellagio gets Reservation and
+/// Transport. Each list is pushed so back returns here.
+class ApproveReservationsMenuScreen extends ConsumerStatefulWidget {
+  const ApproveReservationsMenuScreen({super.key});
+
+  @override
+  ConsumerState<ApproveReservationsMenuScreen> createState() =>
+      _ApproveReservationsMenuScreenState();
+}
+
+class _ApproveReservationsMenuScreenState
+    extends ConsumerState<ApproveReservationsMenuScreen>
+    with ConnectivityMixin {
+  /// Group Reservation, Amendments, Visa, Airport Services and the Ballys
+  /// Transport list are Ballys-only, as on the Reservations screen.
+  bool _isBallys = false;
+
+  /// The shared Transport list is a Bellagio-only (bty.world) feature.
+  bool _isBellagio = false;
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveLocation();
+  }
+
+  Future<void> _resolveLocation() async {
+    final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+    final location = await StorageUtil.getCurrentLocation();
+    if (!mounted) return;
+    setState(() {
+      _isBellagio = apiUrl.contains('bty.world');
+      _isBallys =
+          location?.code.split('_').first.toUpperCase() == 'BALLYS';
+      _isLoading = false;
+    });
+  }
+
+  void _open(String path) => context.push('/menu/approve-reject/$path');
+
+  @override
+  Widget build(BuildContext context) {
+    final countsAsync = ref.watch(pendingCountProvider);
+    final counts = countsAsync.when(
+      data: (c) => c,
+      loading: () => const PendingCounts(),
+      error: (e, st) => const PendingCounts(),
+    );
+
+    final cards = <Widget>[
+      // Ballys logins get their own Reservations screen; every other
+      // location keeps the shared one.
+      _CardWithBadge(
+        count: counts.reservation,
+        onTap: () =>
+            _open(_isBallys ? 'reservations-ballys' : 'reservations'),
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 255, 149, 0),
+            Color.fromARGB(255, 255, 149, 0),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: FontAwesomeIcons.luggageCart,
+        label: 'Reservation',
+      ),
       // Same lists as the Reservations menu, opened without their add
       // buttons — nothing is created from the Approve flow.
       if (_isBallys) ...[
         _CardWithBadge(
           count: 0,
-          onTap: () =>
-              context.go('/menu/approve-reject/group-reservations-ballys'),
+          onTap: () => _open('group-reservations-ballys'),
           gradient: const LinearGradient(
             colors: [
               Color.fromARGB(255, 103, 58, 183),
@@ -132,7 +171,7 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         ),
         _CardWithBadge(
           count: 0,
-          onTap: () => context.go('/menu/approve-reject/amendments-ballys'),
+          onTap: () => _open('amendments-ballys'),
           gradient: const LinearGradient(
             colors: [
               Color.fromARGB(255, 0, 121, 107),
@@ -144,7 +183,7 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         ),
         _CardWithBadge(
           count: 0,
-          onTap: () => context.go('/menu/approve-reject/transport-ballys'),
+          onTap: () => _open('transport-ballys'),
           gradient: const LinearGradient(
             colors: [
               Color.fromARGB(255, 63, 81, 181),
@@ -156,7 +195,7 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         ),
         _CardWithBadge(
           count: 0,
-          onTap: () => context.go('/menu/approve-reject/visa-ballys'),
+          onTap: () => _open('visa-ballys'),
           gradient: const LinearGradient(
             colors: [Color(0xFF6A1B9A), Color(0xFF6A1B9A)],
           ),
@@ -165,8 +204,7 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         ),
         _CardWithBadge(
           count: 0,
-          onTap: () =>
-              context.go('/menu/approve-reject/airport-service-ballys'),
+          onTap: () => _open('airport-service-ballys'),
           gradient: const LinearGradient(
             colors: [Color(0xFF0277BD), Color(0xFF0277BD)],
           ),
@@ -177,7 +215,7 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
       if (_isBellagio)
         _CardWithBadge(
           count: 0,
-          onTap: () => context.go('/menu/approve-reject/transport'),
+          onTap: () => _open('transport'),
           gradient: const LinearGradient(
             colors: [
               Color.fromARGB(255, 63, 81, 181),
@@ -189,6 +227,36 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         ),
     ];
 
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return _CardGridScaffold(
+      title: 'Reservations',
+      onBack: () => context.go('/menu/approve-reject'),
+      cards: cards,
+    );
+  }
+}
+
+// ─── Shared two-per-row card layout ─────────────────────────────────────────
+
+class _CardGridScaffold extends StatelessWidget {
+  final String title;
+  final VoidCallback onBack;
+  final List<Widget> cards;
+
+  const _CardGridScaffold({
+    required this.title,
+    required this.onBack,
+    required this.cards,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -196,11 +264,11 @@ class _ApproveScreenState extends ConsumerState<ApproveScreen> with Connectivity
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.go('/menu'),
+          onPressed: onBack,
         ),
-        title: const Text(
-          'Approve',
-          style: TextStyle(
+        title: Text(
+          title,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 20,
             fontWeight: FontWeight.bold,

@@ -1566,6 +1566,13 @@ GoRoute(
                 path: 'approve-reject',
                 builder: (context, state) => const ApproveScreen(),
                 routes: [
+                  // Approve → Reservations sub-menu: picks which reservation
+                  // list to approve (per location).
+                  GoRoute(
+                    path: 'reservations-menu',
+                    builder: (context, state) =>
+                        const ApproveReservationsMenuScreen(),
+                  ),
                   GoRoute(
                     path: '/reservations',
                     pageBuilder: (context, state) => CustomTransitionPage(

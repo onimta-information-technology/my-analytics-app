@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:ballys_reservation_app/components/map_location_picker.dart';
 import 'package:ballys_reservation_app/data/services/places_service.dart';
 
 /// A read-only field that opens a Google Places search sheet.
@@ -24,6 +25,12 @@ class LocationSearchField extends StatelessWidget {
   /// alone — for callers that fill the field from somewhere else.
   final bool enabled;
 
+  /// Adds a map button that picks the location by dropping a pin.
+  final bool allowMapPick;
+
+  /// Place id of the current value, so the map opens on it.
+  final String placeId;
+
   const LocationSearchField({
     super.key,
     required this.controller,
@@ -34,7 +41,19 @@ class LocationSearchField extends StatelessWidget {
     required this.onSelected,
     this.validator,
     this.enabled = true,
+    this.allowMapPick = false,
+    this.placeId = '',
   });
+
+  Future<void> _pickOnMap(BuildContext context) async {
+    final result = await MapLocationPicker.show(
+      context,
+      title: sheetTitle.replaceFirst('Search', 'Choose'),
+      accent: accent,
+      initialPlaceId: placeId,
+    );
+    if (result != null) onSelected(result.description, result.placeId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,11 +67,25 @@ class LocationSearchField extends StatelessWidget {
       decoration: decoration.copyWith(
         suffixIcon: !enabled
             ? null
-            : controller.text.isEmpty
-            ? Icon(Icons.search, color: accent)
-            : IconButton(
-                icon: Icon(Icons.clear, color: accent),
-                onPressed: () => onSelected('', ''),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (allowMapPick)
+                    IconButton(
+                      tooltip: 'Choose on map',
+                      icon: Icon(Icons.map_outlined, color: accent),
+                      onPressed: () => _pickOnMap(context),
+                    ),
+                  controller.text.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Icon(Icons.search, color: accent),
+                        )
+                      : IconButton(
+                          icon: Icon(Icons.clear, color: accent),
+                          onPressed: () => onSelected('', ''),
+                        ),
+                ],
               ),
       ),
       onTap: !enabled

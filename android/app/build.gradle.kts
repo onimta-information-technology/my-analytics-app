@@ -17,10 +17,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
     
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
-    
     defaultConfig {
         applicationId = "com.app.ballys_reservation"
         minSdk = flutter.minSdkVersion
@@ -54,4 +50,10 @@ flutter {
 dependencies {
     implementation("com.google.firebase:firebase-messaging:23.4.0")
     implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
 }

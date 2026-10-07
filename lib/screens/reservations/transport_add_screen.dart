@@ -1236,6 +1236,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                   textStyle: _kInputTextStyle,
                   accent: _kAccent,
                   sheetTitle: 'Search Pickup Location',
+                  allowMapPick: true,
+                  placeId: _pickupPlaceId,
                   decoration: _fieldDeco(
                     'Pickup Location *',
                     icon: Icons.my_location_rounded,
@@ -1263,6 +1265,8 @@ class _TransportAddScreenState extends ConsumerState<TransportAddScreen>
                   // nothing to search for until the guest calls it in.
                   enabled: !_guestWillInformDrop,
                   sheetTitle: 'Search Drop Location',
+                  allowMapPick: true,
+                  placeId: _dropPlaceId,
                   decoration: _fieldDeco(
                     'Drop Location *',
                     icon: Icons.place_rounded,

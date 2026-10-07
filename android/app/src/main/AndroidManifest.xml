@@ -42,6 +42,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Google Maps SDK; same key as PlacesService -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDETWXoAvfKzF2H6zuZMQ9mBq3kyWI_W48" />
+
         <!-- Stages clipboard images so ClipData can hand out a content:// URI -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -64,6 +69,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <!-- Recording voice messages in chat -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- LiveKit audio/video calls -->

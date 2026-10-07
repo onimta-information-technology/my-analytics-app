@@ -41,6 +41,10 @@ class PlacesService {
   // Results are biased (not restricted) towards Colombo.
   static const double _biasLat = 6.9271;
   static const double _biasLng = 79.8612;
+
+  /// Where the map picker opens when there is nothing better to centre on.
+  static const double defaultLat = _biasLat;
+  static const double defaultLng = _biasLng;
   static const double _biasRadiusMeters = 50000;
 
   Future<PlacesResult> autocomplete(String input) async {
@@ -170,4 +174,57 @@ class PlacesService {
       return null;
     }
   }
+
+  /// Address and place id for a point on the map, or null when Geocoding
+  /// can't name it (the caller falls back to the raw coordinates).
+  Future<GeocodedPlace?> reverseGeocode(double lat, double lng) =>
+      _geocode({'latlng': '$lat,$lng'});
+
+  /// Coordinates for a place id, used to open the map on a place picked
+  /// earlier from search.
+  Future<GeocodedPlace?> geocodePlaceId(String placeId) =>
+      _geocode({'place_id': placeId});
+
+  Future<GeocodedPlace?> _geocode(Map<String, String> query) async {
+    try {
+      final uri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        ...query,
+        'key': _apiKey,
+      });
+      final res = await http.get(uri);
+      if (res.statusCode != 200) return null;
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (data['status'] != 'OK') return null;
+      final results = (data['results'] as List?) ?? [];
+      if (results.isEmpty) return null;
+
+      final first = results.first as Map<String, dynamic>;
+      final location = (first['geometry'] as Map<String, dynamic>?)?['location']
+          as Map<String, dynamic>?;
+      return GeocodedPlace(
+        address: first['formatted_address'] as String? ?? '',
+        placeId: first['place_id'] as String? ?? '',
+        lat: (location?['lat'] as num?)?.toDouble(),
+        lng: (location?['lng'] as num?)?.toDouble(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// A Geocoding API result.
+class GeocodedPlace {
+  final String address;
+  final String placeId;
+  final double? lat;
+  final double? lng;
+
+  const GeocodedPlace({
+    required this.address,
+    required this.placeId,
+    this.lat,
+    this.lng,
+  });
 }

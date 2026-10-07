@@ -5,6 +5,7 @@ import ReplayKit
 import UIKit
 import FirebaseCore
 import FirebaseMessaging
+import GoogleMaps
 import flutter_callkit_incoming
 
 @main
@@ -20,6 +21,9 @@ import flutter_callkit_incoming
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
     }
+
+    // Google Maps SDK; same key as PlacesService
+    GMSServices.provideAPIKey("AIzaSyDETWXoAvfKzF2H6zuZMQ9mBq3kyWI_W48")
 
     GeneratedPluginRegistrant.register(with: self)
 

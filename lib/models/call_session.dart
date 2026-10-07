@@ -322,7 +322,11 @@ class CallHistoryEntry {
   }
 
   factory CallHistoryEntry.fromJson(Map<String, dynamic> json) {
-    final peer = (json['otherParticipant'] as Map?)?.cast<String, dynamic>();
+    // The server sends `otherParticipants` as a list; a 1:1 call has one entry.
+    final peers = json['otherParticipants'];
+    final peer = ((peers is List ? peers.whereType<Map>().firstOrNull : null) ??
+            json['otherParticipant'] as Map?)
+        ?.cast<String, dynamic>();
     return CallHistoryEntry(
       callId: json['callId']?.toString() ?? '',
       chatId: json['chatId']?.toString() ?? '',

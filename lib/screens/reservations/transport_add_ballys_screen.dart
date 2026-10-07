@@ -1256,6 +1256,8 @@ class _TransportAddBallysScreenState
             textStyle: _kInputTextStyle,
             accent: _accent,
             sheetTitle: 'Search Pickup Location',
+            allowMapPick: true,
+            placeId: _pickupPlaceId,
             decoration: _fieldDeco(
               'Pickup Location *',
               icon: Icons.my_location_rounded,
@@ -1274,6 +1276,8 @@ class _TransportAddBallysScreenState
             textStyle: _kInputTextStyle,
             accent: _accent,
             sheetTitle: 'Search Drop Location',
+            allowMapPick: true,
+            placeId: _dropPlaceId,
             decoration: _fieldDeco(
               'Drop Location *',
               icon: Icons.place_rounded,

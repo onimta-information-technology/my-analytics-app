@@ -4646,6 +4646,8 @@ class _TransportForm extends StatelessWidget {
                   textStyle: kInputTextStyle,
                   accent: accent,
                   sheetTitle: 'Search Pickup Location',
+                  allowMapPick: true,
+                  placeId: state._t_pickupPlaceId,
                   decoration: _fieldDeco(
                     'Pickup Location *',
                     icon: Icons.my_location_rounded,
@@ -4671,6 +4673,8 @@ class _TransportForm extends StatelessWidget {
                   // nothing to search for until the guest calls it in.
                   enabled: !state._t_guestWillInformDrop,
                   sheetTitle: 'Search Drop Location',
+                  allowMapPick: true,
+                  placeId: state._t_dropPlaceId,
                   decoration: _fieldDeco(
                     'Drop Location *',
                     icon: Icons.place_rounded,

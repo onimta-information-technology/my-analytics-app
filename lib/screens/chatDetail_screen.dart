@@ -490,8 +490,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     try {
       final call = await CallApiService.activeCall(widget.contact.chatUuid);
       if (!mounted) return;
-      final onIt = call != null &&
-          CallManager.instance.current?.callId == call.callId;
+      final onIt =
+          call != null && CallManager.instance.current?.callId == call.callId;
       setState(() => _activeCall = onIt ? null : call);
     } catch (e) {
       // Calling is optional server-side; no banner is the right fallback.
@@ -610,45 +610,41 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     );
   }
 
-  Widget _buildActiveCallBanner(FontSettings fontSettings) {
+  /// WhatsApp-style green "Join" pill shown in the app bar while a call is
+  /// ringing or ongoing in this chat.
+  Widget _buildJoinCallButton(FontSettings fontSettings) {
     final call = _activeCall!;
-    final kind = call.media == CallMedia.video ? 'video' : 'voice';
-    final label = call.status == 'ringing'
-        ? '${call.callerName.isEmpty ? 'Someone' : call.callerName} is calling'
-        : 'Ongoing $kind call';
-    return Material(
-      color: ChatColors.accent,
-      child: InkWell(
-        onTap: _joinActiveCall,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Icon(
-                call.media == CallMedia.video ? Icons.videocam : Icons.call,
-                color: Colors.white,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+      child: Material(
+        color: ChatColors.accent,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: _joinActiveCall,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+             // mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  call.media == CallMedia.video ? Icons.videocam : Icons.call,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Join',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: fontSettings.fontSize - 2,
+                    fontSize: fontSettings.fontSize - 1,
                     fontWeight: FontWeight.w600,
+
                   ),
                 ),
-              ),
-              Text(
-                'JOIN',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fontSettings.fontSize - 2,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1156,8 +1152,9 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               .toList();
 
           final known = _serverMessages.map(_identityOf).toSet();
-          final fresh =
-              page.where((m) => !known.contains(_identityOf(m))).toList();
+          final fresh = page
+              .where((m) => !known.contains(_identityOf(m)))
+              .toList();
 
           _serverMessages = [...fresh, ..._serverMessages]
             ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -6622,44 +6619,49 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                     // Group info and refresh live in the overflow menu, which
                     // leaves room for the call buttons.
                     actions: [
-                      // WhatsApp-style: one call icon with a caret that
-                      // opens a voice / video picker.
-                      PopupMenuButton<CallMedia>(
-                        tooltip: 'Call',
-                        position: PopupMenuPosition.under,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        onSelected: _onHeaderCall,
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: CallMedia.audio,
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Icon(Icons.call_outlined),
-                              title: Text('Voice call'),
+                      // While a call is live here, a green "Join" pill takes
+                      // the call button's place (WhatsApp-style).
+                      if (_activeCall != null)
+                        _buildJoinCallButton(fontSettings)
+                      else
+                        // WhatsApp-style: one call icon with a caret that
+                        // opens a voice / video picker.
+                        PopupMenuButton<CallMedia>(
+                          tooltip: 'Call',
+                          position: PopupMenuPosition.under,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          onSelected: _onHeaderCall,
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: CallMedia.audio,
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.call_outlined),
+                                title: Text('Voice call'),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: CallMedia.video,
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.videocam_outlined),
+                                title: Text('Video call'),
+                              ),
+                            ),
+                          ],
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.call_outlined),
+                                Icon(Icons.arrow_drop_down, size: 20),
+                              ],
                             ),
                           ),
-                          PopupMenuItem(
-                            value: CallMedia.video,
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Icon(Icons.videocam_outlined),
-                              title: Text('Video call'),
-                            ),
-                          ),
-                        ],
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.call_outlined),
-                              Icon(Icons.arrow_drop_down, size: 20),
-                            ],
-                          ),
                         ),
-                      ),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert),
                         tooltip: 'More',
@@ -6707,8 +6709,6 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                         ChatColors.primary,
                       ),
                     ),
-                  if (_activeCall != null)
-                    _buildActiveCallBanner(fontSettings),
                   if (_isUploading)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -6815,9 +6815,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                       children: [
                                         if (_reachableMentions.isNotEmpty &&
                                             !_isSearching)
-                                          _buildMentionJumpButton(
-                                            fontSettings,
-                                          ),
+                                          _buildMentionJumpButton(fontSettings),
                                         AnimatedSwitcher(
                                           duration: const Duration(
                                             milliseconds: 200,

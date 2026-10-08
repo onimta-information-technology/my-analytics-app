@@ -5,9 +5,12 @@ import 'package:ballys_reservation_app/components/group_avatar.dart';
 import 'package:ballys_reservation_app/components/user_avatar.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/notification_banner.dart';
+import 'package:ballys_reservation_app/data/services/call_api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/data/services/typing_service.dart';
+import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
@@ -112,6 +115,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   );
   StreamSubscription<void>? _typingChanges;
 
+  /// Newest call of each conversation, keyed by chatId, from the calls
+  /// history. A row whose latest call is newer than its last message shows
+  /// that call instead ("Voice call · Ringing", "Missed voice call"…), the way
+  /// WhatsApp does.
+  Map<String, CallHistoryEntry> _latestCallByChat = {};
+
+  /// The call this device is on, listened to so its row flips between
+  /// ringing, ongoing and ended while it happens.
+  CallController? _watchedCall;
+  CallPhase? _watchedPhase;
+  Timer? _callsRefreshTimer;
+
   @override
   void initState() {
     super.initState();
@@ -125,6 +140,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _typingChanges = _typingWatcher.changes.listen((_) {
       if (mounted) setState(() {});
     });
+    CallManager.instance.active.addListener(_onActiveCallChanged);
+    _onActiveCallChanged();
   }
 
   @override
@@ -146,6 +163,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _messageSubscription?.cancel();
     _typingChanges?.cancel();
     _typingWatcher.dispose();
+    CallManager.instance.active.removeListener(_onActiveCallChanged);
+    _watchedCall?.removeListener(_onWatchedCallUpdate);
+    _callsRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -156,6 +176,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (state == AppLifecycleState.resumed) {
       // Refresh when app comes to foreground
       _fetchChatsFromApi();
+      _fetchRecentCalls();
       BadgeService().clearBadge();
     } else if (state == AppLifecycleState.paused) {
       // Update badge when app goes to background
@@ -219,7 +240,11 @@ Future<void> _reloadGuestBookings() async {
     _messageSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
     ) {
-      
+      // A call ringing, answered or ending changes what its row says.
+      if (CallPushType.isCallPush(message.data)) {
+        _scheduleCallsRefresh();
+        return;
+      }
 if (message.data['msg_type'] == '35') {
       _reloadGuestBookings();
       return;
@@ -282,7 +307,7 @@ if (message.data['msg_type'] == '35') {
       }
       // Group tiles read their last-message preview from _groups, not
       // _contacts, so it must be refreshed here too or it goes stale.
-      await _fetchGroupsSilently();
+      await Future.wait([_fetchGroupsSilently(), _fetchRecentCalls()]);
     } catch (e) {
 
     }
@@ -722,7 +747,165 @@ if (message.data['msg_type'] == '35') {
 
   /// Both lists feed the All/Unread tabs, so they refresh together.
   Future<void> _refreshChatsAndGroups() async {
-    await Future.wait([_fetchChatsFromApi(), _fetchGroups()]);
+    await Future.wait([
+      _fetchChatsFromApi(),
+      _fetchGroups(),
+      _fetchRecentCalls(),
+    ]);
+  }
+
+  // ─── Calls in the chat list ─────────────────────────────────────────────────
+
+  /// Pulls the newest page of call history and keeps the latest call of each
+  /// conversation. The history is newest first, so the first row per chat wins.
+  Future<void> _fetchRecentCalls() async {
+    try {
+      final page = await CallApiService.history(limit: 50);
+      if (!mounted) return;
+      final latest = <String, CallHistoryEntry>{};
+      for (final call in page.calls) {
+        if (call.chatId.isEmpty) continue;
+        latest.putIfAbsent(call.chatId, () => call);
+      }
+      setState(() => _latestCallByChat = latest);
+    } catch (e) {
+      // Calls are an extra on this screen — the last message still shows.
+    }
+  }
+
+  /// Call pushes and phase changes come in bursts (ringing, answered, …), and
+  /// the server needs a moment to record each step, so they share one fetch.
+  void _scheduleCallsRefresh() {
+    _callsRefreshTimer?.cancel();
+    _callsRefreshTimer = Timer(
+      const Duration(milliseconds: 800),
+      _fetchRecentCalls,
+    );
+  }
+
+  void _onActiveCallChanged() {
+    final call = CallManager.instance.active.value;
+    if (!identical(call, _watchedCall)) {
+      _watchedCall?.removeListener(_onWatchedCallUpdate);
+      _watchedCall = call;
+      _watchedPhase = call?.phase;
+      call?.addListener(_onWatchedCallUpdate);
+    }
+    _scheduleCallsRefresh();
+    if (mounted) setState(() {});
+  }
+
+  /// The controller notifies on every room event; only a phase change matters
+  /// to the list.
+  void _onWatchedCallUpdate() {
+    final phase = _watchedCall?.phase;
+    if (phase == _watchedPhase) return;
+    _watchedPhase = phase;
+    _scheduleCallsRefresh();
+    if (mounted) setState(() {});
+  }
+
+  /// The call to show on [chatId]'s row, or null when its last message is
+  /// newer. A live call always wins.
+  CallHistoryEntry? _callForRow(String chatId, DateTime? lastMessageTime) {
+    if (chatId.isEmpty) return null;
+    final call = _latestCallByChat[chatId];
+    if (call == null) return null;
+    if (call.isLive || _isLocallyLive(chatId)) return call;
+    final at = call.createdAt;
+    if (at == null) return null;
+    return lastMessageTime == null || !at.isBefore(lastMessageTime)
+        ? call
+        : null;
+  }
+
+  bool _isLocallyLive(String chatId) {
+    final c = CallManager.instance.active.value;
+    return c != null && c.chatId == chatId && c.phase != CallPhase.ended;
+  }
+
+  /// When the row last saw anything happen — a message or a call — for
+  /// sorting and for the time shown on the right.
+  DateTime? _rowActivity(String chatId, DateTime? lastMessageTime) {
+    final callAt = _callForRow(chatId, lastMessageTime)?.createdAt;
+    if (callAt == null) return lastMessageTime;
+    if (lastMessageTime == null || callAt.isAfter(lastMessageTime)) {
+      return callAt;
+    }
+    return lastMessageTime;
+  }
+
+  /// WhatsApp's call line: direction arrow, "Voice call" / "Missed voice
+  /// call", and " · Ringing" or " · Ongoing" while the call is still live.
+  Widget _callSubtitle(CallHistoryEntry call, FontSettings fontSettings) {
+    final kind = call.media == CallMedia.video ? 'video call' : 'voice call';
+    final Color grey = Colors.grey[600]!;
+    final double size = fontSettings.fontSize - 2;
+
+    // This device's own phase is fresher than the history row.
+    final local = CallManager.instance.active.value;
+    final bool localLive = local != null &&
+        local.chatId == call.chatId &&
+        local.phase != CallPhase.ended;
+    final bool live = call.isLive || localLive;
+    final bool ongoing = localLive
+        ? local.phase == CallPhase.connected
+        : call.status == 'ongoing';
+    final bool missed = !live && !call.isOutgoing &&
+        (call.isMissed || call.isDeclined);
+
+    final IconData icon;
+    final Color color;
+    if (live) {
+      icon = call.media == CallMedia.video
+          ? Icons.videocam
+          : (call.isOutgoing ? Icons.call_made : Icons.call_received);
+      color = ChatColors.accent;
+    } else if (missed) {
+      icon = call.media == CallMedia.video
+          ? Icons.missed_video_call
+          : Icons.call_missed;
+      color = Colors.red;
+    } else {
+      icon = call.media == CallMedia.video
+          ? Icons.videocam
+          : (call.isOutgoing ? Icons.call_made : Icons.call_received);
+      color = grey;
+    }
+
+    final String label = missed
+        ? 'Missed $kind'
+        : '${kind[0].toUpperCase()}${kind.substring(1)}';
+
+    return Row(
+      children: [
+        Icon(icon, size: size + 2, color: color),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: label,
+                  style: TextStyle(
+                    color: live ? ChatColors.accent : grey,
+                    fontWeight: live ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                if (live)
+                  TextSpan(
+                    text: ongoing ? ' · Ongoing' : ' · Ringing',
+                    style: TextStyle(color: grey),
+                  ),
+              ],
+            ),
+            style: TextStyle(fontSize: size),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _fetchGroups() async {
@@ -905,18 +1088,21 @@ if (message.data['msg_type'] == '35') {
       if (ap != null && bp != null && ap != bp) return bp.compareTo(ap);
     }
 
-    final at = a is ChatContact
-        ? a.lastMessageTime
-        : _lastActivityForGroup(a as ChatGroup);
-    final bt = b is ChatContact
-        ? b.lastMessageTime
-        : _lastActivityForGroup(b as ChatGroup);
+    final at = _activityOfRow(a);
+    final bt = _activityOfRow(b);
     if (at == null && bt == null) return 0;
     // Conversations without a message yet sink to the bottom.
     if (at == null) return 1;
     if (bt == null) return -1;
     return bt.compareTo(at);
   }
+
+  DateTime? _activityOfRow(Object row) => row is ChatContact
+      ? _rowActivity(row.chatUuid, row.lastMessageTime)
+      : _rowActivity(
+          (row as ChatGroup).groupId,
+          _lastActivityForGroup(row),
+        );
 
   bool _isRowPinned(Object row) =>
       row is ChatContact ? row.isPinned : (row as ChatGroup).isPinned;
@@ -1118,6 +1304,7 @@ if (message.data['msg_type'] == '35') {
         contact.lastMessage.isNotEmpty &&
         contact.lastMessage != 'No messages yet';
     final bool isSelected = _selectedContactId == contact.id;
+    final call = _callForRow(contact.chatUuid, contact.lastMessageTime);
 
     return Material(
       color: isSelected ? _kChatSelectionColor : Colors.transparent,
@@ -1221,6 +1408,8 @@ if (message.data['msg_type'] == '35') {
               // lasts, the way WhatsApp does it.
               if (typingLabel != null)
                 _typingSubtitle(typingLabel, fontSettings)
+              else if (call != null)
+                _callSubtitle(call, fontSettings)
               else if (hasLastMessage) ...[
                 Text(
                   stripChatFormatting(contact.lastMessage),
@@ -1278,7 +1467,9 @@ if (message.data['msg_type'] == '35') {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      contact.time,
+                      call?.createdAt != null
+                          ? ChatContact.getTimeAgo(call!.createdAt)
+                          : contact.time,
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: fontSettings.fontSize - 4,
@@ -1301,7 +1492,9 @@ if (message.data['msg_type'] == '35') {
                           ),
                         ),
                       ),
-                    if (hasLastMessage && contact.unreadCount == 0)
+                    if (hasLastMessage &&
+                        call == null &&
+                        contact.unreadCount == 0)
                       Icon(
                         contact.lastMessageRead
                             ? Icons.done_all
@@ -1398,6 +1591,7 @@ if (message.data['msg_type'] == '35') {
     // Long-pressing a group selects it the same way a 1:1 chat row does, so
     // the pin button appears in the same place for both kinds of row.
     final bool isSelected = _selectedContactId == group.groupId;
+    final call = _callForRow(group.groupId, _lastActivityForGroup(group));
 
     return Material(
       color: isSelected ? _kChatSelectionColor : Colors.transparent,
@@ -1448,6 +1642,8 @@ if (message.data['msg_type'] == '35') {
           children: [
             if (typingLabel != null)
               _typingSubtitle(typingLabel, fontSettings)
+            else if (call != null)
+              _callSubtitle(call, fontSettings)
             else
               Text(
                 hasLastMessage
@@ -1493,7 +1689,9 @@ if (message.data['msg_type'] == '35') {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    group.time,
+                    call?.createdAt != null
+                        ? ChatContact.getTimeAgo(call!.createdAt)
+                        : group.time,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: fontSettings.fontSize - 4,

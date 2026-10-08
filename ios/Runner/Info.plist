@@ -51,6 +51,8 @@
 	<string>This app uses biometric authentication for secure login</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We use your location to help choose pickup and drop locations on the map</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We use your location to help choose pickup and drop locations on the map</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need camera access to take photos</string>
 	<key>NSMicrophoneUsageDescription</key>

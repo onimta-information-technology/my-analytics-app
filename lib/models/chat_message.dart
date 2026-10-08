@@ -36,6 +36,16 @@ class AttachmentItem {
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
   }
 
+  bool get isVideo =>
+      (mimeType ?? '').startsWith('video/') ||
+      isVideoPath(localPath ?? url ?? '');
+
+  /// Whether [path] names a video file the chat can send and play.
+  static bool isVideoPath(String path) {
+    final ext = path.split('?').first.split('.').last.toLowerCase();
+    return const ['mp4', 'm4v', 'mov', 'webm', 'mkv'].contains(ext);
+  }
+
   AttachmentItem copyWith({
     String? url,
     String? localPath,
@@ -449,15 +459,50 @@ class ChatMessage {
   /// Only a plain text message of the user's own can be edited: attachments
   /// have no text to correct, and one still on its way to the server has no
   /// id to address.
+  ///
+  /// A captioned photo or video counts too: its caption is the message text,
+  /// and the backend edits it through the same endpoint.
   bool get isEditable =>
       isMe &&
       !isSystem &&
       !isDeleted &&
       apiMessageId != null &&
       apiChatId != null &&
-      fileType == null &&
-      !hasGroupedAttachments &&
-      text.trim().isNotEmpty;
+      ((fileType == null &&
+              !hasGroupedAttachments &&
+              text.trim().isNotEmpty) ||
+          caption != null);
+
+  /// The text typed on the media preview screen when this attachment was sent,
+  /// or null when there is none.
+  ///
+  /// An uncaptioned upload still carries text — the backend's "📎 <filename>"
+  /// placeholder — and a voice note carries its own label, so neither counts.
+  String? get caption {
+    if (isDeleted || isSystem || isVoiceNote) return null;
+    final String? name;
+    if (hasGroupedAttachments) {
+      name = groupedAttachments.first.fileName;
+    } else if (fileType != null) {
+      name = fileName;
+    } else {
+      return null;
+    }
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || isUploadPlaceholder(text, name)) return null;
+    return trimmed;
+  }
+
+  /// Whether [text] is the placeholder the backend stores on an attachment
+  /// sent without a caption.
+  static bool isUploadPlaceholder(String text, String? fileName) {
+    if (fileName != null && fileName.isNotEmpty) {
+      return text == '📎 $fileName';
+    }
+    // No name to compare against (an older or partial row): any "📎 …" text is
+    // taken to be the placeholder rather than shown as a caption.
+    return text.trim().startsWith('📎');
+  }
 
   /// Whether the 15-minute window is still open, as of [now].
   bool isWithinEditWindow([DateTime? now]) =>
@@ -671,7 +716,10 @@ class ChatMessage {
           ? 'voice'
           : mime.startsWith('image/')
               ? 'image'
-              : 'document';
+              : mime.startsWith('video/') ||
+                      AttachmentItem.isVideoPath(attachmentUrl ?? '')
+                  ? 'video'
+                  : 'document';
     }
 
     return ChatMessage(
@@ -747,7 +795,9 @@ class ChatMessage {
           ),
         ];
 
-        // Collect consecutive image msgs from same sender within 30 seconds
+        // Collect consecutive image msgs from same sender within 30 seconds.
+        // A caption rides on the first file of a send, so one that carries
+        // its own caption starts the next batch rather than joining this one.
         int j = i + 1;
         while (j < messages.length) {
           final next = messages[j];
@@ -758,6 +808,7 @@ class ChatMessage {
               next.fileType == 'image' &&
               next.attachmentUrl != null &&
               next.isMe == msg.isMe &&
+              next.caption == null &&
               sameWindow) {
             group.add(AttachmentItem(
               url: next.attachmentUrl,
@@ -773,7 +824,9 @@ class ChatMessage {
 
         result.add(ChatMessage(
           id: msg.id,
-          text: '',
+          // The first file's text: its caption, or the upload placeholder,
+          // which [caption] knows to ignore.
+          text: msg.text,
           isMe: msg.isMe,
           timestamp: msg.timestamp,
           apiMessageId: msg.apiMessageId,

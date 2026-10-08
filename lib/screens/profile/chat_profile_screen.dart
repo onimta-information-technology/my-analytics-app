@@ -12,9 +12,9 @@ import 'package:intl/intl.dart';
 /// The signed-in user's chat profile: the name and photo other participants
 /// see, plus the rest of the record the chat backend keeps.
 ///
-/// Reached from the chats overflow menu. Tapping the photo replaces it, and the
-/// screen pops `true` once it has been changed so the caller can refresh the
-/// lists that carry avatar urls.
+/// Reached from the chats overflow menu. Tapping the photo replaces it and the
+/// pencil next to the name edits the username; the screen pops `true` once
+/// either has changed so the caller can refresh the lists that carry them.
 class ChatProfileScreen extends ConsumerStatefulWidget {
   const ChatProfileScreen({super.key});
 
@@ -28,8 +28,10 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
   bool _isUploading = false;
   String? _errorMessage;
 
-  /// Whether the avatar was replaced while this screen was open — handed back
-  /// to the chats screen on pop.
+  bool _isSavingUsername = false;
+
+  /// Whether the avatar or username was changed while this screen was open —
+  /// handed back to the chats screen on pop.
   bool _avatarChanged = false;
 
   @override
@@ -67,6 +69,13 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
   }
 
   String get _name => _value('name') ?? _value('firstName') ?? 'Unknown user';
+
+  /// The editable display name. The backend falls back to `name` until one
+  /// has been set, so it is only missing on an older server.
+  String get _username => _value('username') ?? _name;
+
+  /// Maximum username length the backend accepts.
+  static const int _maxUsernameLength = 50;
 
   String? get _avatarUrl => _value('profileImageUrl');
 
@@ -227,16 +236,56 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              _name,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: fontSettings.fontSize + 4,
-                fontWeight: fontSettings.fontWeight,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Balances the edit button so the name stays centred.
+                const SizedBox(width: 40),
+                Flexible(
+                  child: Text(
+                    _username,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSettings.fontSize + 4,
+                      fontWeight: fontSettings.fontWeight,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 40,
+                  child: _isSavingUsername
+                      ? const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          color: Colors.white,
+                          tooltip: 'Edit username',
+                          onPressed: _profile == null ? null : _editUsername,
+                        ),
+                ),
+              ],
             ),
           ),
+          // The login profile's name, when the username has moved away from
+          // it — so it is still clear whose account this is.
+          if (_username != _name)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, left: 24, right: 24),
+              child: Text(
+                _name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: fontSettings.fontSize - 3,
+                ),
+              ),
+            ),
           // const SizedBox(height: 4),
           // Text(
           //   _profile?['isOnline'] == true ? 'Online' : 'Offline',
@@ -325,6 +374,54 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
     );
   }
 
+  /// Asks for a new username, starting from the current one, and saves it.
+  Future<void> _editUsername() async {
+    final entered = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _UsernameDialog(
+        initialValue: _username,
+        maxLength: _maxUsernameLength,
+      ),
+    );
+    if (entered == null || !mounted) return;
+
+    // The backend trims and collapses repeated spaces itself; doing the same
+    // here catches an unchanged or empty name before a round trip.
+    final username = entered.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (username.isEmpty || username == _username) return;
+
+    setState(() => _isSavingUsername = true);
+    final result = await FirebaseApiService.updateUsername(username);
+    if (!mounted) return;
+    setState(() => _isSavingUsername = false);
+
+    final messenger = ScaffoldMessenger.of(context);
+    if (result['success'] == true) {
+      _avatarChanged = true;
+      setState(() {
+        _profile = {
+          ...?_profile,
+          'username': result['username'] ?? username,
+        };
+      });
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Username updated'),
+          backgroundColor: ChatColors.primary,
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not update the username: ${result['error'] ?? ''}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   /// Picks an image and uploads it as the chat avatar, then re-reads the
   /// profile so the new url — not the cached one — is what gets shown.
   Future<void> _changePhoto() async {
@@ -406,5 +503,64 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
       }
       return null;
     }
+  }
+}
+
+/// The username field. Owns its controller so it is disposed with the dialog
+/// rather than while the route is still animating away.
+class _UsernameDialog extends StatefulWidget {
+  final String initialValue;
+  final int maxLength;
+
+  const _UsernameDialog({required this.initialValue, required this.maxLength});
+
+  @override
+  State<_UsernameDialog> createState() => _UsernameDialogState();
+}
+
+class _UsernameDialogState extends State<_UsernameDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  )..selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.initialValue.length,
+    );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _isValid => _controller.text.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit username'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: widget.maxLength,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(hintText: 'Username'),
+        onChanged: (_) => setState(() {}),
+        onSubmitted: (value) {
+          if (_isValid) Navigator.pop(context, value);
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _isValid
+              ? () => Navigator.pop(context, _controller.text)
+              : null,
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }

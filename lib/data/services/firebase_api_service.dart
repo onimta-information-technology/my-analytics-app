@@ -193,34 +193,75 @@ class FirebaseApiService {
   // ---------------------------------------------------------------------------
   // Upload files  (POST /api/chats/{chatId}/upload/multiple)
   // Accepts one or more local file paths. Returns list of uploaded file info:
-  // [{ messageId, attachmentId, url, filename, size, type }, ...]
+  // [{ messageId, attachmentId, url, filename, size, type, text }, ...]
+  //
+  // Every file becomes its own message. [caption] — whatever was typed on the
+  // media preview screen — is stored as the text of the first file's message;
+  // the rest keep the "📎 <filename>" placeholder. `text` on each entry is what
+  // the server stored, so the sent bubbles can be drawn without a refetch.
   // ---------------------------------------------------------------------------
+
+  /// The most files the multi-upload endpoint takes in one request.
+  static const int maxFilesPerUpload = 5;
 
   static Future<Map<String, dynamic>> uploadFiles({
     required String chatId,
     required List<String> filePaths,
+    String? caption,
+  }) async {
+    final paths = filePaths.where((p) => File(p).existsSync()).toList();
+    if (paths.isEmpty) {
+      return {'success': false, 'error': 'No files to upload'};
+    }
+
+    // The endpoint caps a request at five files, so a bigger pick goes up in
+    // batches. The caption rides only on the first one, which is where the
+    // first file — the one that carries it — is.
+    final files = <dynamic>[];
+    for (var start = 0; start < paths.length; start += maxFilesPerUpload) {
+      final end = (start + maxFilesPerUpload).clamp(0, paths.length);
+      final result = await _uploadBatch(
+        chatId: chatId,
+        filePaths: paths.sublist(start, end),
+        caption: start == 0 ? caption : null,
+      );
+      if (result['success'] != true) {
+        // Whatever already went up is in the chat; report the rest as failed.
+        return {...result, 'uploadedFiles': files};
+      }
+      files.addAll((result['data']?['files'] as List<dynamic>?) ?? const []);
+    }
+    return {
+      'success': true,
+      'data': {'files': files},
+    };
+  }
+
+  static Future<Map<String, dynamic>> _uploadBatch({
+    required String chatId,
+    required List<String> filePaths,
+    String? caption,
   }) async {
     try {
       final domain = await resolveDomain();
-     
+
       final token = await _getToken();
       final deviceId = await DeviceId.get();
       final senderName = await StorageUtil.getChatUserName() ?? '';
-print("Uploading files to chat $chatId with sender: $senderName and deviceId: $deviceId");
-      final url =
-          Uri.parse('$domain/api/chats/$chatId/upload/multiple');
+      final url = Uri.parse('$domain/api/chats/$chatId/upload/multiple');
 
       final request = http.MultipartRequest('POST', url)
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['senderId'] = deviceId ?? ''
         ..fields['senderName'] = senderName
-        ..fields['senderAppType'] = '2'; // Assuming appType is always 2 for this app
+        ..fields['senderAppType'] = '$appType';
 
+      final trimmedCaption = caption?.trim() ?? '';
+      if (trimmedCaption.isNotEmpty) {
+        request.fields['caption'] = trimmedCaption;
+      }
 
       for (final path in filePaths) {
-        final file = File(path);
-        if (!file.existsSync()) continue;
-
         // Determine MIME type from extension and pass it explicitly.
         // Without this the http package defaults to application/octet-stream
         // which the server rejects.
@@ -355,6 +396,12 @@ print("Uploading files to chat $chatId with sender: $senderName and deviceId: $d
       'opus': 'audio/ogg',
       'amr': 'audio/amr',
       '3gp': 'audio/3gpp',
+      // Videos picked from the gallery: Android hands back mp4, iOS mov.
+      'mp4': 'video/mp4',
+      'm4v': 'video/x-m4v',
+      'mov': 'video/quicktime',
+      'webm': 'video/webm',
+      'mkv': 'video/x-matroska',
     };
     return map[ext] ?? 'application/octet-stream';
   }
@@ -832,6 +879,58 @@ print('updateUserAvatar response: ${streamedResponse.statusCode} $responseBody')
       print('fetchUserProfile exception: $e');
       return null;
     }
+  }
+
+  /// Changes the signed-in user's editable display name.
+  /// PUT /api/users/{userUuid}/username — `{ username, appType }`.
+  ///
+  /// `username` is separate from `name`: `name` mirrors the login profile and
+  /// every sync overwrites it, while `username` only changes through here.
+  /// The backend trims it and collapses repeated spaces; it must end up 1–50
+  /// characters. Returns `{success, username}` on success, or `{success:
+  /// false, error}` with the server's reason when it refuses.
+  static Future<Map<String, dynamic>> updateUsername(
+    String username, {
+    String? userUuid,
+  }) async {
+    try {
+      final domain = await resolveDomain();
+      final uuid = userUuid ?? await DeviceId.get();
+      final url = '$domain${endpoints['users']}/$uuid/username';
+      final result = await putRequest(url, {
+        'username': username,
+        'appType': appType,
+      });
+
+      if (result['success'] == true) {
+        final data = result['data'];
+        return {
+          'success': true,
+          'username': data is Map ? data['username']?.toString() : null,
+        };
+      }
+      return {'success': false, 'error': _serverError(result)};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// The reason the server gave for refusing a request, falling back to the
+  /// status line when the body has none.
+  static String _serverError(Map<String, dynamic> result) {
+    final body = result['responseBody'];
+    if (body is String && body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map) {
+          final message = decoded['error'] ?? decoded['message'];
+          if (message is String && message.isNotEmpty) return message;
+        }
+      } catch (_) {
+        // Not JSON — use the status line below.
+      }
+    }
+    return result['error']?.toString() ?? 'Unknown error';
   }
 
   /// Adds members to a group. Admins only. Users already in the group are

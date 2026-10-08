@@ -10,6 +10,7 @@ import 'package:ballys_reservation_app/components/chat_wallpaper.dart';
 import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/voice_message_bubble.dart';
+import 'package:ballys_reservation_app/components/chat_video_player.dart';
 import 'package:ballys_reservation_app/components/typing_indicator_bubble.dart';
 import 'package:ballys_reservation_app/components/voice_recorder_widgets.dart';
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
@@ -23,6 +24,7 @@ import 'package:ballys_reservation_app/models/chat_message.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/screens/chat_settings_screen.dart';
+import 'package:ballys_reservation_app/screens/media_preview_screen.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/chat_text_format.dart';
 import 'package:ballys_reservation_app/utils/current_chat_state.dart';
@@ -46,6 +48,9 @@ import 'package:url_launcher/url_launcher.dart';
 // attachments small.
 const int _kImageQuality = 50;
 const double _kImageMaxDimension = 1280;
+
+/// Width of a photo/video in a bubble; a caption wraps to the same width.
+const double _kMediaBubbleWidth = 220.0;
 
 // A recording shorter than this is treated as a mis-tap on the mic rather than
 // a message, and is thrown away instead of sent.
@@ -1838,7 +1843,13 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
   // ─── Upload files ───────────────────────────────────────────────────────────
 
-  Future<void> _uploadAndSendFiles(List<String> filePaths) async {
+  /// Uploads [filePaths] as one send. [caption] — typed on the media preview
+  /// screen — becomes the text of the first file's message; the backend
+  /// gives the rest the "📎 <filename>" placeholder.
+  Future<void> _uploadAndSendFiles(
+    List<String> filePaths, {
+    String? caption,
+  }) async {
     if (filePaths.isEmpty) return;
 
     final now = DateTime.now();
@@ -1850,11 +1861,28 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       return AttachmentItem(
         localPath: p,
         fileName: p.split('/').last,
-        mimeType: imageExts.contains(ext) ? 'image/$ext' : null,
+        mimeType: imageExts.contains(ext)
+            ? 'image/$ext'
+            : AttachmentItem.isVideoPath(p)
+            ? 'video/$ext'
+            : null,
       );
     }).toList();
 
     final allImages = localItems.every((a) => a.isImage);
+
+    /// What the optimistic bubble for item [i] says until the server answers:
+    /// the caption on the first, the placeholder the server will store on the
+    /// rest (which the bubble knows not to show).
+    String localText(int i) => i == 0 && caption != null
+        ? caption
+        : '📎 ${localItems[i].fileName ?? ''}';
+
+    String fileTypeOf(AttachmentItem item) => item.isImage
+        ? 'image'
+        : item.isVideo
+        ? 'video'
+        : 'document';
 
     setState(() {
       _isUploading = true;
@@ -1863,7 +1891,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         _messages.add(
           ChatMessage(
             id: localId,
-            text: '',
+            text: localText(0),
             isMe: true,
             timestamp: now,
             isRead: false,
@@ -1873,16 +1901,15 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       } else {
         for (int i = 0; i < localItems.length; i++) {
           final item = localItems[i];
-          final ext = (item.localPath ?? '').split('.').last.toLowerCase();
           _messages.add(
             ChatMessage(
               id: '${localId}_$i',
-              text: item.fileName ?? '',
+              text: localText(i),
               isMe: true,
               timestamp: now,
               isRead: false,
               filePath: item.localPath,
-              fileType: item.isImage ? 'image' : 'document',
+              fileType: fileTypeOf(item),
               fileName: item.fileName,
               groupedAttachments: item.isImage ? [item] : [],
             ),
@@ -1896,6 +1923,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       final result = await FirebaseApiService.uploadFiles(
         chatId: widget.contact.chatUuid,
         filePaths: filePaths,
+        caption: caption,
       );
 
       if (result['success'] == true) {
@@ -1919,11 +1947,15 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                   ),
                 );
               }
+              final first = files.isNotEmpty
+                  ? files[0] as Map<String, dynamic>
+                  : const <String, dynamic>{};
               _messages[idx] = _messages[idx].copyWith(
-                apiMessageId: files.isNotEmpty
-                    ? files[0]['messageId'] as String?
-                    : null,
+                apiMessageId: first['messageId'] as String?,
                 apiChatId: widget.contact.chatUuid,
+                // What the server stored — the caption as it was trimmed, or
+                // the placeholder when there was none.
+                text: first['text'] as String?,
                 groupedAttachments: updatedItems,
                 isRead: false,
               );
@@ -1936,12 +1968,18 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 final f = files[i] as Map<String, dynamic>;
                 final mime = f['type'] as String? ?? '';
                 final isImg = mime.startsWith('image/');
+                final isVid = mime.startsWith('video/');
                 _messages[idx] = _messages[idx].copyWith(
                   apiMessageId: f['messageId'] as String?,
                   apiChatId: widget.contact.chatUuid,
+                  text: f['text'] as String?,
                   attachmentUrl: f['url'] as String?,
                   attachmentType: mime,
-                  fileType: isImg ? 'image' : 'document',
+                  fileType: isImg
+                      ? 'image'
+                      : isVid
+                      ? 'video'
+                      : 'document',
                   fileName: f['filename'] as String?,
                   groupedAttachments: isImg
                       ? [
@@ -1962,7 +2000,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         });
 
         if (widget.onMessageSent != null) {
-          widget.onMessageSent!('📎 ${filePaths.length} file(s) sent');
+          final emoji = localItems.first.isVideo ? '🎥' : '📷';
+          widget.onMessageSent!(
+            caption != null
+                ? '$emoji $caption'
+                : '📎 ${filePaths.length} file(s) sent',
+          );
         }
 
         // ── FIX: Give the server a moment to index the upload, then sync ──
@@ -1974,11 +2017,33 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       } else {
         setState(() => _isUploading = false);
         _showErrorSnack('Upload failed: ${result['error'] ?? 'Unknown error'}');
+        // Part of a large pick may have gone up before a later batch failed;
+        // let the server say which bubbles are real.
+        if (result['uploadedFiles'] is List &&
+            (result['uploadedFiles'] as List).isNotEmpty) {
+          _fetchMessagesFromApi(silent: true);
+        }
       }
     } catch (e) {
       setState(() => _isUploading = false);
       _showErrorSnack('Upload error: $e');
     }
+  }
+
+  /// Opens the preview screen for picked photos/videos and uploads only what
+  /// the user sends from it, with the caption they typed.
+  Future<void> _previewAndSendMedia(List<String> filePaths) async {
+    if (filePaths.isEmpty || !mounted) return;
+    final result = await Navigator.of(context).push<MediaPreviewResult>(
+      MaterialPageRoute(
+        builder: (_) => MediaPreviewScreen(
+          filePaths: filePaths,
+          recipientName: widget.contact.name,
+        ),
+      ),
+    );
+    if (result == null || result.filePaths.isEmpty || !mounted) return;
+    await _uploadAndSendFiles(result.filePaths, caption: result.caption);
   }
 
   // ─── Voice notes ────────────────────────────────────────────────────────────
@@ -2394,7 +2459,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         maxWidth: _kImageMaxDimension,
         maxHeight: _kImageMaxDimension,
       );
-      if (photo != null) await _uploadAndSendFiles([photo.path]);
+      if (photo != null) await _previewAndSendMedia([photo.path]);
     } catch (e) {
       _showErrorSnack('Error taking photo: $e');
     }
@@ -2469,15 +2534,16 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     );
   }
 
+  /// Photos and videos both — the downscaling only applies to the photos.
   Future<void> _pickImagesFromGallery() async {
     try {
-      final List<XFile> images = await _imagePicker.pickMultiImage(
+      final List<XFile> media = await _imagePicker.pickMultipleMedia(
         imageQuality: _kImageQuality,
         maxWidth: _kImageMaxDimension,
         maxHeight: _kImageMaxDimension,
       );
-      if (images.isNotEmpty) {
-        await _uploadAndSendFiles(images.map((x) => x.path).toList());
+      if (media.isNotEmpty) {
+        await _previewAndSendMedia(media.map((x) => x.path).toList());
       }
     } catch (e) {
       _showErrorSnack('Error selecting image: $e');
@@ -2493,7 +2559,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         _showErrorSnack('No image on the clipboard');
         return;
       }
-      await _uploadAndSendFiles([path]);
+      await _previewAndSendMedia([path]);
     } catch (e) {
       _showErrorSnack('Error pasting image: $e');
     }
@@ -2625,6 +2691,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       return count > 1 ? '$count attachments' : 'Attachment';
     }
     if (msg.fileType == 'image') return 'Photo';
+    if (msg.fileType == 'video') return 'Video';
     if (msg.isVoiceNote) return '🎤 Voice message';
     if (msg.fileType != null) return msg.fileName ?? 'Attachment';
     return _quoteTextOrAttachmentLabel(msg.text);
@@ -4825,7 +4892,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     String messageId,
     FontSettings fontSettings,
   ) {
-    const double gridSize = 220.0;
+    const double gridSize = _kMediaBubbleWidth;
     const double gap = 3.0;
     const double cellSize = (gridSize - gap) / 2;
 
@@ -5060,6 +5127,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       return _buildImageGrid([item], message.isMe, message.id, fontSettings);
     }
 
+    if (message.fileType == 'video') {
+      return _buildVideoAttachment(message, fontSettings);
+    }
+
     final name = message.fileName ?? message.text;
     return GestureDetector(
       onTap: () {
@@ -5103,6 +5174,75 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     );
   }
 
+  /// A video in the thread: a dark tile with a play button that opens the
+  /// full-screen player. No frame is decoded here — loading a player for
+  /// every video bubble in the list would be far too heavy.
+  Widget _buildVideoAttachment(ChatMessage message, FontSettings fontSettings) {
+    return GestureDetector(
+      onTap: () {
+        if (_isSelectionMode) {
+          _toggleSelection(message.id);
+          return;
+        }
+        if (message.attachmentUrl == null && message.filePath == null) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ChatVideoView(
+              url: message.attachmentUrl,
+              localPath: message.filePath,
+              title: message.fileName,
+            ),
+          ),
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: _kMediaBubbleWidth,
+          height: _kMediaBubbleWidth * 0.66,
+          color: Colors.black87,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  // Still on its way up: nothing to play from the server yet.
+                  message.apiMessageId == null && message.filePath != null
+                      ? Icons.cloud_upload_outlined
+                      : Icons.play_arrow,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              Positioned(
+                left: 8,
+                bottom: 6,
+                child: Row(
+                  children: [
+                    const Icon(Icons.videocam, color: Colors.white70, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Video',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: fontSettings.fontSize - 5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─── Message bubble ─────────────────────────────────────────────────────────
 
   Widget _buildMessage(ChatMessage message, FontSettings fontSettings) {
@@ -5122,15 +5262,19 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final showText =
         !isDeleted &&
         message.text.isNotEmpty &&
-        message.fileType != 'image' &&
-        message.fileType != 'document' &&
+        // An attachment's text is either its caption — drawn under the media
+        // below — or the "📎 <filename>" upload placeholder, which is noise.
         // The backend labels a voice note "🎤 Voice message"; the player says
         // that already.
+        message.fileType == null &&
         !message.isVoiceNote &&
         !hasGrouped;
+    // Typed on the preview screen when the photo/video was sent.
+    final caption = isDeleted ? null : message.caption;
     final isImageBubble = hasGrouped
         ? message.isImageGroup
-        : !isDeleted && message.fileType == 'image';
+        : !isDeleted &&
+              (message.fileType == 'image' || message.fileType == 'video');
     final senderLabel = (message.senderName?.trim().isNotEmpty ?? false)
         ? message.senderName!.trim()
         : 'Unknown';
@@ -5439,6 +5583,33 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+
+                            // Caption, kept to the media's width so a long
+                            // one wraps under the picture instead of
+                            // stretching the bubble past it.
+                            if (caption != null)
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: isImageBubble
+                                      ? _kMediaBubbleWidth
+                                      : double.infinity,
+                                ),
+                                child: Padding(
+                                  padding: isImageBubble
+                                      ? const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        )
+                                      : EdgeInsets.zero,
+                                  child: _buildMessageText(
+                                    message.copyWith(text: caption),
+                                    TextStyle(
+                                      color: ChatColors.bubbleText,
+                                      fontSize: fontSettings.fontSize + 2,
+                                      fontWeight: fontSettings.fontWeight,
+                                    ),
+                                  ),
                                 ),
                               ),
 

@@ -56,6 +56,9 @@ class CallKitService {
       id: systemId(push.callId),
       nameCaller: push.displayTitle,
       appName: 'My Analytics',
+      // Shown on Android's ring. iOS's CallKit screen never shows a custom
+      // image, so there the photo appears on the in-app screen once answered.
+      avatar: push.callerImageUrl.isEmpty ? null : push.callerImageUrl,
       handle: push.displayBody,
       type: push.media == CallMedia.video ? 1 : 0,
       // The server gives up on an unanswered call after 45s (and the push

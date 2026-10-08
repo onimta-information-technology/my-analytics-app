@@ -617,6 +617,7 @@ extension AppDelegate: PKPushRegistryDelegate {
       "callId": callId,
       "callerId": str("callerId"),
       "callerName": callerName,
+      "callerImageUrl": str("callerImageUrl"),
       "callType": isVideo ? "video" : "audio",
       "isGroupCall": isGroup ? "true" : "false",
       "chatTitle": chatTitle,

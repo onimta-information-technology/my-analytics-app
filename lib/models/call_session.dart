@@ -181,6 +181,10 @@ class IncomingCallPush {
   final String callId;
   final String callerId;
   final String callerName;
+
+  /// The caller's profile photo; empty when they have none. For someone
+  /// added to an ongoing call this is the inviter's, like [callerName].
+  final String callerImageUrl;
   final CallMedia media;
   final bool isGroupCall;
 
@@ -198,6 +202,7 @@ class IncomingCallPush {
     required this.callId,
     required this.callerId,
     required this.callerName,
+    this.callerImageUrl = '',
     required this.media,
     required this.isGroupCall,
     required this.chatTitle,
@@ -232,6 +237,7 @@ class IncomingCallPush {
       callId: callId,
       callerId: str('callerId'),
       callerName: str('callerName'),
+      callerImageUrl: str('callerImageUrl'),
       media: CallMedia.parse(data['callType']),
       isGroupCall:
           data['isGroupCall'] == true || str('isGroupCall') == 'true',
@@ -248,6 +254,7 @@ class IncomingCallPush {
     'callId': callId,
     'callerId': callerId,
     'callerName': callerName,
+    'callerImageUrl': callerImageUrl,
     'callType': media.wire,
     'isGroupCall': isGroupCall.toString(),
     'chatTitle': chatTitle,

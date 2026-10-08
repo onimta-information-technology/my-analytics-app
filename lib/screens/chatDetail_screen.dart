@@ -15,6 +15,7 @@ import 'package:ballys_reservation_app/components/typing_indicator_bubble.dart';
 import 'package:ballys_reservation_app/components/voice_recorder_widgets.dart';
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
+import 'package:ballys_reservation_app/screens/call/join_call_screen.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:ballys_reservation_app/data/services/typing_service.dart';
@@ -603,10 +604,28 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final call = _activeCall;
     if (call == null) return;
     FocusManager.instance.primaryFocus?.unfocus();
-    CallManager.instance.joinExisting(
-      call: call,
-      title: widget.contact.name,
-      avatarUrl: _headerAvatarUrl,
+    // Already on a call: let joinExisting bring that one back up (or say
+    // so) rather than offering a pre-join screen that cannot join.
+    if (CallManager.instance.isBusy) {
+      CallManager.instance.joinExisting(
+        call: call,
+        title: widget.contact.name,
+        avatarUrl: _headerAvatarUrl,
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => JoinCallScreen(
+          call: call,
+          title: widget.contact.name,
+          avatarUrl: _headerAvatarUrl,
+          avatarColor: widget.contact.avatarColor,
+          isGroup: widget.isGroup,
+          members: _groupMembers,
+          currentUserUuid: _currentUserUuid,
+        ),
+      ),
     );
   }
 
@@ -626,7 +645,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-             // mainAxisAlignment: MainAxisAlignment.center,
+              // mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   call.media == CallMedia.video ? Icons.videocam : Icons.call,
@@ -640,7 +659,6 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                     color: Colors.white,
                     fontSize: fontSettings.fontSize - 1,
                     fontWeight: FontWeight.w600,
-
                   ),
                 ),
               ],

@@ -142,10 +142,10 @@ class CallController extends ChangeNotifier {
   /// LiveKit identities of everyone already on or ringing into the call,
   /// us included — who "Add person" should not offer.
   Set<String> get identitiesOnCall => {
-        ...?room?.remoteParticipants.values.map((p) => p.identity),
-        if (room?.localParticipant != null) room!.localParticipant!.identity,
-        ...invited.keys,
-      };
+    ...?room?.remoteParticipants.values.map((p) => p.identity),
+    if (room?.localParticipant != null) room!.localParticipant!.identity,
+    ...invited.keys,
+  };
 
   String nameOf(Participant p) {
     if (p.name.isNotEmpty) return p.name;
@@ -271,7 +271,10 @@ class CallManager {
     _open(c);
 
     if (!await _ensurePermissions(media)) {
-      return _finish(c, 'Microphone${media == CallMedia.video ? ' and camera' : ''} permission is required');
+      return _finish(
+        c,
+        'Microphone${media == CallMedia.video ? ' and camera' : ''} permission is required',
+      );
     }
 
     CallJoinInfo info;
@@ -318,11 +321,13 @@ class CallManager {
     }
   }
 
-  /// Joins a call already in progress — the chat screen's "Join" banner.
+  /// Joins a call already in progress — the chat screen's "Join" button.
+  /// [muted] is the choice made on the pre-join screen.
   Future<void> joinExisting({
     required CallInfo call,
     required String title,
     String? avatarUrl,
+    bool muted = false,
   }) async {
     if (isBusy) {
       if (_current!.callId == call.callId) return showScreen();
@@ -338,7 +343,7 @@ class CallManager {
       isGroupCall: call.isGroupCall,
       isOutgoing: false,
       phase: CallPhase.connecting,
-    );
+    )..micEnabled = !muted;
     _open(c);
     await _acceptInto(c, answeringRing: false);
   }
@@ -455,9 +460,11 @@ class CallManager {
   Future<void> toggleSpeaker() async {
     final c = _current;
     if (c == null) return;
-    await selectAudioRoute(AudioRoute(
-      c.speakerOn ? AudioRouteType.earpiece : AudioRouteType.speaker,
-    ));
+    await selectAudioRoute(
+      AudioRoute(
+        c.speakerOn ? AudioRouteType.earpiece : AudioRouteType.speaker,
+      ),
+    );
   }
 
   /// Plays the call through [route]: the earpiece, the loudspeaker, or a
@@ -491,7 +498,8 @@ class CallManager {
       if (!_isLive(c)) return;
       if (routes != null) c.audioRoutes = routes;
       final available = routes?.available ?? const <AudioRoute>[];
-      route = available
+      route =
+          available
               .where((r) => r.type == AudioRouteType.bluetooth)
               .firstOrNull ??
           available.where((r) => r.type == AudioRouteType.wired).firstOrNull ??
@@ -520,14 +528,17 @@ class CallManager {
         final stillThere = routes.available.any(chosen.sameAs);
         // A headset that just connected takes the audio over; the pick made
         // before it no longer says where audio should go.
-        final newHeadset = routes.available.any((r) =>
-            r.type == AudioRouteType.bluetooth &&
-            !(before?.available.any(r.sameAs) ?? true));
+        final newHeadset = routes.available.any(
+          (r) =>
+              r.type == AudioRouteType.bluetooth &&
+              !(before?.available.any(r.sameAs) ?? true),
+        );
         if (!stillThere || newHeadset) c.chosenRoute = null;
       }
       final current = routes.current;
-      final speakerOn =
-          current == null ? c.speakerOn : current.type == AudioRouteType.speaker;
+      final speakerOn = current == null
+          ? c.speakerOn
+          : current.type == AudioRouteType.speaker;
       if (routes == before && speakerOn == c.speakerOn) return;
       c.audioRoutes = routes;
       c.speakerOn = speakerOn;
@@ -644,8 +655,9 @@ class CallManager {
 
   Future<void> switchCamera() async {
     final c = _current;
-    final pub = c?.room?.localParticipant
-        ?.getTrackPublicationBySource(TrackSource.camera);
+    final pub = c?.room?.localParticipant?.getTrackPublicationBySource(
+      TrackSource.camera,
+    );
     final track = pub?.track;
     if (c == null || track is! LocalVideoTrack) return;
     c.cameraPosition = c.cameraPosition == CameraPosition.front
@@ -670,7 +682,9 @@ class CallManager {
   }) async {
     final c = _current;
     final id = c?.callId;
-    if (c == null || id == null || !_isLive(c) ||
+    if (c == null ||
+        id == null ||
+        !_isLive(c) ||
         c.phase != CallPhase.connected) {
       return;
     }
@@ -773,8 +787,9 @@ class CallManager {
       if (Platform.isIOS) {
         if (isBusy && _current!.callId != callId) {
           unawaited(
-            CallApiService.decline(callId)
-                .catchError((e) => print('busy decline: $e')),
+            CallApiService.decline(
+              callId,
+            ).catchError((e) => print('busy decline: $e')),
           );
           return;
         }
@@ -796,7 +811,8 @@ class CallManager {
     final c = _current;
     // The callee can confirm its ring before our own `start` has even
     // returned the callId.
-    final ownPendingCall = c != null &&
+    final ownPendingCall =
+        c != null &&
         c.callId == null &&
         c.isOutgoing &&
         type == CallPushType.ringing;
@@ -843,11 +859,11 @@ class CallManager {
     try {
       final snap = await CallApiService.status(callId);
       final me = await _myIdentity();
-      final mine = snap.participants
-          .where((p) => p.identity == me)
-          .firstOrNull;
+      final mine = snap.participants.where((p) => p.identity == me).firstOrNull;
       final stillForMe =
-          snap.call.isLive && (mine == null || mine.status == 'ringing' ||
+          snap.call.isLive &&
+          (mine == null ||
+              mine.status == 'ringing' ||
               (snap.call.isGroupCall && mine.status != 'joined'));
       if (!stillForMe) {
         _toast('Missed call from ${snap.call.callerName}');
@@ -875,7 +891,9 @@ class CallManager {
       // Already on another call: treat it as busy rather than ringing over
       // the top of the conversation.
       unawaited(
-        CallApiService.decline(callId).catchError((e) => print('busy decline: $e')),
+        CallApiService.decline(
+          callId,
+        ).catchError((e) => print('busy decline: $e')),
       );
       return;
     }
@@ -907,13 +925,21 @@ class CallManager {
   /// [answeringRing] is true when this answers a ring rather than joining a
   /// call already in progress: if the call can't be taken, the caller is
   /// told so rather than left ringing until the timeout.
-  Future<void> _acceptInto(CallController c, {bool answeringRing = true}) async {
+  Future<void> _acceptInto(
+    CallController c, {
+    bool answeringRing = true,
+  }) async {
     if (!await _ensurePermissions(c.media)) {
       final id = c.callId;
-      _finish(c, 'Microphone${c.isVideo ? ' and camera' : ''} permission is required');
+      _finish(
+        c,
+        'Microphone${c.isVideo ? ' and camera' : ''} permission is required',
+      );
       if (answeringRing && id != null) {
         unawaited(
-          CallApiService.decline(id).catchError((e) => print('call decline failed: $e')),
+          CallApiService.decline(
+            id,
+          ).catchError((e) => print('call decline failed: $e')),
         );
       }
       return;
@@ -1047,7 +1073,11 @@ class CallManager {
       unawaited(_refreshNames(c));
     } catch (e) {
       print('call connect failed: $e');
-      await _hangUp(c, reason: 'connect_failed', message: 'Could not connect the call');
+      await _hangUp(
+        c,
+        reason: 'connect_failed',
+        message: 'Could not connect the call',
+      );
     }
   }
 
@@ -1170,7 +1200,9 @@ class CallManager {
     if (c == null || c.phase == CallPhase.ended) return;
     if (c._route?.isActive == true) {
       final nav = navigatorKey.currentState;
-      nav?.popUntil((r) => r.settings.name == CallScreen.routeName || r.isFirst);
+      nav?.popUntil(
+        (r) => r.settings.name == CallScreen.routeName || r.isFirst,
+      );
       return;
     }
     _showScreen(c);
@@ -1231,8 +1263,9 @@ class CallManager {
         }
         if (c.phase == CallPhase.incoming) {
           final me = await _myIdentity();
-          final mine =
-              snap.participants.where((p) => p.identity == me).firstOrNull;
+          final mine = snap.participants
+              .where((p) => p.identity == me)
+              .firstOrNull;
           if (mine != null && mine.status != 'ringing') {
             _finish(c, 'Call ended');
           }
@@ -1513,7 +1546,7 @@ class _IOSBroadcastCaptureOptions extends ScreenShareCaptureOptions {
 
   @override
   Map<String, dynamic> toMediaConstraintsMap() => {
-        ...super.toMediaConstraintsMap(),
-        'deviceId': 'broadcast-manual',
-      };
+    ...super.toMediaConstraintsMap(),
+    'deviceId': 'broadcast-manual',
+  };
 }

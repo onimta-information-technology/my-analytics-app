@@ -9,16 +9,26 @@ import 'package:flutter/material.dart';
 /// scatter of small line glyphs, so a painter gives it at any pixel density and
 /// any screen size without an asset that would have to be re-cut for each.
 class ChatWallpaper extends StatelessWidget {
-  const ChatWallpaper({super.key, required this.child});
+  const ChatWallpaper({
+    super.key,
+    required this.child,
+    this.background = ChatColors.chatBackground,
+    this.doodle = ChatColors.wallpaperDoodle,
+  });
 
   final Widget child;
+
+  /// The ground and glyph colours. The conversation uses the defaults; the
+  /// call screens pass a dark pair.
+  final Color background;
+  final Color doodle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: ChatColors.chatBackground,
+      color: background,
       child: CustomPaint(
-        painter: const _DoodlePainter(),
+        painter: _DoodlePainter(doodle),
         // The glyphs never move once laid out, so let the raster cache keep
         // them instead of re-drawing the whole field on every message.
         isComplex: true,
@@ -33,7 +43,9 @@ class ChatWallpaper extends StatelessWidget {
 typedef _Glyph = void Function(Canvas canvas, Paint paint, double size);
 
 class _DoodlePainter extends CustomPainter {
-  const _DoodlePainter();
+  const _DoodlePainter(this.color);
+
+  final Color color;
 
   /// One glyph per cell. The cell is wide enough that neighbours never touch,
   /// even at the largest jitter and scale below.
@@ -43,7 +55,7 @@ class _DoodlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = ChatColors.wallpaperDoodle
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.round
@@ -88,7 +100,8 @@ class _DoodlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DoodlePainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DoodlePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 // ─── The glyphs ───────────────────────────────────────────────────────────────
@@ -215,7 +228,11 @@ void _plane(Canvas canvas, Paint paint, double s) {
     ..lineTo(-s * 0.02, s * 0.08)
     ..close();
   canvas.drawPath(path, paint);
-  canvas.drawLine(Offset(-s * 0.02, s * 0.08), Offset(s * 0.5, -s * 0.42), paint);
+  canvas.drawLine(
+    Offset(-s * 0.02, s * 0.08),
+    Offset(s * 0.5, -s * 0.42),
+    paint,
+  );
 }
 
 void _cup(Canvas canvas, Paint paint, double s) {
@@ -233,8 +250,16 @@ void _cup(Canvas canvas, Paint paint, double s) {
     false,
     paint,
   );
-  canvas.drawLine(Offset(-s * 0.1, -s * 0.38), Offset(-s * 0.1, -s * 0.54), paint);
-  canvas.drawLine(Offset(s * 0.1, -s * 0.38), Offset(s * 0.1, -s * 0.54), paint);
+  canvas.drawLine(
+    Offset(-s * 0.1, -s * 0.38),
+    Offset(-s * 0.1, -s * 0.54),
+    paint,
+  );
+  canvas.drawLine(
+    Offset(s * 0.1, -s * 0.38),
+    Offset(s * 0.1, -s * 0.54),
+    paint,
+  );
 }
 
 void _sun(Canvas canvas, Paint paint, double s) {

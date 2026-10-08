@@ -979,6 +979,7 @@ class CallManager {
         // A third person in the room: someone was added to what began as a
         // 1:1 call — by us or by the other side — so it is a group call now.
         if (room.remoteParticipants.length > 1) c.isGroupCall = true;
+        if (c.isGroupCall) unawaited(_playJoinTone());
         _settleInvites(c);
         c.update();
         unawaited(_refreshNames(c));
@@ -1436,7 +1437,39 @@ class CallManager {
     }());
   }
 
+  /// The short chime a group call plays when somebody joins, WhatsApp style.
+  /// Set up like the ringback — on the call stream, out of the call's audio
+  /// session — so it is heard over the call and never pauses it.
+  Future<void> _playJoinTone() async {
+    final player = AudioPlayer(
+      handleInterruptions: false,
+      androidApplyAudioAttributes: false,
+      handleAudioSessionActivation: !Platform.isAndroid,
+    );
+    try {
+      if (Platform.isAndroid) {
+        await player.setAndroidAudioAttributes(
+          const AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.sonification,
+            usage: AndroidAudioUsage.voiceCommunicationSignalling,
+          ),
+        );
+      }
+      await player.setAsset(_joinToneAsset);
+      await player.setVolume(Platform.isAndroid ? 1.0 : 0.5);
+      await player.play();
+      await player.processingStateStream
+          .firstWhere((s) => s == ProcessingState.completed)
+          .timeout(const Duration(seconds: 3));
+    } catch (e) {
+      print('join tone failed: $e');
+    } finally {
+      await player.dispose();
+    }
+  }
+
   static const _ringbackAsset = 'assets/sounds/callRingback.wav';
+  static const _joinToneAsset = 'assets/sounds/callJoin.wav';
 
   static Future<String> _myIdentity() async =>
       '${await DeviceId.get()}|${FirebaseApiService.appType}';

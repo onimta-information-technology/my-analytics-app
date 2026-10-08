@@ -199,10 +199,15 @@ VideoTrack? _remoteScreen(RemoteParticipant p) {
   return track is VideoTrack ? track as VideoTrack : null;
 }
 
-/// A live group call with no cameras on: everyone gets a tile, WhatsApp
-/// style, rather than the single big avatar.
+/// A group call with no cameras on: everyone gets a tile, WhatsApp style,
+/// rather than the single big avatar — straight away while it is placed or
+/// joined, not only once it is live. Only the incoming ring keeps the avatar.
 bool _showsGroupAudioStage(CallController c) =>
-    c.isGroupCall && c.phase == CallPhase.connected && !_showsVideoStage(c);
+    c.isGroupCall &&
+    (c.phase == CallPhase.outgoing ||
+        c.phase == CallPhase.connecting ||
+        c.phase == CallPhase.connected) &&
+    !_showsVideoStage(c);
 
 VideoTrack? _remoteVideo(RemoteParticipant p) => p.videoTrackPublications
     .where((pub) =>
@@ -799,7 +804,15 @@ class _GroupHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                _Duration(since: c.connectedAt),
+                c.phase == CallPhase.connected
+                    ? _Duration(since: c.connectedAt)
+                    : Text(
+                        _statusText(c),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 15,
+                        ),
+                      ),
               ],
             ),
           ),
@@ -854,25 +867,28 @@ class _GroupHeader extends StatelessWidget {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
-                      ListTile(
-                        leading: const CircleAvatar(
-                          radius: 20,
-                          backgroundColor: ChatColors.accent,
-                          child: Icon(
-                            Icons.person_add_alt_1,
-                            color: Colors.white,
-                            size: 20,
+                      // Someone can only be added once the call is live.
+                      if (controller.phase == CallPhase.connected)
+                        ListTile(
+                          leading: const CircleAvatar(
+                            radius: 20,
+                            backgroundColor: ChatColors.accent,
+                            child: Icon(
+                              Icons.person_add_alt_1,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
+                          title: const Text(
+                            'Add person',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            showAddCallParticipantSheet(
+                                screenContext, controller);
+                          },
                         ),
-                        title: const Text(
-                          'Add person',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          showAddCallParticipantSheet(screenContext, controller);
-                        },
-                      ),
                       for (final m in members)
                         ListTile(
                           leading: _Avatar(

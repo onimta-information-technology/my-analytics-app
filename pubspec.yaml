@@ -198,6 +198,7 @@ flutter:
     - assets/icon/menu_screen/Followed.json
     - assets/sounds/messageReceiveNotification.mp3
     - assets/sounds/callRingback.wav
+    - assets/sounds/callJoin.wav
  
 
   fonts:

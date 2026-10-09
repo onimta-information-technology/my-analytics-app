@@ -85,9 +85,9 @@ class _NewGroupMembersScreenState extends ConsumerState<NewGroupMembersScreen> {
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Scaffold(
-            backgroundColor: Colors.white,
+            backgroundColor: ChatColors.background,
             appBar: AppBar(
-              backgroundColor: ChatColors.primary,
+              backgroundColor: ChatColors.appBar,
               foregroundColor: Colors.white,
               titleSpacing: 0,
               title: _isSearching
@@ -216,9 +216,9 @@ class _NewGroupInfoScreenState extends ConsumerState<NewGroupInfoScreen> {
       child: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: ChatColors.background,
           appBar: AppBar(
-            backgroundColor: ChatColors.primary,
+            backgroundColor: ChatColors.appBar,
             foregroundColor: Colors.white,
             titleSpacing: 0,
             title: PickerAppBarTitle(
@@ -228,7 +228,7 @@ class _NewGroupInfoScreenState extends ConsumerState<NewGroupInfoScreen> {
             ),
           ),
           floatingActionButton: FloatingActionButton(
-            backgroundColor: canCreate ? ChatColors.accent : Colors.grey,
+            backgroundColor: canCreate ? ChatColors.accent : ChatColors.textHint,
             onPressed: canCreate
                 ? () => Navigator.pop(
                     context,
@@ -263,7 +263,7 @@ class _NewGroupInfoScreenState extends ConsumerState<NewGroupInfoScreen> {
                                 ? FileImage(_avatarFile!)
                                 : null,
                             child: _avatarFile == null
-                                ? const Icon(
+                                ? Icon(
                                     Icons.camera_alt,
                                     size: 24,
                                     color: ChatColors.primary,
@@ -276,7 +276,7 @@ class _NewGroupInfoScreenState extends ConsumerState<NewGroupInfoScreen> {
                               bottom: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: ChatColors.primary,
                                   shape: BoxShape.circle,
                                 ),
@@ -306,10 +306,10 @@ class _NewGroupInfoScreenState extends ConsumerState<NewGroupInfoScreen> {
                             fontSize: fontSettings.fontSize - 2,
                             color: kPickerSubtitle,
                           ),
-                          enabledBorder: const UnderlineInputBorder(
+                          enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(color: kPickerRule),
                           ),
-                          focusedBorder: const UnderlineInputBorder(
+                          focusedBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
                               color: ChatColors.primary,
                               width: 2,

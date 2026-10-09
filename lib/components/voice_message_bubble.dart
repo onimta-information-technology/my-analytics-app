@@ -153,12 +153,17 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
-    // Both bubbles are light in the WhatsApp palette, so the player reads dark
-    // on either side; only the played-through part of the waveform picks up the
-    // chat green, and a touch deeper on the green bubble to stay visible.
-    const foreground = ChatColors.bubbleText;
-    final played = widget.isMe ? ChatColors.primaryDark : ChatColors.primary;
-    final unplayed = Colors.black26;
+    // Both bubbles share one text colour in each chat mode, so the player reads
+    // the same on either side; only the played-through part of the waveform
+    // picks up the chat green, and a touch deeper on the green bubble to stay
+    // visible in light mode.
+    final foreground = ChatColors.bubbleText;
+    final played = widget.isMe && ChatColors.isDark
+        ? Colors.white
+        : widget.isMe
+        ? ChatColors.primaryDark
+        : ChatColors.primary;
+    final unplayed = ChatColors.isDark ? Colors.white30 : Colors.black26;
 
     return ValueListenableBuilder<String?>(
       valueListenable: _hub.playingKey,

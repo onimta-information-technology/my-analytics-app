@@ -870,7 +870,7 @@ class _GroupHeader extends StatelessWidget {
                       // Someone can only be added once the call is live.
                       if (controller.phase == CallPhase.connected)
                         ListTile(
-                          leading: const CircleAvatar(
+                          leading: CircleAvatar(
                             radius: 20,
                             backgroundColor: ChatColors.accent,
                             child: Icon(

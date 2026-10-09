@@ -63,9 +63,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Scaffold(
-            backgroundColor: Colors.white,
+            backgroundColor: ChatColors.background,
             appBar: AppBar(
-              backgroundColor: ChatColors.primary,
+              backgroundColor: ChatColors.appBar,
               foregroundColor: Colors.white,
               titleSpacing: 0,
               title: _isSearching

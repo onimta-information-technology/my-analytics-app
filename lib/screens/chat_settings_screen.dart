@@ -1,13 +1,14 @@
 import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/chat_notification_sound_provider.dart';
+import 'package:ballys_reservation_app/providers/chat_theme_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/utils/chat_notification_sound.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Chat's own font, notification-tone and device-permission settings, reached from the overflow
+/// Chat's own theme, font, notification-tone and device-permission settings, reached from the overflow
 /// menu in the chat list and inside a conversation. The typography here is
 /// deliberately separate from the app-wide
 /// "Font Size Settings" on the app Settings screen: changing one leaves the other
@@ -28,12 +29,13 @@ class ChatSettingsScreen extends ConsumerWidget {
     final notifier = ref.read(chatFontSettingsProvider.notifier);
     final sound = ref.watch(chatNotificationSoundProvider);
     final soundNotifier = ref.read(chatNotificationSoundProvider.notifier);
+    final darkMode = ref.watch(chatDarkModeProvider);
 
     return ChatFontScope(
       child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
+        backgroundColor: ChatColors.groupedBackground,
         appBar: AppBar(
-          backgroundColor: ChatColors.primary,
+          backgroundColor: ChatColors.appBar,
           foregroundColor: Colors.white,
           title: const Text(
             'Chat settings',
@@ -43,6 +45,36 @@ class ChatSettingsScreen extends ConsumerWidget {
         body: ListView(
           padding: const EdgeInsets.symmetric(vertical: 12),
           children: [
+            _sectionLabel('Theme'),
+            _buildCard(
+              child: SwitchListTile(
+                value: darkMode,
+                onChanged: (value) =>
+                    ref.read(chatDarkModeProvider.notifier).setDark(value),
+                secondary: Icon(
+                  darkMode ? Icons.dark_mode : Icons.light_mode,
+                  color: ChatColors.primaryDark,
+                ),
+                title: Text(
+                  'Dark mode',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: ChatColors.textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  darkMode ? 'On · chats only' : 'Off · chats only',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: ChatColors.textSecondary,
+                  ),
+                ),
+                activeThumbColor: Colors.white,
+                activeTrackColor: ChatColors.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
             _sectionLabel('Preview'),
             _buildPreview(settings),
             const SizedBox(height: 8),
@@ -110,7 +142,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                 label: const Text('Reset to default'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: ChatColors.primaryDark,
-                  side: const BorderSide(color: ChatColors.primary),
+                  side: BorderSide(color: ChatColors.primary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -119,12 +151,13 @@ class ChatSettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                'This size applies to chats only. The rest of the app follows '
-                'the font size in Settings. The notification sound applies to '
-                'chat messages only and is kept by the reset above.',
+                'Dark mode and this size apply to chats only. The rest of the '
+                'app stays light and follows the font size in Settings. The '
+                'notification sound applies to chat messages only. Dark mode '
+                'and the sound are kept by the reset above.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: ChatColors.textSecondary,
                   height: 1.4,
                 ),
               ),
@@ -146,7 +179,7 @@ class ChatSettingsScreen extends ConsumerWidget {
     title: Text(label, style: style),
     trailing: Icon(
       selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-      color: selected ? ChatColors.primary : Colors.grey.shade400,
+      color: selected ? ChatColors.primary : ChatColors.textFaint,
     ),
   );
 
@@ -166,7 +199,7 @@ class ChatSettingsScreen extends ConsumerWidget {
     ),
     subtitle: Text(
       option.description,
-      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+      style: TextStyle(fontSize: 12, color: ChatColors.textSecondary),
     ),
     trailing: Row(
       mainAxisSize: MainAxisSize.min,
@@ -180,7 +213,7 @@ class ChatSettingsScreen extends ConsumerWidget {
           ),
         Icon(
           selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-          color: selected ? ChatColors.primary : Colors.grey.shade400,
+          color: selected ? ChatColors.primary : ChatColors.textFaint,
         ),
       ],
     ),
@@ -202,7 +235,7 @@ class ChatSettingsScreen extends ConsumerWidget {
   Widget _buildCard({required Widget child}) => Container(
     margin: const EdgeInsets.symmetric(horizontal: 12),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: ChatColors.surface,
       borderRadius: BorderRadius.circular(12),
     ),
     child: child,
@@ -365,7 +398,7 @@ class _DevicePermissionsCardState extends State<_DevicePermissionsCard>
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
+            child: Text(
               'Open settings',
               style: TextStyle(color: ChatColors.primaryDark),
             ),
@@ -409,7 +442,7 @@ class _DevicePermissionsCardState extends State<_DevicePermissionsCard>
           name: 'Camera',
           purpose: 'Take photos to send in chat',
         ),
-        Divider(height: 1, indent: 56, color: Colors.grey.shade200),
+        Divider(height: 1, indent: 56, color: ChatColors.inputFill),
         _tile(
           permission: Permission.microphone,
           icon: Icons.mic_none,
@@ -447,7 +480,7 @@ class _DevicePermissionsCardState extends State<_DevicePermissionsCard>
       ),
       subtitle: Text(
         '$purpose\n$statusText',
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        style: TextStyle(fontSize: 12, color: ChatColors.textSecondary),
       ),
       isThreeLine: true,
       trailing: Switch(

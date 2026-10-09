@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:ballys_reservation_app/core/chat_colors.dart';
+import 'package:ballys_reservation_app/providers/chat_theme_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,8 +52,7 @@ class ChatFontSettingsNotifier extends StateNotifier<FontSettings> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final fontSize = prefs.getDouble(_sizeKey) ?? ChatFontSize.medium;
-    final fontWeightIndex =
-        prefs.getInt(_weightKey) ?? FontWeight.normal.index;
+    final fontWeightIndex = prefs.getInt(_weightKey) ?? FontWeight.normal.index;
 
     state = FontSettings(
       fontSize: fontSize,
@@ -94,22 +95,105 @@ final chatFontSettingsProvider =
 /// screens having to name a family. Wrap a chat screen's body with it, and also
 /// the content of any sheet or dialog the chat opens — those get their own
 /// route, so they would otherwise fall back to the app-wide theme.
-class ChatFontScope extends StatelessWidget {
+///
+/// It also carries the chat's own light / dark mode ([chatDarkModeProvider]):
+/// in dark mode the Material defaults below it (text, dialogs, sheets, list
+/// tiles) switch to a dark theme, and when the mode flips every widget under
+/// the scope is rebuilt so the [ChatColors] getters are read afresh.
+class ChatFontScope extends ConsumerStatefulWidget {
   const ChatFontScope({super.key, required this.child});
 
   final Widget child;
 
   @override
+  ConsumerState<ChatFontScope> createState() => _ChatFontScopeState();
+}
+
+class _ChatFontScopeState extends ConsumerState<ChatFontScope> {
+  /// Most chat widgets read [ChatColors] directly rather than through the
+  /// theme, so a theme change alone would leave them stale — mark the whole
+  /// subtree dirty instead. Runs only when the user flips the switch.
+  void _rebuildSubtree() {
+    if (!mounted) return;
+    void rebuild(Element element) {
+      element.markNeedsBuild();
+      element.visitChildren(rebuild);
+    }
+
+    final element = context as Element;
+    element.visitChildren(rebuild);
+
+    // The widgets handed to this scope (a screen's app bar, search box, tabs)
+    // were built — colours and all — by whichever widget built the scope, so
+    // re-running only the descendants would reuse those stale values. Rebuild
+    // that owner too: the nearest component ancestor.
+    element.visitAncestorElements((ancestor) {
+      if (ancestor is ComponentElement) {
+        ancestor.markNeedsBuild();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final dark = ref.watch(chatDarkModeProvider);
+    ref.listen<bool>(chatDarkModeProvider, (previous, next) {
+      if (previous != next) _rebuildSubtree();
+    });
+
     final base = Theme.of(context);
     return Theme(
-      data: base.copyWith(
-        textTheme: base.textTheme.apply(fontFamily: kChatFontFamily),
-        primaryTextTheme: base.primaryTextTheme.apply(
-          fontFamily: kChatFontFamily,
-        ),
+      data: dark ? _darkTheme(base) : _lightTheme(base),
+      child: widget.child,
+    );
+  }
+
+  ThemeData _lightTheme(ThemeData base) => base.copyWith(
+    textTheme: base.textTheme.apply(fontFamily: kChatFontFamily),
+    primaryTextTheme: base.primaryTextTheme.apply(fontFamily: kChatFontFamily),
+  );
+
+  ThemeData _darkTheme(ThemeData base) {
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: ChatColors.primary,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: ChatColors.primary,
+          surface: ChatColors.surface,
+          onSurface: ChatColors.textPrimary,
+        );
+    final dark = ThemeData(
+      useMaterial3: base.useMaterial3,
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: ChatColors.background,
+      canvasColor: ChatColors.background,
+      cardColor: ChatColors.surface,
+      dividerColor: ChatColors.divider,
+      dialogTheme: DialogThemeData(backgroundColor: ChatColors.surface),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: ChatColors.surface,
+        modalBackgroundColor: ChatColors.surface,
       ),
-      child: child,
+      popupMenuTheme: PopupMenuThemeData(color: ChatColors.surface),
+      listTileTheme: ListTileThemeData(
+        iconColor: ChatColors.textSecondary,
+        textColor: ChatColors.textPrimary,
+      ),
+      iconTheme: IconThemeData(color: ChatColors.textSecondary),
+    );
+    return dark.copyWith(
+      textTheme: dark.textTheme.apply(
+        fontFamily: kChatFontFamily,
+        bodyColor: ChatColors.textPrimary,
+        displayColor: ChatColors.textPrimary,
+      ),
+      primaryTextTheme: dark.primaryTextTheme.apply(
+        fontFamily: kChatFontFamily,
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/models/chat_group.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 
 /// Group info sheet: name, settings and the member list with their roles.
 ///
@@ -31,19 +32,20 @@ void showGroupDetailsSheet({
   VoidCallback? onGroupLeftOrDeleted,
 }) {
   showModalBottomSheet(
+    backgroundColor: ChatColors.surface,
     context: context,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (sheetContext) => _GroupDetailsSheet(
+    builder: (sheetContext) => ChatFontScope(child: _GroupDetailsSheet(
       groupId: groupId,
       avatarColor: avatarColor,
       fontSettings: fontSettings,
       currentUserUuid: currentUserUuid,
       onGroupChanged: onGroupChanged,
       onGroupLeftOrDeleted: onGroupLeftOrDeleted,
-    ),
+    )),
   );
 }
 
@@ -151,7 +153,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
     final newName = await showDialog<String>(
       context: context,
       builder: (dialogContext) =>
-          _RenameGroupDialog(currentName: currentName, fontSettings: _fs),
+          ChatFontScope(child: _RenameGroupDialog(currentName: currentName, fontSettings: _fs)),
     );
 
     if (newName == null || newName.isEmpty || newName == currentName) return;
@@ -170,11 +172,12 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
   /// rejects anyone else, and the tap target is hidden for them anyway.
   Future<void> _changeGroupAvatar() async {
     final source = await showModalBottomSheet<ImageSource>(
+      backgroundColor: ChatColors.surface,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => ChatFontScope(child: SafeArea(
         child: Wrap(
           children: [
             ListTile(
@@ -195,7 +198,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
             ),
           ],
         ),
-      ),
+      )),
     );
     if (source == null) return;
 
@@ -241,7 +244,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
   Future<void> _removeMember(GroupMember member) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => ChatFontScope(child: AlertDialog(
         title: Text(
           'Remove member',
           style: TextStyle(fontSize: _fs.fontSize + 2),
@@ -263,7 +266,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
 
     if (confirmed != true) return;
@@ -309,7 +312,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
   Future<void> _exitGroup({required bool delete}) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => ChatFontScope(child: AlertDialog(
         title: Text(
           delete ? 'Delete group' : 'Leave group',
           style: TextStyle(fontSize: _fs.fontSize + 2),
@@ -334,7 +337,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
 
     if (confirmed != true) return;
@@ -414,13 +417,14 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
     }
 
     final selected = await showModalBottomSheet<List<ChatContact>>(
+      backgroundColor: ChatColors.surface,
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (pickerContext) =>
-          _MemberPicker(candidates: candidates, fontSettings: _fs),
+          ChatFontScope(child: _MemberPicker(candidates: candidates, fontSettings: _fs)),
     );
 
     if (selected == null || selected.isEmpty) return;
@@ -449,7 +453,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
         future: _detailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: ChatColors.primary),
             );
           }
@@ -507,7 +511,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (_busy)
-                const LinearProgressIndicator(
+                LinearProgressIndicator(
                   backgroundColor: Colors.transparent,
                   valueColor: AlwaysStoppedAnimation<Color>(ChatColors.primary),
                 ),
@@ -589,7 +593,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                             '${members.length} member${members.length == 1 ? '' : 's'}'
                             '${details.adminOnlyMessaging ? ' • Only admins can message' : ''}',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: ChatColors.textSecondary,
                               fontSize: _fs.fontSize - 3,
                             ),
                           ),
@@ -634,7 +638,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                         style: TextStyle(
                           fontSize: _fs.fontSize - 2,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
+                          color: ChatColors.textMuted,
                         ),
                       ),
                     ),
@@ -661,7 +665,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                           'No members',
                           style: TextStyle(
                             fontSize: _fs.fontSize - 2,
-                            color: Colors.grey,
+                            color: ChatColors.textHint,
                           ),
                         ),
                       )
@@ -702,7 +706,7 @@ class _GroupDetailsSheetState extends State<_GroupDetailsSheet> {
                                 ? Text(
                                     'Created this group',
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: ChatColors.textSecondary,
                                       fontSize: _fs.fontSize - 4,
                                     ),
                                   )
@@ -915,7 +919,7 @@ class _MemberPickerState extends State<_MemberPicker> {
                     : '${_selected.length} selected',
                 style: TextStyle(
                   fontSize: fs.fontSize - 3,
-                  color: Colors.grey[700],
+                  color: ChatColors.textMuted,
                 ),
               ),
               const SizedBox(height: 4),

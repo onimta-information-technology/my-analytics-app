@@ -89,8 +89,8 @@ const Color _kMentionColorOnGreen = Color.fromARGB(255, 12, 59, 121);
 /// Links in an incoming bubble read as the usual web blue; on the green
 /// outgoing bubble that blue goes muddy, so links there stay white and lean
 /// on the underline instead.
-const Color _kLinkColor = ChatColors.link;
-const Color _kLinkColorOnGreen = ChatColors.link;
+Color _kLinkColor = ChatColors.link;
+Color _kLinkColorOnGreen = ChatColors.link;
 
 /// Composer controller that paints picked "@Name" tokens in [_kMentionColor].
 ///
@@ -535,12 +535,13 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final fontSettings = ref.read(chatFontSettingsProvider);
 
     showModalBottomSheet(
+      backgroundColor: ChatColors.surface,
       context: _chatModalContext,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => ChatFontScope(child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -586,7 +587,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -809,7 +810,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       // one smeared shape. A single face sits on the wallpaper and needs none.
       if (!overlapping) return avatar;
       return Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: ChatColors.incomingBubble,
           shape: BoxShape.circle,
         ),
@@ -1693,8 +1694,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     return Container(
       constraints: const BoxConstraints(maxHeight: 180),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+        color: ChatColors.surface,
+        border: Border(top: BorderSide(color: ChatColors.divider)),
       ),
       child: ListView.builder(
         shrinkWrap: true,
@@ -1722,7 +1723,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 ? Text(
                     'Admin',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: ChatColors.textSecondary,
                       fontSize: fontSettings.fontSize - 5,
                     ),
                   )
@@ -2493,16 +2494,17 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     );
 
     showModalBottomSheet(
+      backgroundColor: ChatColors.surface,
       context: _chatModalContext,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => ChatFontScope(child: SafeArea(
         child: Wrap(
           children: [
             if (clipboardHasImage)
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.content_paste,
                   color: ChatColors.primary,
                 ),
@@ -2516,7 +2518,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               Container(
                 width: MediaQuery.of(ctx).size.width,
                 height: 1,
-                color: Colors.black,
+                color: ChatColors.textPrimary,
               ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: Colors.blue),
@@ -2545,7 +2547,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -2806,10 +2808,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ChatColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: ChatColors.textHint.withOpacity(0.3),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, -3),
@@ -2827,7 +2829,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             Divider(
               height: 14,
               thickness: 1,
-              color: Colors.grey.withOpacity(0.2),
+              color: ChatColors.textHint.withOpacity(0.2),
             ),
           if (_isSelectionMode) ...[
             Text(
@@ -2930,7 +2932,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         // the extra one would only be ambiguous inside the shared card.
         if (!_isSelectionMode)
           IconButton(
-            icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+            icon: Icon(Icons.close, size: 20, color: ChatColors.textHint),
             tooltip: 'Close',
             onPressed: _closeReactionPicker,
           ),
@@ -3035,7 +3037,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: ChatColors.surface,
                 borderRadius: BorderRadius.circular(14),
                 // A ring the colour of the chat ground keeps the pill legible
                 // where it crosses the bubble.
@@ -3072,7 +3074,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       style: TextStyle(
                         fontSize: fontSettings.fontSize - 4,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
+                        color: ChatColors.textStrong,
                       ),
                     ),
                 ],
@@ -3173,7 +3175,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
     showModalBottomSheet(
       context: _chatModalContext,
-      backgroundColor: Colors.white,
+      backgroundColor: ChatColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -3202,7 +3204,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                         width: 36,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: ChatColors.divider,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -3236,7 +3238,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                             child: Icon(
                               Icons.add_reaction_outlined,
                               size: fontSettings.fontSize + 2,
-                              color: Colors.grey[700],
+                              color: ChatColors.textMuted,
                             ),
                           ),
                           // Tapping the chip already filtering clears it, so
@@ -3264,7 +3266,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                     style: TextStyle(
                                       fontSize: fontSettings.fontSize - 4,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.grey[800],
+                                      color: ChatColors.textStrong,
                                     ),
                                   ),
                                 ],
@@ -3287,7 +3289,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                             leading: CircleAvatar(
                               radius: 20,
                               backgroundColor: who.isMe
-                                  ? Colors.grey[400]
+                                  ? ChatColors.textFaint
                                   : ChatContact.generateColorFromName(who.name),
                               child: who.isMe
                                   ? const Icon(
@@ -3315,7 +3317,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                     'Tap to remove',
                                     style: TextStyle(
                                       fontSize: fontSettings.fontSize - 6,
-                                      color: Colors.grey[600],
+                                      color: ChatColors.textSecondary,
                                     ),
                                   )
                                 : null,
@@ -3364,7 +3366,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           decoration: BoxDecoration(
             color: selected
                 ? ChatColors.primary.withOpacity(0.12)
-                : Colors.grey.withOpacity(0.12),
+                : ChatColors.textHint.withOpacity(0.12),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected ? ChatColors.primary : Colors.transparent,
@@ -3458,7 +3460,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
     showModalBottomSheet(
       context: _chatModalContext,
-      backgroundColor: Colors.white,
+      backgroundColor: ChatColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -3478,7 +3480,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: ChatColors.divider,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -3505,7 +3507,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: ChatColors.textHint.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(
@@ -3517,7 +3519,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: fontSettings.fontSize - 3,
-                            color: Colors.black87,
+                            color: ChatColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -3525,7 +3527,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           'Sent ${_formatStamp(message.timestamp)}',
                           style: TextStyle(
                             fontSize: fontSettings.fontSize - 6,
-                            color: Colors.grey[600],
+                            color: ChatColors.textSecondary,
                           ),
                         ),
                       ],
@@ -3540,7 +3542,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                     style: TextStyle(
                       fontSize: fontSettings.fontSize - 3,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[800],
+                      color: ChatColors.textStrong,
                     ),
                   ),
                 ),
@@ -3552,7 +3554,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       'No one has read this yet.',
                       style: TextStyle(
                         fontSize: fontSettings.fontSize - 4,
-                        color: Colors.grey[600],
+                        color: ChatColors.textSecondary,
                       ),
                     ),
                   )
@@ -3569,7 +3571,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           leading: CircleAvatar(
                             radius: 20,
                             backgroundColor: who.isMe
-                                ? Colors.grey[400]
+                                ? ChatColors.textFaint
                                 : ChatContact.generateColorFromName(who.name),
                             child: who.isMe
                                 ? const Icon(
@@ -3600,7 +3602,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                   _formatStamp(seen.readAt!),
                                   style: TextStyle(
                                     fontSize: fontSettings.fontSize - 6,
-                                    color: Colors.grey[600],
+                                    color: ChatColors.textSecondary,
                                   ),
                                 ),
                           trailing: Icon(
@@ -3784,7 +3786,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   Widget _buildReplyPreview(ChatMessage msg, FontSettings fontSettings) {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-      color: Colors.grey[100],
+      color: ChatColors.groupedBackground,
       child: Row(
         children: [
           Container(
@@ -3815,7 +3817,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.grey[700],
+                    color: ChatColors.textMuted,
                     fontSize: fontSettings.fontSize - 3,
                   ),
                 ),
@@ -3823,7 +3825,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.grey),
+            icon: Icon(Icons.close, color: ChatColors.textHint),
             tooltip: 'Cancel reply',
             onPressed: _cancelReply,
           ),
@@ -4101,11 +4103,11 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
   Future<void> _showEditDialog(ChatMessage message) async {
     final newText = await showDialog<String>(
       context: _chatModalContext,
-      builder: (ctx) => _EditMessageDialog(
+      builder: (ctx) => ChatFontScope(child: _EditMessageDialog(
         initialText: message.text,
         windowNote: _editWindowNote(message),
         fontSettings: ref.read(chatFontSettingsProvider),
-      ),
+      )),
     );
 
     if (!mounted || newText == null) return;
@@ -4223,11 +4225,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final fontSettings = ref.read(chatFontSettingsProvider);
 
     showModalBottomSheet(
+      backgroundColor: ChatColors.surface,
       context: _chatModalContext,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => ChatFontScope(child: SafeArea(
         child: Wrap(
           children: [
             // ── Header ──
@@ -4235,7 +4238,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.delete_outline, color: Colors.grey),
+                  Icon(Icons.delete_outline, color: ChatColors.textHint),
                   const SizedBox(width: 10),
                   Text(
                     '${selectedIds.length} message${selectedIds.length > 1 ? 's' : ''} selected',
@@ -4301,7 +4304,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
             // ── Cancel ──
             ListTile(
-              leading: const Icon(Icons.cancel, color: Colors.grey),
+              leading: Icon(Icons.cancel, color: ChatColors.textHint),
               title: Text(
                 'Cancel',
                 style: TextStyle(fontSize: fontSettings.fontSize - 2),
@@ -4310,7 +4313,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -4610,7 +4613,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     return Padding(
       padding: const EdgeInsets.only(right: 12, bottom: 12),
       child: Material(
-        color: Colors.white,
+        color: ChatColors.surface,
         shape: const CircleBorder(),
         elevation: 3,
         child: InkWell(
@@ -4620,7 +4623,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             padding: const EdgeInsets.all(8),
             child: Icon(
               Icons.keyboard_double_arrow_down,
-              color: Colors.grey[700],
+              color: ChatColors.textMuted,
               size: 22,
             ),
           ),
@@ -4773,7 +4776,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
 
   PreferredSizeWidget _buildSearchAppBar(FontSettings fontSettings) {
     return AppBar(
-      backgroundColor: ChatColors.primary,
+      backgroundColor: ChatColors.appBar,
       foregroundColor: Colors.white,
       titleSpacing: 0,
       leading: IconButton(
@@ -4825,7 +4828,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+        border: Border(top: BorderSide(color: ChatColors.divider)),
       ),
       child: Row(
         children: [
@@ -4833,7 +4836,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.grey[700],
+                color: ChatColors.textMuted,
                 fontSize: fontSettings.fontSize - 3,
               ),
             ),
@@ -4889,7 +4892,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           width: 20,
           height: 20,
           child: _isLoadingOlder
-              ? const CircularProgressIndicator(
+              ? CircularProgressIndicator(
                   strokeWidth: 2,
                   color: ChatColors.primary,
                 )
@@ -4929,8 +4932,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             return Container(
               width: cellSize,
               height: cellSize,
-              color: Colors.grey[300],
-              child: const Center(
+              color: ChatColors.divider,
+              child: Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: ChatColors.primary,
@@ -4941,8 +4944,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           errorBuilder: (_, __, ___) => Container(
             width: cellSize,
             height: cellSize,
-            color: Colors.grey[300],
-            child: const Icon(Icons.broken_image, color: Colors.grey, size: 32),
+            color: ChatColors.divider,
+            child: Icon(Icons.broken_image, color: ChatColors.textHint, size: 32),
           ),
         );
       } else if (item.localPath != null && File(item.localPath!).existsSync()) {
@@ -4957,8 +4960,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         img = Container(
           width: cellSize,
           height: cellSize,
-          color: Colors.grey[300],
-          child: const Icon(Icons.image, color: Colors.grey, size: 32),
+          color: ChatColors.divider,
+          child: Icon(Icons.image, color: ChatColors.textHint, size: 32),
         );
       }
 
@@ -5027,8 +5030,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       : Container(
                           width: gridSize,
                           height: gridSize,
-                          color: Colors.grey[300],
-                          child: const Center(
+                          color: ChatColors.divider,
+                          child: Center(
                             child: CircularProgressIndicator(
                               color: ChatColors.primary,
                             ),
@@ -5037,10 +5040,10 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                   errorBuilder: (_, __, ___) => Container(
                     width: gridSize,
                     height: gridSize,
-                    color: Colors.grey[300],
-                    child: const Icon(
+                    color: ChatColors.divider,
+                    child: Icon(
                       Icons.broken_image,
-                      color: Colors.grey,
+                      color: ChatColors.textHint,
                       size: 48,
                     ),
                   ),
@@ -5055,8 +5058,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               : Container(
                   width: gridSize,
                   height: gridSize,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, color: Colors.grey, size: 48),
+                  color: ChatColors.divider,
+                  child: Icon(Icons.image, color: ChatColors.textHint, size: 48),
                 ),
         ),
       );
@@ -5352,7 +5355,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       value: isSelected,
                       activeColor: ChatColors.primary,
                       shape: const CircleBorder(),
-                      side: const BorderSide(
+                      side: BorderSide(
                         color: ChatColors.primary,
                         width: 2,
                       ),
@@ -5408,7 +5411,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           decoration: BoxDecoration(
                             color: ChatColors.accent,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
+                            border: Border.all(color: ChatColors.chatBackground, width: 1.5),
                           ),
                         ),
                       ),
@@ -6091,17 +6094,17 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.attach_file,
-                                color: Colors.grey,
+                                color: ChatColors.textHint,
                               ),
                               visualDensity: VisualDensity.compact,
                               onPressed: _onAttachFilePressed,
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.camera_alt,
-                                color: Colors.grey,
+                                color: ChatColors.textHint,
                               ),
                               visualDensity: VisualDensity.compact,
                               onPressed: _onCameraPressed,
@@ -6156,7 +6159,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           width: 40,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ChatColors.surface,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -6174,7 +6177,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 size: 20,
                 // Greens up as the lock comes within reach.
                 color: Color.lerp(
-                  Colors.grey[600],
+                  ChatColors.textSecondary,
                   ChatColors.primary,
                   progress,
                 ),
@@ -6183,7 +6186,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               Icon(
                 Icons.keyboard_arrow_up,
                 size: 18,
-                color: Colors.grey[500]?.withOpacity(0.4 + progress * 0.6),
+                color: ChatColors.textHint.withOpacity(0.4 + progress * 0.6),
               ),
             ],
           ),
@@ -6318,14 +6321,14 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
       children: [
         // Blinks, so a recording that is running is never mistaken for one
         // that has stalled.
-        _BlinkingDot(color: cancelling ? Colors.grey : Colors.red),
+        _BlinkingDot(color: cancelling ? ChatColors.textHint : Colors.red),
         const SizedBox(width: 10),
         Text(
           _formatRecordingTime(_recordingElapsed),
           style: TextStyle(
             fontSize: fontSettings.fontSize - 2,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: ChatColors.textPrimary,
           ),
         ),
         const SizedBox(width: 10),
@@ -6354,7 +6357,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: fontSettings.fontSize - 4,
-              color: cancelling ? Colors.red : Colors.grey[600],
+              color: cancelling ? Colors.red : ChatColors.textSecondary,
               fontWeight: cancelling ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -6381,7 +6384,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           style: TextStyle(
             fontSize: fontSettings.fontSize - 2,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: ChatColors.textPrimary,
           ),
         ),
         const SizedBox(width: 10),
@@ -6478,7 +6481,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             backgroundColor: ChatColors.chatBackground,
             appBar: _isSelectionMode
                 ? AppBar(
-                    backgroundColor: ChatColors.primary,
+                    backgroundColor: ChatColors.appBar,
                     foregroundColor: Colors.white,
                     leading: IconButton(
                       icon: const Icon(Icons.close),
@@ -6552,7 +6555,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 : _isSearching
                 ? _buildSearchAppBar(fontSettings)
                 : AppBar(
-                    backgroundColor: ChatColors.primary,
+                    backgroundColor: ChatColors.appBar,
                     foregroundColor: Colors.white,
                     leading: IconButton(
                       icon: const Icon(Icons.arrow_back),
@@ -6612,7 +6615,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                       color: ChatColors.accent,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.white,
+                                        color: ChatColors.appBar,
                                         width: 2,
                                       ),
                                     ),
@@ -6749,8 +6752,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
               child: Column(
                 children: [
                   if (_isLoadingMessages)
-                    const LinearProgressIndicator(
-                      backgroundColor: Colors.grey,
+                    LinearProgressIndicator(
+                      backgroundColor: ChatColors.textHint,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         ChatColors.primary,
                       ),
@@ -6764,7 +6767,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                       color: ChatColors.systemPill,
                       child: Row(
                         children: [
-                          const SizedBox(
+                          SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
@@ -6795,7 +6798,7 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                                 child: Text(
                                   'No messages yet',
                                   style: TextStyle(
-                                    color: Colors.grey,
+                                    color: ChatColors.textHint,
                                     fontSize: fontSettings.fontSize,
                                   ),
                                 ),
@@ -6896,21 +6899,21 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                         horizontal: 16,
                         vertical: 14,
                       ),
-                      color: Colors.grey[200],
+                      color: ChatColors.inputFill,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.lock_outline,
                             size: 16,
-                            color: Colors.grey[600],
+                            color: ChatColors.textSecondary,
                           ),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               'Only admins can send messages in this group',
                               style: TextStyle(
-                                color: Colors.grey[700],
+                                color: ChatColors.textMuted,
                                 fontSize: fontSettings.fontSize - 3,
                               ),
                             ),
@@ -7148,7 +7151,7 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
             style: TextStyle(fontSize: fontSettings.fontSize),
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
-              focusedBorder: const OutlineInputBorder(
+              focusedBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: ChatColors.primary, width: 2),
               ),
               hintText: 'Message',
@@ -7159,7 +7162,7 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
           Text(
             widget.windowNote,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: ChatColors.textSecondary,
               fontSize: fontSettings.fontSize - 5,
             ),
           ),
@@ -7171,7 +7174,7 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Colors.grey[700],
+              color: ChatColors.textMuted,
               fontSize: fontSettings.fontSize - 2,
             ),
           ),

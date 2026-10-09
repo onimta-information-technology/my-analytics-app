@@ -165,7 +165,7 @@ class _AddCallParticipantSheetState extends State<_AddCallParticipantSheet> {
 
   Widget _body() {
     if (_loading) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(color: ChatColors.accent),
       );
     }
@@ -209,7 +209,7 @@ class _AddCallParticipantSheetState extends State<_AddCallParticipantSheet> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.white),
               ),
-              trailing: const Icon(Icons.add_call, color: ChatColors.accent),
+              trailing: Icon(Icons.add_call, color: ChatColors.accent),
               onTap: () => Navigator.of(context).pop(c),
             );
           },

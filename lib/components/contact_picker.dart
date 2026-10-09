@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/models/chat_contact.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// The pieces the "New chat" and "New group" screens are built from.
@@ -15,9 +16,11 @@ import 'package:image_picker/image_picker.dart';
 
 /// WhatsApp's light-surface neutrals. Kept next to [ChatColors] rather than in
 /// it because these are picker chrome, not conversation colours.
-const Color kPickerTitle = Color(0xFF111B21);
-const Color kPickerSubtitle = Color(0xFF667781);
-const Color kPickerRule = Color(0xFFE9EDEF);
+// Getters rather than consts: they follow the chat's light / dark mode.
+Color get kPickerTitle => ChatColors.bubbleText;
+Color get kPickerSubtitle => ChatColors.bubbleMeta;
+Color get kPickerRule =>
+    ChatColors.isDark ? const Color(0xFF222D34) : const Color(0xFFE9EDEF);
 
 /// Name search shared by both screens.
 List<ChatContact> matchContacts(List<ChatContact> contacts, String query) {
@@ -268,11 +271,11 @@ class _TickBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: ChatColors.background,
         shape: BoxShape.circle,
       ),
-      child: const CircleAvatar(
+      child: CircleAvatar(
         radius: 8,
         backgroundColor: ChatColors.accent,
         child: Icon(Icons.check, size: 11, color: Colors.white),
@@ -358,7 +361,7 @@ class PickerSelectedStrip extends StatelessWidget {
             },
           ),
         ),
-        const Divider(height: 1, color: kPickerRule),
+        Divider(height: 1, color: kPickerRule),
       ],
     );
   }
@@ -371,11 +374,11 @@ class _RemoveBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: ChatColors.background,
         shape: BoxShape.circle,
       ),
-      child: const CircleAvatar(
+      child: CircleAvatar(
         radius: 8,
         backgroundColor: kPickerSubtitle,
         child: Icon(Icons.close, size: 11, color: Colors.white),
@@ -390,11 +393,12 @@ class _RemoveBadge extends StatelessWidget {
 /// avatar is capped the same way wherever it is set.
 Future<File?> pickChatAvatarImage(BuildContext context) async {
   final source = await showModalBottomSheet<ImageSource>(
+    backgroundColor: ChatColors.surface,
     context: context,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => SafeArea(
+    builder: (ctx) => ChatFontScope(child: SafeArea(
       child: Wrap(
         children: [
           ListTile(
@@ -409,7 +413,7 @@ Future<File?> pickChatAvatarImage(BuildContext context) async {
           ),
         ],
       ),
-    ),
+    )),
   );
   if (source == null) return null;
 

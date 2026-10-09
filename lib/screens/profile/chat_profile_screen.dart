@@ -116,7 +116,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
           if (!didPop) Navigator.pop(context, _avatarChanged);
         },
         child: Scaffold(
-          backgroundColor: Colors.grey.shade100,
+          backgroundColor: ChatColors.groupedBackground,
           appBar: AppBar(
             title: Text(
               'My Profile',
@@ -125,7 +125,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
                 fontWeight: fontSettings.fontWeight,
               ),
             ),
-            backgroundColor: ChatColors.primary,
+            backgroundColor: ChatColors.appBar,
             foregroundColor: Colors.white,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -197,7 +197,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
                           _name.trim().isEmpty
                               ? '?'
                               : _name.trim()[0].toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 40,
                             color: ChatColors.primary,
                             fontWeight: FontWeight.bold,
@@ -223,7 +223,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: ChatColors.primary, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.camera_alt,
                       size: 18,
                       color: ChatColors.primary,
@@ -330,7 +330,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ChatColors.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -360,7 +360,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
         label,
         style: TextStyle(
           fontSize: fontSettings.fontSize - 5,
-          color: Colors.black54,
+          color: ChatColors.textSecondary,
         ),
       ),
       subtitle: Text(
@@ -368,7 +368,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
         style: TextStyle(
           fontSize: fontSettings.fontSize - 2,
           fontWeight: fontSettings.fontWeight,
-          color: Colors.black87,
+          color: ChatColors.textPrimary,
         ),
       ),
     );
@@ -378,10 +378,10 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
   Future<void> _editUsername() async {
     final entered = await showDialog<String>(
       context: context,
-      builder: (ctx) => _UsernameDialog(
+      builder: (ctx) => ChatFontScope(child: _UsernameDialog(
         initialValue: _username,
         maxLength: _maxUsernameLength,
-      ),
+      )),
     );
     if (entered == null || !mounted) return;
 
@@ -405,7 +405,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
         };
       });
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Username updated'),
           backgroundColor: ChatColors.primary,
         ),
@@ -441,7 +441,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
       await _loadProfile();
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Profile photo updated'),
           backgroundColor: ChatColors.primary,
         ),
@@ -460,11 +460,12 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
 
   Future<File?> _pickImage() async {
     final source = await showModalBottomSheet<ImageSource>(
+      backgroundColor: ChatColors.surface,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => ChatFontScope(child: SafeArea(
         child: Wrap(
           children: [
             ListTile(
@@ -479,7 +480,7 @@ class _ChatProfileScreenState extends ConsumerState<ChatProfileScreen> {
             ),
           ],
         ),
-      ),
+      )),
     );
     if (source == null) return null;
 

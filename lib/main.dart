@@ -18,6 +18,7 @@ import 'package:ballys_reservation_app/models/call_session.dart';
 import 'package:ballys_reservation_app/navigation/app_navigation.dart';
 import 'package:ballys_reservation_app/providers/app_notifications_provider.dart';
 import 'package:ballys_reservation_app/providers/auth_provider.dart';
+import 'package:ballys_reservation_app/providers/chat_theme_provider.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/providers/transport_provider.dart';
 import 'package:ballys_reservation_app/utils/badge_sync_helper.dart';
@@ -143,6 +144,7 @@ late ProviderContainer globalContainer;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ChatDarkModeNotifier.preload();
 
   //await ScreenProtector.preventScreenshotOn();
  await ConnectivityService.instance.initialize();

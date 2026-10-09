@@ -115,7 +115,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(color: ChatColors.primary),
       );
     }
@@ -132,7 +132,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
       itemBuilder: (context, i) {
         if (i >= _calls.length) {
-          return const Padding(
+          return Padding(
             padding: EdgeInsets.all(16),
             child: Center(
               child: CircularProgressIndicator(color: ChatColors.primary),
@@ -214,7 +214,7 @@ class _CallRow extends StatelessWidget {
               _subtitle(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: ChatColors.bubbleMeta),
+              style: TextStyle(color: ChatColors.bubbleMeta),
             ),
           ),
         ],

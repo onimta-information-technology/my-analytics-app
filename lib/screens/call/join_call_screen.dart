@@ -226,7 +226,7 @@ class _JoinCallScreenState extends State<JoinCallScreen> {
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: ChatColors.accent,
                     shape: BoxShape.circle,
                   ),

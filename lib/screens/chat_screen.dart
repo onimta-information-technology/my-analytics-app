@@ -39,7 +39,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 /// Row tint for a long-pressed chat or group row. WhatsApp washes the whole
 /// row edge to edge instead of lifting a rounded card out of the list, so the
 /// selected row is a flat full-width block of colour.
-const Color _kChatSelectionColor = Color(0xFFE8F5E9);
+Color get _kChatSelectionColor => ChatColors.listSelection;
 
 class ChatScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? notificationData;
@@ -652,7 +652,7 @@ if (message.data['msg_type'] == '35') {
 
                 if (success) {
                   scaffoldMessenger.showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Chat deleted successfully. Refreshing...'),
                       backgroundColor: ChatColors.primary,
                       duration: Duration(seconds: 2),
@@ -839,7 +839,7 @@ if (message.data['msg_type'] == '35') {
   /// call", and " · Ringing" or " · Ongoing" while the call is still live.
   Widget _callSubtitle(CallHistoryEntry call, FontSettings fontSettings) {
     final kind = call.media == CallMedia.video ? 'video call' : 'voice call';
-    final Color grey = Colors.grey[600]!;
+    final Color grey = ChatColors.textSecondary;
     final double size = fontSettings.fontSize - 2;
 
     // This device's own phase is fresher than the history row.
@@ -1193,7 +1193,7 @@ if (message.data['msg_type'] == '35') {
         padding: const EdgeInsets.only(top: 4),
         child: Transform.rotate(
           angle: 0.6,
-          child: Icon(Icons.push_pin, size: 14, color: Colors.grey[600]),
+          child: Icon(Icons.push_pin, size: 14, color: ChatColors.textSecondary),
         ),
       );
 
@@ -1242,7 +1242,7 @@ if (message.data['msg_type'] == '35') {
       decoration: BoxDecoration(
         color: ChatColors.primary,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: ChatColors.background, width: 2),
       ),
       child: const Icon(Icons.check, size: 12, color: Colors.white),
     ),
@@ -1387,7 +1387,7 @@ if (message.data['msg_type'] == '35') {
       decoration: BoxDecoration(
         color: ChatColors.accent, // WhatsApp's online dot
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: ChatColors.background, width: 2),
       ),
     ),
   ),
@@ -1414,7 +1414,7 @@ if (message.data['msg_type'] == '35') {
                 Text(
                   stripChatFormatting(contact.lastMessage),
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: ChatColors.textSecondary,
                     fontSize: fontSettings.fontSize - 2,
                     fontWeight: contact.unreadCount > 0
                         ? FontWeight.w500
@@ -1427,7 +1427,7 @@ if (message.data['msg_type'] == '35') {
                   Text(
                     'by ${contact.lastMessageSenderName}',
                     style: TextStyle(
-                      color: Colors.grey[500],
+                      color: ChatColors.textHint,
                       fontSize: fontSettings.fontSize - 4,
                     ),
                   ),
@@ -1435,7 +1435,7 @@ if (message.data['msg_type'] == '35') {
                 Text(
                   'No messages yet',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: ChatColors.textSecondary,
                     fontSize: fontSettings.fontSize - 2,
                   ),
                 ),
@@ -1452,7 +1452,7 @@ if (message.data['msg_type'] == '35') {
                       tooltip: 'Delete chat',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.grey),
+                      icon: Icon(Icons.close, color: ChatColors.textHint),
                       onPressed: () {
                         setState(() {
                           _selectedContactId = null;
@@ -1471,7 +1471,7 @@ if (message.data['msg_type'] == '35') {
                           ? ChatContact.getTimeAgo(call!.createdAt)
                           : contact.time,
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: ChatColors.textSecondary,
                         fontSize: fontSettings.fontSize - 4,
                       ),
                     ),
@@ -1479,7 +1479,7 @@ if (message.data['msg_type'] == '35') {
                       Container(
                         margin: const EdgeInsets.only(top: 4),
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: ChatColors.accent,
                           shape: BoxShape.circle,
                         ),
@@ -1501,7 +1501,7 @@ if (message.data['msg_type'] == '35') {
                             : Icons.done,
                         color: contact.lastMessageRead
                             ? Colors.blue
-                            : Colors.grey,
+                            : ChatColors.textHint,
                         size: 16,
                       ),
                     if (contact.isPinned) _pinnedMarker(),
@@ -1650,7 +1650,7 @@ if (message.data['msg_type'] == '35') {
                     ? stripChatFormatting(group.lastMessage)
                     : 'No messages yet',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: ChatColors.textSecondary,
                   fontSize: fontSettings.fontSize - 2,
                 ),
                 maxLines: 1,
@@ -1660,7 +1660,7 @@ if (message.data['msg_type'] == '35') {
               '${group.memberCount} member${group.memberCount == 1 ? '' : 's'}'
               '${group.adminOnlyMessaging ? ' • Admins only' : ''}',
               style: TextStyle(
-                color: Colors.grey[500],
+                color: ChatColors.textHint,
                 fontSize: fontSettings.fontSize - 4,
               ),
             ),
@@ -1672,12 +1672,12 @@ if (message.data['msg_type'] == '35') {
                 children: [
                   _pinActionButton(group),
                   IconButton(
-                    icon: const Icon(Icons.info_outline, color: Colors.grey),
+                    icon: Icon(Icons.info_outline, color: ChatColors.textHint),
                     onPressed: () => _openGroupDetails(group, fontSettings),
                     tooltip: 'Group info',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: Icon(Icons.close, color: ChatColors.textHint),
                     onPressed: () =>
                         setState(() => _selectedContactId = null),
                     tooltip: 'Cancel',
@@ -1693,7 +1693,7 @@ if (message.data['msg_type'] == '35') {
                         ? ChatContact.getTimeAgo(call!.createdAt)
                         : group.time,
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: ChatColors.textSecondary,
                       fontSize: fontSettings.fontSize - 4,
                     ),
                   ),
@@ -1709,7 +1709,7 @@ if (message.data['msg_type'] == '35') {
                               customBorder: const CircleBorder(),
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: ChatColors.primary,
                                   shape: BoxShape.circle,
                                 ),
@@ -1725,7 +1725,7 @@ if (message.data['msg_type'] == '35') {
                           if (unreadCount > 0)
                             Container(
                               padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 color: ChatColors.accent,
                                 shape: BoxShape.circle,
                               ),
@@ -1753,7 +1753,7 @@ if (message.data['msg_type'] == '35') {
                           child: Icon(
                             Icons.info_outline,
                             size: 18,
-                            color: Colors.grey[500],
+                            color: ChatColors.textHint,
                           ),
                         ),
                       ),
@@ -1841,7 +1841,7 @@ if (message.data['msg_type'] == '35') {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(color: ChatColors.primary),
+            CircularProgressIndicator(color: ChatColors.primary),
             const SizedBox(height: 16),
             Text(
               'Loading groups...',
@@ -1895,13 +1895,13 @@ if (message.data['msg_type'] == '35') {
         child: ListView(
           children: [
             SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-            const Icon(Icons.groups_outlined, size: 50, color: Colors.grey),
+            Icon(Icons.groups_outlined, size: 50, color: ChatColors.textHint),
             const SizedBox(height: 16),
             Text(
               'No groups yet',
               style: TextStyle(
                 fontSize: fontSettings.fontSize,
-                color: Colors.black54,
+                color: ChatColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1941,7 +1941,7 @@ if (message.data['msg_type'] == '35') {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(color: ChatColors.primary),
+            CircularProgressIndicator(color: ChatColors.primary),
             const SizedBox(height: 16),
             Text(
               'Loading chats...',
@@ -1991,7 +1991,7 @@ if (message.data['msg_type'] == '35') {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.chat_bubble_outline, size: 50, color: Colors.grey),
+            Icon(Icons.chat_bubble_outline, size: 50, color: ChatColors.textHint),
             const SizedBox(height: 16),
             Text(
               tabIndex == 0
@@ -1999,7 +1999,7 @@ if (message.data['msg_type'] == '35') {
                   : "No ${['all', 'unread', 'groups', 'favorites', 'rewards'][tabIndex]} chats",
               style: TextStyle(
                 fontSize: fontSettings.fontSize,
-                color: Colors.black54,
+                color: ChatColors.textSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -2098,7 +2098,7 @@ if (message.data['msg_type'] == '35') {
             // backgroundColor: _selectedContactId != null
             //     ? Colors.red
             //     : ChatColors.primary,
-            backgroundColor: ChatColors.primary,
+            backgroundColor: ChatColors.appBar,
             foregroundColor: Colors.white,
             // leading: _selectedContactId != null
             //     ? IconButton(
@@ -2169,7 +2169,7 @@ if (message.data['msg_type'] == '35') {
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(100),
               child: Container(
-                color: Colors.white,
+                color: ChatColors.background,
                 child: Column(
                   children: [
                     Padding(
@@ -2184,7 +2184,7 @@ if (message.data['msg_type'] == '35') {
                           ),
                           prefixIcon: const Icon(Icons.search),
                           filled: true,
-                          fillColor: Colors.grey.shade200,
+                          fillColor: ChatColors.inputFill,
                           contentPadding: const EdgeInsets.symmetric(vertical: 0),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
@@ -2199,7 +2199,7 @@ if (message.data['msg_type'] == '35') {
                       tabAlignment: TabAlignment.start,
                       indicatorColor: ChatColors.primary,
                       labelColor: ChatColors.primary,
-                      unselectedLabelColor: Colors.black54,
+                      unselectedLabelColor: ChatColors.textSecondary,
                       labelStyle: TextStyle(
                         fontSize: fontSettings.fontSize - 4,
                         fontWeight: fontSettings.fontWeight,
@@ -2444,7 +2444,7 @@ if (message.data['msg_type'] == '35') {
             child: url == null
                 ? Text(
                     initial,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: ChatColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
@@ -2460,7 +2460,7 @@ if (message.data['msg_type'] == '35') {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.camera_alt,
                 size: 10,
                 color: ChatColors.primary,
@@ -2490,7 +2490,7 @@ if (message.data['msg_type'] == '35') {
     scaffoldMessenger.hideCurrentSnackBar();
     if (result['success'] == true) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Profile photo updated'),
           backgroundColor: ChatColors.primary,
         ),

@@ -12,23 +12,24 @@ class ChatWallpaper extends StatelessWidget {
   const ChatWallpaper({
     super.key,
     required this.child,
-    this.background = ChatColors.chatBackground,
-    this.doodle = ChatColors.wallpaperDoodle,
+    this.background,
+    this.doodle,
   });
 
   final Widget child;
 
-  /// The ground and glyph colours. The conversation uses the defaults; the
-  /// call screens pass a dark pair.
-  final Color background;
-  final Color doodle;
+  /// The ground and glyph colours. The conversation uses the chat palette's
+  /// pair (light or dark, whichever chat is in); the call screens pass a dark
+  /// pair of their own.
+  final Color? background;
+  final Color? doodle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: background,
+      color: background ?? ChatColors.chatBackground,
       child: CustomPaint(
-        painter: _DoodlePainter(doodle),
+        painter: _DoodlePainter(doodle ?? ChatColors.wallpaperDoodle),
         // The glyphs never move once laid out, so let the raster cache keep
         // them instead of re-drawing the whole field on every message.
         isComplex: true,

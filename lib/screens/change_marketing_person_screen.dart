@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
@@ -12,6 +13,7 @@ import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 /// Ballys-only screen for moving a member to a different marketing person.
@@ -28,20 +30,19 @@ class _ChangeMarketingPersonScreenState
     extends ConsumerState<ChangeMarketingPersonScreen> {
   static const List<String> _prefixes = ['BM', 'BL', 'BN'];
 
-  // TODO: replace with the real change-marketer Iid.
-  static const int _changeMarketerIid = 23232323;
-
   final GuestRepository _guestRepository = GuestRepository(
     ApiService(SecureStorage.instance),
   );
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _remarkController = TextEditingController();
   final FocusNode _memberIdFocusNode = FocusNode();
+  final ImagePicker _imagePicker = ImagePicker();
 
   String _selectedPrefix = 'BM';
   bool _isLoading = false;
   GuestSearchResponse? _member;
   String? _searchError;
+  final List<File> _selectedImages = [];
 
   /// Base text size from the user's font setting; every size on this screen
   /// is offset from it.
@@ -87,6 +88,7 @@ class _ChangeMarketingPersonScreenState
     setState(() {
       _memberIdController.clear();
       _remarkController.clear();
+      _selectedImages.clear();
       _member = null;
       _searchError = null;
     });
@@ -111,6 +113,178 @@ class _ChangeMarketingPersonScreenState
     context.push('/home/profile');
   }
 
+  // ── Image ───────────────────────────────────────────────────────────────
+
+  Future<void> _pickImages(ImageSource source) async {
+    try {
+      final List<XFile> picked;
+      if (source == ImageSource.gallery) {
+        picked = await _imagePicker.pickMultiImage(
+          maxWidth: 1280,
+          maxHeight: 1280,
+          imageQuality: 70,
+        );
+      } else {
+        final photo = await _imagePicker.pickImage(
+          source: source,
+          maxWidth: 1280,
+          maxHeight: 1280,
+          imageQuality: 70,
+        );
+        picked = photo == null ? [] : [photo];
+      }
+      if (picked.isEmpty || !mounted) return;
+      setState(() => _selectedImages.addAll(picked.map((x) => File(x.path))));
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Could not open the image picker.', Colors.red.shade400);
+    }
+  }
+
+  void _showImageSourceSheet() {
+    FocusScope.of(context).unfocus();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.photo_camera,
+                color: Constants.kPrimaryColor,
+              ),
+              title: Text('Take a photo', style: TextStyle(fontSize: _fs - 2)),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _pickImages(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library,
+                color: Constants.kPrimaryColor,
+              ),
+              title: Text(
+                'Choose from gallery',
+                style: TextStyle(fontSize: _fs - 2),
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _pickImages(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePicker() {
+    if (_selectedImages.isEmpty) {
+      return GestureDetector(
+        onTap: _isLoading ? null : _showImageSourceSheet,
+        child: Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.add_a_photo_outlined,
+                size: 36,
+                color: Constants.kPrimaryColor,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tap to attach images (optional)',
+                style: TextStyle(
+                  fontSize: _fs - 3,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 110,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _selectedImages.length + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          if (index == _selectedImages.length) {
+            return GestureDetector(
+              onTap: _isLoading ? null : _showImageSourceSheet,
+              child: Container(
+                width: 110,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.add_a_photo_outlined,
+                      color: Constants.kPrimaryColor,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Add more',
+                      style: TextStyle(
+                        fontSize: _fs - 5,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final image = _selectedImages[index];
+          return SizedBox(
+            width: 110,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(image, fit: BoxFit.cover),
+                ),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: _isLoading
+                        ? null
+                        : () => setState(() => _selectedImages.removeAt(index)),
+                    child: const CircleAvatar(
+                      radius: 13,
+                      backgroundColor: Colors.black54,
+                      child: Icon(Icons.close, size: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // ── Submit ──────────────────────────────────────────────────────────────
 
   Future<void> _onSubmit(GuestSearchResponse member) async {
@@ -119,7 +293,11 @@ class _ChangeMarketingPersonScreenState
 
     setState(() => _isLoading = true);
     try {
-      await _submitMarketerChange(member, _remarkController.text.trim());
+      await _submitMarketerChange(
+        member,
+        _remarkController.text.trim(),
+        _selectedImages,
+      );
       if (!mounted) return;
       _showSnackBar(
         'Marketer changed for ${member.mid}',
@@ -140,13 +318,18 @@ class _ChangeMarketingPersonScreenState
   Future<void> _submitMarketerChange(
     GuestSearchResponse member,
     String remark,
-  ) {
+    List<File> images,
+  ) async {
+    final imagesBase64 = [
+      for (final image in images) base64Encode(await image.readAsBytes()),
+    ];
     return _guestRepository.changeMarketer(
-      _changeMarketerIid,
       memberId: member.mid,
+      memberName: member.mName,
       remark: remark,
       marketingPerson: member.gName ?? '',
       marketingGroup: member.mGroup ?? '',
+      imagesBase64: imagesBase64,
     );
   }
 
@@ -182,6 +365,13 @@ class _ChangeMarketingPersonScreenState
                   style: const TextStyle(fontStyle: FontStyle.italic),
                 ),
               ],
+              if (_selectedImages.isNotEmpty)
+                TextSpan(
+                  text:
+                      '\n\n${_selectedImages.length} '
+                      '${_selectedImages.length == 1 ? 'image' : 'images'} '
+                      'attached.',
+                ),
             ],
           ),
         ),
@@ -672,10 +862,12 @@ class _ChangeMarketingPersonScreenState
             //   ),
             // ),
             // const SizedBox(height: 12),
+            _buildImagePicker(),
+            const SizedBox(height: 14),
             TextField(
               controller: _remarkController,
-              minLines: 2,
-              maxLines: 4,
+              minLines: 5,
+              maxLines: 10,
               maxLength: 250,
               textCapitalization: TextCapitalization.sentences,
               style: TextStyle(fontSize: _fs - 2),
@@ -689,7 +881,7 @@ class _ChangeMarketingPersonScreenState
                 ),
                 alignLabelWithHint: true,
                 prefixIcon: const Padding(
-                  padding: EdgeInsets.only(bottom: 24),
+                  padding: EdgeInsets.only(bottom: 80),
                   child: Icon(
                     Icons.notes_rounded,
                     color: Constants.kPrimaryColor,

@@ -350,89 +350,48 @@ print('API response for guest image: $response');
     throw Exception('Failed guests searching');
   }
 
-  /// Saves a member's marketer change through the common SP.
-  ///
-  /// Parameters: @Text1 member ID, @Text2 remark, @Text3 logged-in user,
-  /// @Text4 logged-in marketing code, @Text5 member's marketing person,
-  /// @Text6 member's marketing group, @Text30 device ID.
-  Future<void> changeMarketer(
-    int iid, {
+  // TODO: replace with the real change-marketer endpoint name.
+  static const String changeMarketerEndpoint = 'ChangeMarketer_Insert';
+
+  /// POST `{baseUrl}/ChangeMarketer_Insert` — saves a member's marketer
+  /// change along with the member's current marketing person and group.
+  /// [imagesBase64] holds zero or more images as base64 strings.
+  Future<void> changeMarketer({
     required String memberId,
+    required String memberName,
     required String remark,
     required String marketingPerson,
     required String marketingGroup,
+    List<String> imagesBase64 = const [],
   }) async {
     final deviceId = await DeviceId.get();
-    final spName = await StorageUtil.getStoredProcedureName();
     final userName = await StorageUtil.getUserName();
+    final salesCode = await StorageUtil.getSalesCode();
     final marketingCode = await StorageUtil.getMarketingCode();
-    print('Changing marketer for member $iid by $userName ($marketingCode): $remark');
-    final response = await apiService.post('CommonExecute', {
-      "HasReturnData": "T",
-      "Parameters": [
-        {
-          "Para_Data": iid,
-          "Para_Direction": "Input",
-          "Para_Lenth": 1,
-          "Para_Name": "@Iid",
-          "Para_Type": "int",
-        },
-        {
-          "Para_Data": memberId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text1",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": remark,
-          "Para_Direction": "Input",
-          "Para_Lenth": 250,
-          "Para_Name": "@Text2",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": userName ?? '',
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text3",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": marketingCode ?? '',
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text4",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": marketingPerson,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text5",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": marketingGroup,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text6",
-          "Para_Type": "varchar",
-        },
-        {
-          "Para_Data": deviceId,
-          "Para_Direction": "Input",
-          "Para_Lenth": 100,
-          "Para_Name": "@Text30",
-          "Para_Type": "varchar",
-        },
-      ],
-      "SpName": spName,
-      "con": "1",
-    });
 
-    if (response['strRturnRes'] == false) {
-      throw Exception('Failed to change marketer');
+    final body = <String, Object?>{
+      'MId': memberId,
+      'MName': memberName,
+      'PrvMPerson': marketingPerson,
+      'PrvMGroup': marketingGroup,
+      'Remark': remark,
+      'Images': imagesBase64,
+      'DeviceId': deviceId,
+      'ReqMperson': userName,
+      'ReqSales_Code': salesCode,
+      'ReqMCode': marketingCode,
+      
+    };
+    // Log a readable copy: the full base64 images would swamp the terminal.
+    final logBody = Map<String, Object?>.from(body);
+    logBody['Images'] = [
+      for (final image in imagesBase64) '<base64 image, ${image.length} chars>',
+    ];
+    print('Change marketer request body: $logBody');
+
+    final response = await apiService.post(changeMarketerEndpoint, body);
+    if (response['Status'] == false) {
+      throw Exception(response['Message'] ?? 'Failed to change marketer');
     }
   }
 }

@@ -4,8 +4,10 @@ import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,14 +26,10 @@ class ChangeMarketingPersonScreen extends ConsumerStatefulWidget {
 
 class _ChangeMarketingPersonScreenState
     extends ConsumerState<ChangeMarketingPersonScreen> {
-  // TODO: replace with the marketer list API once it is available.
-  static const List<({String code, String name})> _marketers = [
-    (code: '1001', name: 'Marketer One'),
-    (code: '1002', name: 'Marketer Two'),
-    (code: '1003', name: 'Marketer Three'),
-  ];
-
   static const List<String> _prefixes = ['BM', 'BL', 'BN'];
+
+  // TODO: replace with the real change-marketer Iid.
+  static const int _changeMarketerIid = 23232323;
 
   final GuestRepository _guestRepository = GuestRepository(
     ApiService(SecureStorage.instance),
@@ -44,7 +42,6 @@ class _ChangeMarketingPersonScreenState
   bool _isLoading = false;
   GuestSearchResponse? _member;
   String? _searchError;
-  String? _selectedMarketerCode;
 
   /// Base text size from the user's font setting; every size on this screen
   /// is offset from it.
@@ -67,7 +64,6 @@ class _ChangeMarketingPersonScreenState
       _isLoading = true;
       _member = null;
       _searchError = null;
-      _selectedMarketerCode = null;
     });
 
     try {
@@ -93,40 +89,47 @@ class _ChangeMarketingPersonScreenState
       _remarkController.clear();
       _member = null;
       _searchError = null;
-      _selectedMarketerCode = null;
     });
+  }
+
+  void _openProfile(GuestSearchResponse member) {
+    ref
+        .read(selectedGuestProvider.notifier)
+        .setSelectedGuest(
+          Guest(
+            mid: member.mid,
+            memberName: member.mName,
+            country: "",
+            lastVisitDate: member.lvd?.toString() ?? "",
+            age: 0,
+            gRating: member.gRating ?? "",
+            mGroup: member.mGroup,
+            gName: member.gName ?? "",
+            memImage2: member.memImage2,
+          ),
+        );
+    context.push('/home/profile');
   }
 
   // ── Submit ──────────────────────────────────────────────────────────────
 
   Future<void> _onSubmit(GuestSearchResponse member) async {
-    final marketer = _marketers
-        .where((m) => m.code == _selectedMarketerCode)
-        .firstOrNull;
-    if (marketer == null) return;
-
-    final confirmed = await _confirmSubmit(member, marketer.name);
+    final confirmed = await _confirmSubmit(member);
     if (confirmed != true || !mounted) return;
 
     setState(() => _isLoading = true);
     try {
-      await _submitMarketerChange(
-        member,
-        marketer.code,
-        _remarkController.text.trim(),
-      );
+      await _submitMarketerChange(member, _remarkController.text.trim());
       if (!mounted) return;
       _showSnackBar(
-        '${member.mid} moved to ${marketer.name}',
+        'Marketer changed for ${member.mid}',
         Colors.green.shade600,
       );
       _clearSearch();
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       _showSnackBar(
-        e is UnimplementedError
-            ? 'Submit API is not connected yet'
-            : 'Could not change marketer. Please try again.',
+        'Could not change marketer. Please try again.',
         Colors.red.shade400,
       );
     } finally {
@@ -134,16 +137,20 @@ class _ChangeMarketingPersonScreenState
     }
   }
 
-  // TODO: call the change-marketer API once it is available.
   Future<void> _submitMarketerChange(
     GuestSearchResponse member,
-    String marketerCode,
     String remark,
-  ) async {
-    throw UnimplementedError();
+  ) {
+    return _guestRepository.changeMarketer(
+      _changeMarketerIid,
+      memberId: member.mid,
+      remark: remark,
+      marketingPerson: member.gName ?? '',
+      marketingGroup: member.mGroup ?? '',
+    );
   }
 
-  Future<bool?> _confirmSubmit(GuestSearchResponse member, String newName) {
+  Future<bool?> _confirmSubmit(GuestSearchResponse member) {
     final current = (member.gName ?? '').isEmpty ? '-' : member.gName!;
     return showDialog<bool>(
       context: context,
@@ -157,22 +164,17 @@ class _ChangeMarketingPersonScreenState
           TextSpan(
             style: TextStyle(fontSize: _fs - 3, color: Colors.black87),
             children: [
-              const TextSpan(text: 'Move '),
+              const TextSpan(text: 'Change marketer for '),
               TextSpan(
                 text: '${member.mid} (${member.mName})',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              const TextSpan(text: ' from '),
+              const TextSpan(text: ' (current: '),
               TextSpan(
                 text: current,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              const TextSpan(text: ' to '),
-              TextSpan(
-                text: newName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const TextSpan(text: '?'),
+              const TextSpan(text: ')?'),
               if (_remarkController.text.trim().isNotEmpty) ...[
                 const TextSpan(text: '\n\nRemark: '),
                 TextSpan(
@@ -611,6 +613,19 @@ class _ChangeMarketingPersonScreenState
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  onPressed: _isLoading ? null : () => _openProfile(member),
+                  child: const Icon(Icons.person_search, size: 25),
+                ),
               ],
             ),
           ),
@@ -640,12 +655,6 @@ class _ChangeMarketingPersonScreenState
   // ── New marketer ────────────────────────────────────────────────────────
 
   Widget _buildMarketerCard(GuestSearchResponse member) {
-    final current = (member.gName ?? '').isEmpty ? '-' : member.gName!;
-    final selected = _marketers
-        .where((m) => m.code == _selectedMarketerCode)
-        .map((m) => m.name)
-        .firstOrNull;
-
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -654,95 +663,15 @@ class _ChangeMarketingPersonScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Assign New Marketer',
-              style: TextStyle(
-                fontSize: _fs - 2,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              // Keyed on the member so a new search starts with nothing
-              // selected.
-              key: ValueKey(member.mid),
-              initialValue: _selectedMarketerCode,
-              isExpanded: true,
-              style: TextStyle(fontSize: _fs - 2, color: Colors.black),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              decoration: InputDecoration(
-                hintText: 'Select marketer',
-                hintStyle: TextStyle(
-                  fontSize: _fs - 2,
-                  color: Colors.grey.shade500,
-                ),
-                prefixIcon: const Icon(
-                  Icons.person_search_outlined,
-                  color: Constants.kPrimaryColor,
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Constants.kPrimaryColor,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-              items: _marketers
-                  .map(
-                    (m) => DropdownMenuItem<String>(
-                      value: m.code,
-                      child: Text(m.name),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _selectedMarketerCode = value),
-            ),
-            if (selected != null) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildChangeSide(
-                        'From',
-                        current,
-                        Colors.grey.shade700,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildChangeSide(
-                        'To',
-                        selected,
-                        Colors.green.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 14),
+            // Text(
+            //   'Assign New Marketer',
+            //   style: TextStyle(
+            //     fontSize: _fs - 2,
+            //     fontWeight: FontWeight.bold,
+            //     color: Colors.grey.shade800,
+            //   ),
+            // ),
+            // const SizedBox(height: 12),
             TextField(
               controller: _remarkController,
               minLines: 2,
@@ -785,9 +714,7 @@ class _ChangeMarketingPersonScreenState
             SizedBox(
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: selected == null || _isLoading
-                    ? null
-                    : () => _onSubmit(member),
+                onPressed: _isLoading ? null : () => _onSubmit(member),
                 icon: const Icon(Icons.check_circle_outline),
                 label: Text(
                   'Submit',
@@ -810,26 +737,6 @@ class _ChangeMarketingPersonScreenState
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildChangeSide(String label, String name, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: _fs - 6, color: Colors.grey.shade600),
-        ),
-        Text(
-          name,
-          style: TextStyle(
-            fontSize: _fs - 3,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
     );
   }
 

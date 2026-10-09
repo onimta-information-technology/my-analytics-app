@@ -5849,13 +5849,41 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final callerLabel = _senderLabel(message);
     final showCaller = widget.isGroup && !message.isMe;
 
+    // Same avatar as a text bubble from this sender, so the call log lines up
+    // with the rest of the conversation.
+    final callerAvatarUrl = widget.isGroup
+        ? _senderAvatarUrl(message, callerLabel)
+        : widget.contact.avatarUrl;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         mainAxisAlignment: message.isMe
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (!message.isMe) ...[
+            GestureDetector(
+              onTap: () => showAvatarPhoto(
+                context,
+                url: callerAvatarUrl,
+                title: widget.isGroup ? callerLabel : widget.contact.name,
+              ),
+              child: UserAvatar(
+                avatarUrl: callerAvatarUrl,
+                initials: widget.isGroup
+                    ? ChatContact.generateInitials(callerLabel)
+                    : widget.contact.initials,
+                backgroundColor: widget.isGroup
+                    ? ChatContact.generateColorFromName(callerLabel)
+                    : widget.contact.avatarColor,
+                radius: 15,
+                fontSize: fontSettings.fontSize - 4,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           Flexible(
             child: Material(
               color: message.isMe

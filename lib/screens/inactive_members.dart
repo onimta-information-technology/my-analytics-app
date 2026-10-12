@@ -56,6 +56,10 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
   /// filter is applied, after which the search bar and the list take over.
   bool _isFilterPanelOpen = true;
 
+  /// Once results are shown, the text size, search, applied filter and rating
+  /// bars can be folded into one compact row to give the list more room.
+  bool _isHeaderCollapsed = false;
+
   /// The filter values the currently displayed data was fetched with. Null
   /// until the first fetch, so nothing is claimed before a filter is applied.
   String? _appliedDateOption;
@@ -368,6 +372,7 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
               child: Column(
               children: [
                 // ── Text size selector (1x / 1.2x / 1.3x) ──────────────
+                if (_isFilterPanelOpen || !_isHeaderCollapsed)
                 MediaQuery(
                   data: MediaQuery.of(
                     context,
@@ -379,7 +384,9 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 ),
                 if (_isFilterPanelOpen)
                   _buildFilterPanel()
-                else ...[
+                else if (_isHeaderCollapsed) ...[
+                _buildCollapsedHeader(),
+                ] else ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                   child: TextField(
@@ -437,6 +444,8 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 ),
                 _buildAppliedFilterBar(),
                 if (!_showingGroups && !_isLoading) _buildRatingCountBar(),
+                ],
+                if (!_isFilterPanelOpen) ...[
                 if (_showingGroups)
                   Expanded(
                     child: groups.isEmpty
@@ -727,6 +736,18 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                 icon: const Icon(Icons.edit, size: 16),
                 label: const Text('Change'),
               ),
+              IconButton(
+                tooltip: 'Collapse filters',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(
+                  Icons.expand_less,
+                  color: Constants.kPrimaryColor,
+                ),
+                onPressed: () {
+                  FocusScope.of(context).unfocus();
+                  setState(() => _isHeaderCollapsed = true);
+                },
+              ),
             ],
           ),
           if (!_isLoading)
@@ -738,6 +759,57 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Single-line stand-in for the folded header: the applied filter, any
+  /// active search / rating, the result count and an expand button.
+  Widget _buildCollapsedHeader() {
+    final dateLabel = _dateOptionLabels[_appliedDateOption] ?? '-';
+    final buyInLabel = _buyInOptionLabels[_appliedBuyInOption] ?? '-';
+    final count = _showingGroups ? groups.length : inactiveMembers.length;
+    final parts = <String>[
+      dateLabel,
+      buyInLabel,
+      if (_searchController.text.isNotEmpty) '"${_searchController.text}"',
+      if (!_showingGroups && _selectedRating != null) _selectedRating!,
+      if (!_isLoading) '$count ${_showingGroups ? (count == 1 ? 'group' : 'groups') : (count == 1 ? 'member' : 'members')}',
+    ];
+
+    return InkWell(
+      onTap: () => setState(() => _isHeaderCollapsed = false),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+        padding: const EdgeInsets.only(left: 12),
+        decoration: BoxDecoration(
+          color: Constants.kPrimaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Constants.kPrimaryColor.withOpacity(0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.tune, size: 16, color: Constants.kPrimaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                parts.join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Expand filters',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(
+                Icons.expand_more,
+                color: Constants.kPrimaryColor,
+              ),
+              onPressed: () => setState(() => _isHeaderCollapsed = false),
+            ),
+          ],
+        ),
       ),
     );
   }

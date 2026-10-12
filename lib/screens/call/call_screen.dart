@@ -449,6 +449,7 @@ class _OneToOneStageState extends State<_OneToOneStage> {
         track,
         key: ObjectKey(track),
         fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        renderMode: VideoRenderMode.texture,
       );
 }
 
@@ -542,6 +543,7 @@ class _RemoteScreenStage extends StatelessWidget {
                   track,
                   key: ObjectKey(track),
                   fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                  renderMode: VideoRenderMode.texture,
                 ),
               ),
             ),
@@ -1139,6 +1141,7 @@ class _ParticipantTile extends StatelessWidget {
             VideoTrackRenderer(
               track!,
               fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+              renderMode: VideoRenderMode.texture,
             )
           else
             Center(child: _Avatar(name: name, radius: 32)),

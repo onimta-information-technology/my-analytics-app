@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
+import 'package:ballys_reservation_app/screens/call/floating_call_video.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -27,19 +28,29 @@ class OngoingCallBar extends StatelessWidget {
         builder: (context, shown, _) => ListenableBuilder(
           listenable: call ?? const _Never(),
           builder: (context, _) {
-            final visible = !shown && _isLive(call);
+            final minimized = !shown && _isLive(call) ? call : null;
+            // Voice calls get the bar; video calls float as a small video
+            // window over the app instead, like WhatsApp.
+            final barVisible = minimized != null && !minimized.isVideo;
+            final videoVisible = minimized != null && minimized.isVideo;
             // The tree keeps the same shape either way so the app's navigator
             // below is never rebuilt from scratch when the bar comes and goes.
-            return Column(
+            return Stack(
+              fit: StackFit.expand,
               children: [
-                if (visible) _Bar(controller: call!),
-                Expanded(
-                  child: MediaQuery.removePadding(
-                    context: context,
-                    removeTop: visible,
-                    child: child,
-                  ),
+                Column(
+                  children: [
+                    if (barVisible) _Bar(controller: minimized),
+                    Expanded(
+                      child: MediaQuery.removePadding(
+                        context: context,
+                        removeTop: barVisible,
+                        child: child,
+                      ),
+                    ),
+                  ],
                 ),
+                if (videoVisible) FloatingCallVideo(controller: minimized),
               ],
             );
           },

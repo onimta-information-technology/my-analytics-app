@@ -1,0 +1,466 @@
+// ============================================================
+// FILE: lib/components/follow_up_pdf_button.dart
+//
+// Builds a watermarked PDF of one follow-up and offers the same two ways out
+// as ReservationPdfButtonBallys: the OS share sheet (WhatsApp and friends) and
+// the app's own chat, to any mix of 1:1 conversations and groups.
+//
+// Only the AD001 admin may share any follow-up; everyone else sees the
+// buttons on their own follow-ups only.
+//
+// USAGE in FollowUpViewScreen:
+//   FollowUpPdfButton(item: item),
+// ============================================================
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
+import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
+import 'package:ballys_reservation_app/models/follow_up_item.dart';
+import 'package:ballys_reservation_app/providers/follow_up_provider.dart';
+import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+
+class FollowUpPdfButton extends ConsumerStatefulWidget {
+  final FollowUpItem item;
+
+  const FollowUpPdfButton({super.key, required this.item});
+
+  /// AD001 may share every follow-up; anyone else only the ones they saved.
+  static bool canShare({
+    required FollowUpItem item,
+    required String? currentUser,
+    required bool isAdmin,
+  }) {
+    if (isAdmin) return true;
+    final me = currentUser?.trim().toLowerCase() ?? '';
+    final owner = item.loginBy?.trim().toLowerCase() ?? '';
+    return me.isNotEmpty && me == owner;
+  }
+
+  @override
+  ConsumerState<FollowUpPdfButton> createState() => _FollowUpPdfButtonState();
+}
+
+class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
+  /// True while the picked chats are being uploaded to, so both buttons are
+  /// held shut and the chat one shows progress.
+  bool _isSendingToChat = false;
+
+  /// True while the PDF is being built for the share sheet.
+  bool _isSharing = false;
+
+  FollowUpItem get _item => widget.item;
+
+  String _fmt(DateTime dt) => DateFormat('dd MMM yyyy  hh:mm a').format(dt);
+
+  // ── PDF builder ──────────────────────────────────────────────────────────
+  Future<pw.Document> _buildPdf() async {
+    // Fonts come from Google Fonts like the reservation PDF; offline, fall
+    // back to the built-in Helvetica rather than failing the share.
+    pw.ThemeData theme;
+    try {
+      theme = pw.ThemeData.withFont(
+        base: await PdfGoogleFonts.nunitoRegular(),
+        bold: await PdfGoogleFonts.nunitoBold(),
+      );
+    } catch (e) {
+      debugPrint('Follow-up PDF font load failed: $e');
+      theme = pw.ThemeData.base();
+    }
+
+    final sharedBy = ref.read(currentUserNameProvider).valueOrNull ?? '';
+    final generatedAt = _fmt(DateTime.now());
+    final photo = _item.photoBytes;
+
+    final labelStyle = pw.TextStyle(
+      fontWeight: pw.FontWeight.bold,
+      fontSize: 11,
+    );
+    const valueStyle = pw.TextStyle(fontSize: 11);
+
+    pw.Widget row(String label, String? value, {PdfColor? color}) {
+      final text = (value == null || value.trim().isEmpty) ? '-' : value;
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.SizedBox(width: 130, child: pw.Text(label, style: labelStyle)),
+            pw.Expanded(
+              child: pw.Text(
+                text,
+                style: color == null
+                    ? valueStyle
+                    : valueStyle.copyWith(
+                        color: color,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    pw.Widget section(String title, List<pw.Widget> children) {
+      return pw.Container(
+        width: double.infinity,
+        margin: const pw.EdgeInsets.only(bottom: 14),
+        padding: const pw.EdgeInsets.all(14),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              title,
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 6),
+            ...children,
+          ],
+        ),
+      );
+    }
+
+    final responseColor = _item.isPositive
+        ? PdfColors.green700
+        : _item.isNegative
+            ? PdfColors.red
+            : null;
+
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.MultiPage(
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          theme: theme,
+          // Background, so the watermark repeats on every page and sits
+          // behind the content.
+          buildBackground: (context) =>
+              _buildWatermark(sharedBy, generatedAt),
+        ),
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.center,
+          margin: const pw.EdgeInsets.only(top: 10),
+          child: pw.Text(
+            'System generated · Shared by ${sharedBy.isEmpty ? '-' : sharedBy}'
+            ' · $generatedAt · Page ${context.pageNumber}/${context.pagesCount}',
+            style: pw.TextStyle(
+              fontSize: 9,
+              fontStyle: pw.FontStyle.italic,
+              color: PdfColors.grey700,
+            ),
+          ),
+        ),
+        build: (context) => [
+          pw.Center(
+            child: pw.Text(
+              'FOLLOW-UP DETAILS',
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(height: 18),
+          section('MEMBER', [
+            row('Member ID:', _item.memberId),
+            row('Member Name:', _item.memberName),
+            row('Followed by:', _item.loginBy),
+            row(
+              'Follow-up Date:',
+              _item.createdDate == null ? null : _fmt(_item.createdDate!),
+            ),
+          ]),
+          section('FOLLOW-UP', [
+            row('Description:', _item.description),
+            row('Contact Status:', _item.contactStatus),
+            if (_item.contactStatus == 'Contacted') ...[
+              row('Response:', _item.responseType, color: responseColor),
+              row('Customer Response:', _item.customerResponse),
+              if (_item.remarks != null && _item.remarks!.isNotEmpty)
+                row('Remarks:', _item.remarks),
+              if (_item.isPositive) ...[
+                row(
+                  'Checklist:',
+                  _item.checklistItems.isEmpty
+                      ? null
+                      : _item.checklistItems.map((c) => '• $c').join('\n'),
+                ),
+                row('Status:', _item.positiveStatus),
+              ],
+            ],
+          ]),
+          if (photo != null)
+            section('PHOTO', [
+              pw.Center(
+                child: pw.Image(
+                  pw.MemoryImage(photo),
+                  height: 260,
+                  fit: pw.BoxFit.contain,
+                ),
+              ),
+            ]),
+        ],
+      ),
+    );
+
+    return pdf;
+  }
+
+  /// The sharer's name and the time, tiled diagonally across the whole page.
+  pw.Widget _buildWatermark(String userName, String generatedAt) {
+    final text = '${userName.isEmpty ? 'Ballys' : userName}\n$generatedAt';
+
+    return pw.FullPage(
+      ignoreMargins: true,
+      child: pw.Opacity(
+        opacity: 0.15,
+        child: pw.Column(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+          children: List.generate(
+            9,
+            (r) => pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+              children: List.generate(
+                3,
+                (c) => pw.Transform.rotate(
+                  angle: 0.5,
+                  child: pw.Text(
+                    text,
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                      fontSize: 13,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Member ids and names can carry characters that don't belong in a
+  /// filename, so keep only what is safe on disk.
+  String get _pdfFileName {
+    final safe = '${_item.memberId}_${_item.memberName}'
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+    return 'FollowUp_${safe.isEmpty ? 'details' : safe}.pdf';
+  }
+
+  // ── Share PDF via WhatsApp ────────────────────────────────────────────────
+  Future<void> _sharePdfToWhatsApp() async {
+    if (_isSharing) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSharing = true);
+    try {
+      final doc = await _buildPdf();
+      final bytes = await doc.save();
+      await Printing.sharePdf(bytes: bytes, filename: _pdfFileName);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to share PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  // ── Send PDF into the in-app chat ─────────────────────────────────────────
+  //
+  // Same flow as the reservation PDF: the upload endpoint takes file paths, so
+  // the document goes to the temp directory first; a first-time recipient has
+  // a chat opened for them before the upload.
+  Future<void> _sendPdfToChat() async {
+    if (_isSendingToChat) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final fontSettings = ref.read(fontSettingsProvider);
+
+    final targets = await showForwardMessageSheet(
+      context: context,
+      fontSettings: fontSettings,
+      messageCount: 1,
+      title: 'Send follow-up PDF',
+      icon: Icons.picture_as_pdf,
+    );
+    if (targets == null || targets.isEmpty || !mounted) return;
+
+    setState(() => _isSendingToChat = true);
+
+    final sent = <String>[];
+    final failed = <String>[];
+    String? firstError;
+
+    try {
+      final doc = await _buildPdf();
+      final bytes = await doc.save();
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$_pdfFileName');
+      await file.writeAsBytes(bytes, flush: true);
+
+      // Groups first, matching the order the picker reports names in.
+      for (var i = 0; i < targets.chatIds.length; i++) {
+        final name = i < targets.names.length ? targets.names[i] : 'Group';
+        final error = await _uploadPdfTo(targets.chatIds[i], file.path);
+        (error == null ? sent : failed).add(name);
+        if (error != null) firstError ??= error;
+      }
+
+      for (final contact in targets.contacts) {
+        var chatId = contact.chatUuid;
+
+        if (chatId.isEmpty) {
+          final created = await FirebaseApiService.createChatDetailed(
+            contact.userUuid,
+            userAppType: contact.appType,
+          );
+          chatId = (created['chatId'] as String?) ?? '';
+          if (chatId.isEmpty) {
+            failed.add(contact.name);
+            firstError ??= created['error']?.toString();
+            continue;
+          }
+        }
+
+        final error = await _uploadPdfTo(chatId, file.path);
+        (error == null ? sent : failed).add(contact.name);
+        if (error != null) firstError ??= error;
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSendingToChat = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to send PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isSendingToChat = false);
+
+    final reason = firstError == null ? '' : ': $firstError';
+    final message = failed.isEmpty
+        ? 'Follow-up PDF sent to ${sent.join(', ')}'
+        : sent.isEmpty
+            ? 'Could not send to ${failed.join(', ')}$reason'
+            : 'Sent to ${sent.join(', ')} · failed for '
+                '${failed.join(', ')}$reason';
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: failed.isEmpty
+            ? Colors.green
+            : (sent.isEmpty ? Colors.red : Colors.orange),
+      ),
+    );
+  }
+
+  /// Returns null when the upload landed, or why it did not.
+  Future<String?> _uploadPdfTo(String chatId, String filePath) async {
+    try {
+      final result = await FirebaseApiService.uploadFiles(
+        chatId: chatId,
+        filePaths: [filePath],
+      );
+      if (result['success'] == true) return null;
+      return FirebaseApiService.errorTextFrom(result);
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserNameProvider).valueOrNull;
+    final isAdmin = ref.watch(isAdminSalesCodeProvider).valueOrNull ?? false;
+    if (!FollowUpPdfButton.canShare(
+      item: _item,
+      currentUser: currentUser,
+      isAdmin: isAdmin,
+    )) {
+      return const SizedBox.shrink();
+    }
+
+    final busy = _isSharing || _isSendingToChat;
+
+    return Column(
+      children: [
+        _pdfButton(
+          color: const Color(0xFF25D366),
+          icon: Icons.share,
+          label: _isSharing ? 'PREPARING...' : 'SHARE FOLLOW-UP VIA WHATSAPP',
+          busy: _isSharing,
+          onPressed: busy ? null : _sharePdfToWhatsApp,
+        ),
+        const SizedBox(height: 10),
+        _pdfButton(
+          color: const Color(0xFF0C3B79),
+          icon: Icons.forum,
+          label: _isSendingToChat ? 'SENDING...' : 'SEND FOLLOW-UP VIA CHAT',
+          busy: _isSendingToChat,
+          onPressed: busy ? null : _sendPdfToChat,
+        ),
+      ],
+    );
+  }
+
+  Widget _pdfButton({
+    required Color color,
+    required IconData icon,
+    required String label,
+    required bool busy,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        icon: busy
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: color.withOpacity(0.6),
+          disabledForegroundColor: Colors.white70,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        ),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}

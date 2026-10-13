@@ -1,5 +1,6 @@
 // lib/screens/follow_up_view_screen.dart
 
+import 'package:ballys_reservation_app/components/follow_up_pdf_button.dart';
 import 'package:ballys_reservation_app/components/guestDisplayCardById.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
@@ -269,6 +270,10 @@ class FollowUpViewScreen extends StatelessWidget {
                   ),
                 ],
               ],
+
+              // ── Share (AD001, or the user who saved it) ──────────────────
+              const SizedBox(height: 24),
+              FollowUpPdfButton(item: item),
             ],
           ),
         ),

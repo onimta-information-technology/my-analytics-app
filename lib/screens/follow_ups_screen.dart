@@ -389,6 +389,19 @@ class _FollowUpCard extends StatelessWidget {
 
   const _FollowUpCard({required this.item, this.onUnfollow});
 
+  /// Whole calendar days since the follow-up was saved, e.g. "Today",
+  /// "1 day ago", "12 days ago". Null when the API sent no created date.
+  String? get _daysSinceLabel {
+    final created = item.createdDate;
+    if (created == null) return null;
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month, now.day)
+        .difference(DateTime(created.year, created.month, created.day))
+        .inDays;
+    if (days <= 0) return 'Today';
+    return days == 1 ? '1 day ago' : '$days days ago';
+  }
+
   Color get _responseColor {
     if (item.isPositive) return Colors.green;
     if (item.isNegative) return Colors.red;
@@ -494,6 +507,11 @@ class _FollowUpCard extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
+                        if (_daysSinceLabel != null)
+                          _Chip(
+                            label: _daysSinceLabel!,
+                            color: Colors.black,
+                          ),
                         if (item.contactStatus.isNotEmpty)
                           _Chip(
                             label: item.contactStatus,

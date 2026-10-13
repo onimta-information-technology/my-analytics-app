@@ -485,7 +485,13 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
   ref
       .read(selectedGuestProvider.notifier)
       .setSelectedGuest(guest);
-  context.push('/home/profile', extra: {'showFollowButton': true});
+  context.push('/home/profile', extra: {
+    'showFollowButton': true,
+    // The inactive-member search range, sent with any follow-up saved
+    // from the profile.
+    'dateRange': _dateOptionLabels[_appliedDateOption],
+    'buyInRange': _buyInOptionLabels[_appliedBuyInOption],
+  });
 },
                                     child: Card(
                                       margin: const EdgeInsets.symmetric(

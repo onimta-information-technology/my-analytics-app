@@ -56,6 +56,11 @@ const List<String> _kPositiveStatuses = <String>[
 class FollowScreen extends ConsumerStatefulWidget {
   final String memberId;
   final String memberName;
+
+  /// Inactive-member search range the member was found with, e.g. "03 Months"
+  /// and "2.5M". Sent with the saved follow-up.
+  final String? dateRange;
+  final String? buyInRange;
   final void Function(
     File? photo,
     String description,
@@ -68,6 +73,8 @@ class FollowScreen extends ConsumerStatefulWidget {
     super.key,
     required this.memberId,
     required this.memberName,
+    this.dateRange,
+    this.buyInRange,
     this.onSubmit,
   });
 
@@ -208,6 +215,8 @@ class _FollowScreenState extends ConsumerState<FollowScreen> {
             plannedVisitDate: _plannedVisitDate,
             followUpDate: _followUpDate,
             photo: _selectedImage,
+            dateRange: widget.dateRange,
+            buyInRange: widget.buyInRange,
           );
     } catch (e) {
       if (!mounted) return;

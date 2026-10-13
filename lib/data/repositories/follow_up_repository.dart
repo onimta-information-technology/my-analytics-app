@@ -33,6 +33,8 @@ class FollowUpRepository {
     DateTime? plannedVisitDate,
     DateTime? followUpDate,
     File? photo,
+    String? dateRange,
+    String? buyInRange,
   }) async {
     final deviceId = await DeviceId.get();
     final userName = await StorageUtil.getUserName();
@@ -60,6 +62,8 @@ class FollowUpRepository {
       'Login_By': userName,
       'Sales_Code': salesCode,
       'Marketing_Code': marketingCode,
+      'DateRange': dateRange,
+      'BuyInRange': buyInRange,
       'CreatedDate': DateTime.now().toIso8601String(),
     };
     // Log a readable copy: the full base64 photo would swamp the terminal, so

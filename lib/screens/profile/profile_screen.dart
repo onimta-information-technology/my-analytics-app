@@ -52,6 +52,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   String? _userSalesCode;
   bool _useBadgeForRating = false;
 bool _showFollowButton = false;
+  String? _followDateRange;
+  String? _followBuyInRange;
   bool _isNormalGift = false;
   String? _userName;
   @override
@@ -75,6 +77,8 @@ bool _showFollowButton = false;
         setState(() {
           _nogiftamount = extra['nogiftamount'] == true;
           _showFollowButton = extra['showFollowButton'] == true;
+          _followDateRange = extra['dateRange'] as String?;
+          _followBuyInRange = extra['buyInRange'] as String?;
           _isNormalGift = extra['isNormalGift'] == true;
         });
       }
@@ -777,6 +781,8 @@ bool _showFollowButton = false;
                 builder: (context) => FollowScreen(
                   memberId: guest.mid,
                   memberName: guest.memberName,
+                  dateRange: _followDateRange,
+                  buyInRange: _followBuyInRange,
                   onSubmit: (File? photo, String description, String contactStatus,
                       String? customerResponse, String? remarks) {
                     debugPrint(

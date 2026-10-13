@@ -22,6 +22,7 @@ import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.d
 import 'package:ballys_reservation_app/models/reservation/assigned_guest.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_duplicate_check.dart';
 // import 'package:ballys_reservation_app/models/reservation/reservation_passport_image.dart';
 import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -1699,6 +1700,170 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     return false;
   }
 
+  /// One row per BM number for the pre-insert check: each hotel booked for
+  /// them with its check-in / check-out days, and the from / to airports and
+  /// dates of each air ticket booked for them, outbound and return. A room or
+  /// ticket counts only for the guests it is assigned to — so a member sharing
+  /// a package gets their own, not the owner's — or for the card it sits on
+  /// when it names no one.
+  List<Map<String, dynamic>> _buildReservationCheckGuests(
+      List<GuestReservationEntryBallys> allGuests) {
+    final allHotels = [
+      for (final g in allGuests)
+        for (final h in g.hotels) (owner: g.mid.trim(), hotel: h),
+    ];
+    final allFlights = [
+      for (final g in allGuests)
+        for (final f in g.flights) (owner: g.mid.trim(), flight: f),
+    ];
+
+    List<Map<String, dynamic>> hotelsFor(String bm) => allHotels
+        .where((e) => e.hotel.assignedGuests.isEmpty
+            ? e.owner == bm
+            : e.hotel.assignedGuests.any((a) => a.mid.trim() == bm))
+        .map((e) {
+          // Older rooms carry their stay only as the picked date range.
+          final range = e.hotel.selectedDateRange;
+          final checkIn = e.hotel.arrivalDate ??
+              (range is DateTimeRange ? range.start : null);
+          final checkOut = e.hotel.departureDate ??
+              (range is DateTimeRange ? range.end : null);
+          return {
+            'hotel_id': e.hotel.hotel,
+            'hotel_name': e.hotel.hotelName?.trim() ?? '',
+            'check_in_date': checkIn?.toIso8601String(),
+            'check_out_date': checkOut?.toIso8601String(),
+          };
+        })
+        .toList();
+
+    List<Map<String, dynamic>> ticketsFor(
+            String bm, GuestReservationEntryBallys g) =>
+        allFlights
+            .where((e) => e.flight.assignedGuests.isEmpty
+                ? e.owner == bm
+                : e.flight.assignedGuests.any((a) => a.mid.trim() == bm))
+            .map((e) {
+              final departure = e.flight.airports?.departure;
+              final returnLeg = e.flight.airports?.returnFlight;
+              return {
+                // The ticket's own dates, falling back to the guest's stay.
+                'arrival_date':
+                    (e.flight.arrivalDate ?? g.arrivalDate)?.toIso8601String(),
+                'departure_date': (e.flight.departureDate ?? g.departureDate)
+                    ?.toIso8601String(),
+                'departure_from': departure?.dFrom.airportCode.trim() ?? '',
+                'departure_to': departure?.dTo.airportCode.trim() ?? '',
+                'return_from': returnLeg?.rFrom.airportCode.trim() ?? '',
+                'return_to': returnLeg?.rTo.airportCode.trim() ?? '',
+              };
+            })
+            .toList();
+
+    final rows = <String, Map<String, dynamic>>{};
+    for (final g in allGuests) {
+      final bmNumbers = [
+        g.mid.trim(),
+        ...g.accompanyingMembers.map((m) => m.mid.trim()),
+      ];
+      for (final bm in bmNumbers) {
+        if (bm.isEmpty || rows.containsKey(bm)) continue;
+        rows[bm] = {
+          'bm_number': bm,
+          'hotels': hotelsFor(bm),
+          'air_tickets': ticketsFor(bm, g),
+        };
+      }
+    }
+    return rows.values.toList();
+  }
+
+  /// Lists the pending reservations a new one clashes with, guest by guest.
+  Future<void> _showDuplicateAlert({
+    required String title,
+    required String message,
+    List<DuplicateMatch> hotels = const [],
+    List<DuplicateMatch> tickets = const [],
+  }) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    String dates(DuplicateMatch m, String from, String to) => [
+          m.date(from),
+          m.date(to),
+        ].whereType<DateTime>().map(dateFormat.format).join(' – ');
+    String route(DuplicateMatch m) => [
+          '${m.field('matched_df_airport_code')} → '
+              '${m.field('matched_dt_airport_code')}',
+          if (m.field('matched_rf_airport_code').isNotEmpty)
+            '${m.field('matched_rf_airport_code')} → '
+                '${m.field('matched_rt_airport_code')}',
+        ].join(', ');
+    String reservation(DuplicateMatch m) =>
+        'Pending reservation ${m.field('master_id')}'
+        '${m.field('main_guest_name').isEmpty ? '' : ' — ${m.field('main_guest_name')}'}';
+
+    Widget line(IconData icon, String bm, String text, String detail) =>
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 18, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$bm — $text',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(detail,
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(message),
+              for (final m in hotels)
+                line(
+                  Icons.hotel,
+                  m.bmNumber,
+                  '${m.field('matched_hotel_name')}, '
+                      '${dates(m, 'matched_arrival_date', 'matched_departure_date')}',
+                  reservation(m),
+                ),
+              for (final m in tickets)
+                line(
+                  Icons.flight,
+                  m.bmNumber,
+                  '${route(m)}, '
+                      '${dates(m, 'matched_arrival_date', 'matched_departure_date')}',
+                  reservation(m),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmReservation() async {
     // The form-level validator on Member ID/Name only applies to whatever guest
     // is currently on screen. If guests have already been added and the current
@@ -1858,6 +2023,44 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     setState(() => _isLoading = true);
 
     try {
+      // A new reservation is checked for duplicate pending reservations
+      // first. A hotel clash, or a ticket on the same dates between the same
+      // airports, stops the save; a ticket on the same dates between other
+      // airports is only shown before saving.
+      if (!_isEditMode) {
+        final check = await reservationRepository.checkReservationBallys(
+          guests: _buildReservationCheckGuests(allGuests),
+        );
+        if (!check.status) {
+          throw Exception(check.message.isNotEmpty
+              ? check.message
+              : 'Could not check for duplicate reservations');
+        }
+        if (check.isBlocked) {
+          setState(() => _isLoading = false);
+          await _showDuplicateAlert(
+            title: 'Reservation cannot be saved',
+            message: 'These guests already have a pending reservation for '
+                'the same dates.',
+            hotels: check.hotelDuplicates,
+            tickets: check.airTicketDuplicates,
+          );
+          return;
+        }
+        if (check.airTicketWarnings.isNotEmpty) {
+          setState(() => _isLoading = false);
+          await _showDuplicateAlert(
+            title: 'Air ticket on the same dates',
+            message: 'These guests already have a pending air ticket on the '
+                'same dates to a different airport. The reservation will '
+                'still be saved.',
+            tickets: check.airTicketWarnings,
+          );
+          if (!mounted) return;
+          setState(() => _isLoading = true);
+        }
+      }
+
       ReservationBallys? response = !_isEditMode
           ? await reservationRepository.saveReservationBallys(reservation)
           : await reservationRepository.updateReservationBallys(reservation);

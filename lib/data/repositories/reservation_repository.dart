@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_duplicate_check.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
@@ -267,6 +268,22 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     } else {
       throw Exception(response['Message'] ?? 'Failed to save reservation');
     }
+  }
+
+  /// Asked before a new reservation is inserted: the backend looks for
+  /// pending reservations that already book these guests into the same hotels
+  /// or onto the same air tickets. [guests] is one row per BM number, built by
+  /// the screen.
+  Future<ReservationDuplicateCheck> checkReservationBallys({
+    required List<Map<String, dynamic>> guests,
+  }) async {
+    final requestBody = <String, dynamic>{'guests': guests};
+
+    debugPrintRequestBody(requestBody);
+
+    final response =
+        await apiService.post('Reservation_CheckDuplicate', requestBody);
+    return ReservationDuplicateCheck.fromJson(response);
   }
 
   /// Re-posts an existing reservation to `Reservation_InsertReservation` with a

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/data/services/token_manager.dart';
+import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -16,6 +18,39 @@ class VersionCheckService {
     return apiUrl.contains('bty.world')
         ? Constants.bellagioVersionCheckUrl
         : Constants.versionCheckUrl;
+  }
+
+  /// POSTs [payload] to [url] with the stored access token. On a 401 it gets a
+  /// fresh token from [TokenManager] (same shared refresh ApiService uses) and
+  /// retries once. Never logs out — the version check must not block startup.
+  static Future<http.Response> _postWithAuthRetry(
+    String url,
+    Map<String, Object?> payload,
+  ) async {
+    final tokenManager = TokenManager(SecureStorage.instance);
+
+    Future<http.Response> send(String? token) => http
+        .post(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
+          body: json.encode(payload),
+        )
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('Version check timeout'),
+        );
+
+    final token = await tokenManager.getAccessToken();
+    final response = await send(token);
+    if (response.statusCode != 401) return response;
+
+    final newToken = await tokenManager.refreshAfterFailure(token);
+    if (newToken == null || newToken.isEmpty) return response;
+    return send(newToken);
   }
 
   /// Check if app version is latest
@@ -42,22 +77,12 @@ print("verstiocheck $url");
 print(payload);
 print('Version check url $url');
       // Make API request
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(payload),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Version check timeout');
-        },
-      );
-
+      
+      final response = await _postWithAuthRetry(url, payload);
+print('Version check response: ${response.statusCode}');
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        
+        print('Version check data: $responseData');
         return {
           'isLatest': responseData['isLatest'] ?? true,
           'currentVersion': currentVersion,

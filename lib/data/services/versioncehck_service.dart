@@ -79,7 +79,7 @@ print('Version check url $url');
       // Make API request
       
       final response = await _postWithAuthRetry(url, payload);
-print('Version check response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         print('Version check data: $responseData');

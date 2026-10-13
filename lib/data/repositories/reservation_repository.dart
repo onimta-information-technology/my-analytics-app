@@ -249,10 +249,15 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     }
   }
 
-  Future<ReservationBallys?> saveReservationBallys(NewReservationBallys newReservations) async {
+  /// [masterId] lets the caller know the new reservation's id up front — the
+  /// screen needs it to report air ticket warnings once the insert succeeds.
+  Future<ReservationBallys?> saveReservationBallys(
+    NewReservationBallys newReservations, {
+    String? masterId,
+  }) async {
     final requestBody = await _buildReservationBodyBallys(
       newReservations,
-      masterId: DateTime.now().millisecondsSinceEpoch.toString(),
+      masterId: masterId ?? DateTime.now().millisecondsSinceEpoch.toString(),
     );
 
     debugPrintRequestBody(requestBody);
@@ -284,6 +289,54 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
     final response =
         await apiService.post('Reservation_CheckDuplicate', requestBody);
     return ReservationDuplicateCheck.fromJson(response);
+  }
+
+  /// Records that the new reservation [masterId] was saved even though its
+  /// guests already hold a pending air ticket on the same dates between other
+  /// airports. Each warning names the guest, the reservation that already holds
+  /// the ticket, and both sectors.
+  Future<void> saveAirTicketDuplicateWarnings({
+    required String masterId,
+    required List<DuplicateMatch> warnings,
+  }) async {
+    final requestBody = <String, dynamic>{
+      'master_id': masterId,
+      'air_ticket_warnings': warnings
+          .map((w) => {
+                //'bm_number': w.bmNumber,
+                'existing_master_id': w.field('master_id'),
+                'existing_bm_number': w.field('main_bm_number'),
+                // 'existing_guest_name': w.field('main_guest_name'),
+                // 'arrival_date': w.field('requested_arrival_date'),
+                // 'departure_date': w.field('requested_departure_date'),
+           
+                // 'requested_departure_from': w.field('requested_departure_from'),
+                // 'requested_departure_to': w.field('requested_departure_to'),
+                // 'requested_return_from': w.field('requested_return_from'),
+                // 'requested_return_to': w.field('requested_return_to'),
+              
+                'existing_air_line': w.field('matched_air_line'),
+                'existing_departure_from': w.field('matched_df_airport_code'),
+                'existing_departure_to': w.field('matched_dt_airport_code'),
+                'existing_return_from': w.field('matched_rf_airport_code'),
+                'existing_return_to': w.field('matched_rt_airport_code'),
+                'existing_arrival_date': w.field('matched_arrival_date'),
+                'existing_departure_date': w.field('matched_departure_date'),
+              })
+          .toList(),
+    };
+
+    debugPrintRequestBody(requestBody);
+
+    // TODO: confirm the endpoint name with the backend.
+    final response = await apiService.post(
+        'Reservation_InsertAirTicketDuplicate', requestBody);
+    final status = response['Status'] as bool? ?? false;
+    if (!status) {
+      throw Exception(response['Message'] ??
+          response['message'] ??
+          'Failed to save air ticket warning');
+    }
   }
 
   /// Re-posts an existing reservation to `Reservation_InsertReservation` with a

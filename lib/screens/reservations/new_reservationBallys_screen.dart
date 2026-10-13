@@ -1798,7 +1798,7 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                 '${m.field('matched_rt_airport_code')}',
         ].join(', ');
     String reservation(DuplicateMatch m) =>
-        'Pending reservation ${m.field('master_id')}'
+        '${m.field('reservation_status').isEmpty ? 'Reservation' : '${m.field('reservation_status')} reservation'} ${m.field('master_id')}'
         '${m.field('main_guest_name').isEmpty ? '' : ' — ${m.field('main_guest_name')}'}';
 
     Widget line(IconData icon, String bm, String text, String detail) =>
@@ -2027,6 +2027,11 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
       // first. A hotel clash, or a ticket on the same dates between the same
       // airports, stops the save; a ticket on the same dates between other
       // airports is only shown before saving.
+      // Picked here rather than inside the insert so the air ticket warnings
+      // below can be filed against the reservation once it is saved.
+      final masterId = DateTime.now().millisecondsSinceEpoch.toString();
+      List<DuplicateMatch> airTicketWarnings = const [];
+
       if (!_isEditMode) {
         final check = await reservationRepository.checkReservationBallys(
           guests: _buildReservationCheckGuests(allGuests),
@@ -2051,19 +2056,42 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
           setState(() => _isLoading = false);
           await _showDuplicateAlert(
             title: 'Air ticket on the same dates',
-            message: 'These guests already have a pending air ticket on the '
-                'same dates to a different airport. The reservation will '
-                'still be saved.',
+            message: 'These guests already have an air ticket on another '
+                'sector in the same date range. The reservation will still be '
+                'saved.',
             tickets: check.airTicketWarnings,
           );
           if (!mounted) return;
           setState(() => _isLoading = true);
+          airTicketWarnings = check.airTicketWarnings;
         }
       }
 
       ReservationBallys? response = !_isEditMode
-          ? await reservationRepository.saveReservationBallys(reservation)
+          ? await reservationRepository.saveReservationBallys(reservation,
+              masterId: masterId)
           : await reservationRepository.updateReservationBallys(reservation);
+
+      // The reservation is already saved, so a failure here is reported but
+      // does not undo it.
+      if (airTicketWarnings.isNotEmpty) {
+        try {
+          await reservationRepository.saveAirTicketDuplicateWarnings(
+            masterId: masterId,
+            warnings: airTicketWarnings,
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Reservation saved, but the air ticket warning '
+                    'could not be recorded: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
 
       // On update the caller reloads the list from the API; adding here would
       // show the reservation twice until that reload lands.

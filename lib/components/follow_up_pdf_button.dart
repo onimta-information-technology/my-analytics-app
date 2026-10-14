@@ -18,6 +18,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -522,34 +523,7 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
 
     final busy = _isSharing || _isSendingToChat;
 
-    return Column(
-      children: [
-        _pdfButton(
-          color: const Color(0xFF25D366),
-          icon: Icons.share,
-          label: _isSharing ? 'PREPARING...' : 'SHARE FOLLOW-UP VIA WHATSAPP',
-          busy: _isSharing,
-          onPressed: busy ? null : _sharePdfToWhatsApp,
-        ),
-        const SizedBox(height: 10),
-        _pdfButton(
-          color: const Color(0xFF0C3B79),
-          icon: Icons.forum,
-          label: _isSendingToChat ? 'SENDING...' : 'SEND FOLLOW-UP VIA CHAT',
-          busy: _isSendingToChat,
-          onPressed: busy ? null : _sendPdfToChat,
-        ),
-      ],
-    );
-  }
-
-  Widget _pdfButton({
-    required Color color,
-    required IconData icon,
-    required String label,
-    required bool busy,
-    required VoidCallback? onPressed,
-  }) {
+    // One Share button; the ways to share are picked from a popup.
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
@@ -562,22 +536,123 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
                   color: Colors.white,
                 ),
               )
-            : Icon(icon, size: 20),
+            : const Icon(Icons.share, size: 20),
         label: Text(
-          label,
+          _isSharing
+              ? 'PREPARING...'
+              : _isSendingToChat
+              ? 'SENDING...'
+              : 'SHARE',
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: const Color(0xFF0C3B79),
           foregroundColor: Colors.white,
-          disabledBackgroundColor: color.withOpacity(0.6),
+          disabledBackgroundColor: const Color(
+            0xFF0C3B79,
+          ).withValues(alpha: 0.6),
           disabledForegroundColor: Colors.white70,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
-        onPressed: onPressed,
+        onPressed: busy ? null : _showShareOptions,
+      ),
+    );
+  }
+
+  /// The popup behind the Share button: WhatsApp or the in-app chat.
+  Future<void> _showShareOptions() async {
+    final choice = await showDialog<VoidCallback>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Share follow-up',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _shareOption(
+             // label: 'WhatsApp',
+              button: _pdfButton(
+                color: const Color(0xFF25D366),
+                icon: FontAwesomeIcons.whatsapp,
+                tooltip: 'Share follow-up via WhatsApp',
+                busy: false,
+                onPressed: () =>
+                    Navigator.pop(dialogContext, _sharePdfToWhatsApp),
+              ),
+            ),
+            _shareOption(
+             // label: 'Chat',
+              button: _pdfButton(
+                color: const Color.fromARGB(255, 221, 117, 5),
+                iconAsset: 'assets/images/logo.png',
+                tooltip: 'Send follow-up via chat',
+                busy: false,
+                onPressed: () => Navigator.pop(dialogContext, _sendPdfToChat),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice != null && mounted) choice();
+  }
+
+  Widget _shareOption({required Widget button}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        button,
+        const SizedBox(height: 8),
+        // Text(
+        //   label,
+        //   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        // ),
+      ],
+    );
+  }
+
+  Widget _pdfButton({
+    required Color color,
+    IconData? icon,
+    String? iconAsset,
+    required String tooltip,
+    required bool busy,
+    required VoidCallback? onPressed,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white,
+        shape: CircleBorder(side: BorderSide(color: color, width: 2)),
+        elevation: 2,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Padding(
+              // The logo has its own margin baked in; give it more of the
+              // circle so it reads at the same size as the WhatsApp glyph.
+              padding: EdgeInsets.all(icon != null ? 10 : 2),
+              child: busy
+                  ? CircularProgressIndicator(strokeWidth: 2.5, color: color)
+                  : Opacity(
+                      opacity: onPressed == null ? 0.4 : 1,
+                      child: icon != null
+                          ? FittedBox(child: FaIcon(icon, color: color))
+                          : Image.asset(iconAsset!, fit: BoxFit.contain),
+                    ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
-

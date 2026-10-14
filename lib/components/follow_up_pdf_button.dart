@@ -12,7 +12,9 @@
 //   FollowUpPdfButton(item: item),
 // ============================================================
 
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,8 +27,10 @@ import 'package:printing/printing.dart';
 import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
+import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/follow_up_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 
 class FollowUpPdfButton extends ConsumerStatefulWidget {
   final FollowUpItem item;
@@ -61,6 +65,46 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
 
   String _fmt(DateTime dt) => DateFormat('dd MMM yyyy  hh:mm a').format(dt);
 
+  /// The member's guest record (profile photo, last visit). The details
+  /// screen's GuestDisplayCardById normally has it loaded already; fetch it
+  /// only when the selected guest is someone else. Never fails the share.
+  Future<Guest?> _loadGuest() async {
+    bool isThisMember(Guest? g) =>
+        g != null &&
+        g.mid.trim().toLowerCase() == _item.memberId.trim().toLowerCase();
+
+    var guest = ref.read(selectedGuestProvider);
+    if (isThisMember(guest) && guest!.memberName.isNotEmpty) return guest;
+
+    try {
+      final notifier = ref.read(selectedGuestProvider.notifier);
+      await notifier.setSelectedGuestWithId(_item.memberId);
+      await notifier.getGuestImage(9022, _item.memberId);
+      guest = ref.read(selectedGuestProvider);
+    } catch (e) {
+      debugPrint('Follow-up PDF guest load failed: $e');
+    }
+    return isThisMember(guest) ? guest : null;
+  }
+
+  static Uint8List? _decodeImage(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Same rules as GuestDisplayCardById: blank or the 1970 epoch means none.
+  static String? _formatLastVisit(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final date = DateTime.tryParse(raw);
+    if (date == null) return raw;
+    if (date.year == 1970 && date.month == 1 && date.day == 1) return null;
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
   // ── PDF builder ──────────────────────────────────────────────────────────
   Future<pw.Document> _buildPdf() async {
     // Fonts come from Google Fonts like the reservation PDF; offline, fall
@@ -79,6 +123,9 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
     final sharedBy = ref.read(currentUserNameProvider).valueOrNull ?? '';
     final generatedAt = _fmt(DateTime.now());
     final photo = _item.photoBytes;
+    final guest = await _loadGuest();
+    final profilePic = _decodeImage(guest?.memImage2);
+    final lastVisit = _formatLastVisit(guest?.lastVisitDate);
 
     final labelStyle = pw.TextStyle(
       fontWeight: pw.FontWeight.bold,
@@ -173,12 +220,42 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
           ),
           pw.SizedBox(height: 18),
           section('MEMBER', [
-            row('Member ID:', _item.memberId),
-            row('Member Name:', _item.memberName),
-            row('Followed by:', _item.loginBy),
-            row(
-              'Follow-up Date:',
-              _item.createdDate == null ? null : _fmt(_item.createdDate!),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      row('Member ID:', _item.memberId),
+                      row('Member Name:', _item.memberName),
+                      row('Last Visit Date:', lastVisit),
+                      row('Date Range:', _item.dateRange),
+                      row('Buy-in Range:', _item.buyInRange),
+                      row('Followed by:', _item.loginBy),
+                      row(
+                        'Follow-up Date:',
+                        _item.createdDate == null
+                            ? null
+                            : _fmt(_item.createdDate!),
+                      ),
+                    ],
+                  ),
+                ),
+                if (profilePic != null) ...[
+                  pw.SizedBox(width: 12),
+                  pw.ClipRRect(
+                    horizontalRadius: 6,
+                    verticalRadius: 6,
+                    child: pw.Image(
+                      pw.MemoryImage(profilePic),
+                      width: 100,
+                      height: 120,
+                      fit: pw.BoxFit.cover,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ]),
           section('FOLLOW-UP', [

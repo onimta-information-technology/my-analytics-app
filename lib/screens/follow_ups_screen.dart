@@ -389,17 +389,36 @@ class _FollowUpCard extends StatelessWidget {
 
   const _FollowUpCard({required this.item, this.onUnfollow});
 
-  /// Whole calendar days since the follow-up was saved, e.g. "Today",
-  /// "1 day ago", "12 days ago". Null when the API sent no created date.
-  String? get _daysSinceLabel {
+  /// Whole calendar days since the follow-up was saved. Null when the API
+  /// sent no created date.
+  int? get _daysSince {
     final created = item.createdDate;
     if (created == null) return null;
     final now = DateTime.now();
-    final days = DateTime(now.year, now.month, now.day)
+    return DateTime(now.year, now.month, now.day)
         .difference(DateTime(created.year, created.month, created.day))
         .inDays;
+  }
+
+  /// e.g. "Today", "1 day ago", "12 days ago".
+  String? get _daysSinceLabel {
+    final days = _daysSince;
+    if (days == null) return null;
     if (days <= 0) return 'Today';
     return days == 1 ? '1 day ago' : '$days days ago';
+  }
+
+  /// Green up to 15 days, red once the follow-up is older than that.
+  Color get _daysSinceColor =>
+      (_daysSince ?? 0) > 15 ? Colors.red : Colors.green;
+
+  /// e.g. "Range: 1 Month | Buy-in: 1M". Null when neither was saved.
+  String? get _rangeLabel {
+    final parts = <String>[
+      if (item.dateRange?.isNotEmpty ?? false) 'Range: ${item.dateRange}',
+      if (item.buyInRange?.isNotEmpty ?? false) 'Buy-in: ${item.buyInRange}',
+    ];
+    return parts.isEmpty ? null : parts.join('  |  ');
   }
 
   Color get _responseColor {
@@ -502,6 +521,30 @@ class _FollowUpCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (_rangeLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.filter_alt_outlined,
+                            size: 16,
+                            color: Colors.black54,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _rangeLabel!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
@@ -510,7 +553,7 @@ class _FollowUpCard extends StatelessWidget {
                         if (_daysSinceLabel != null)
                           _Chip(
                             label: _daysSinceLabel!,
-                            color: Colors.black,
+                            color: _daysSinceColor,
                           ),
                         if (item.contactStatus.isNotEmpty)
                           _Chip(

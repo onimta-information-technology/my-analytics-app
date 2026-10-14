@@ -19,6 +19,11 @@ class FollowUpItem {
   /// The user who requested/saved the follow-up (`Login_By` on the wire).
   final String? loginBy;
 
+  /// Inactive-members search filters the follow-up was saved under,
+  /// e.g. "1 Month" / "1M".
+  final String? dateRange;
+  final String? buyInRange;
+
   /// When the follow-up was saved. Null when the API sends no date.
   final DateTime? createdDate;
 
@@ -41,6 +46,8 @@ class FollowUpItem {
     this.checklistItems = const <String>[],
     this.positiveStatus,
     this.loginBy,
+    this.dateRange,
+    this.buyInRange,
     this.createdDate,
     this.photoBase64,
   });
@@ -98,6 +105,8 @@ class FollowUpItem {
           .toList(),
       positiveStatus: json['PositiveStatus'] as String?,
       loginBy: (json['Login_By'] ?? json['LoginBy'])?.toString(),
+      dateRange: json['DateRange']?.toString(),
+      buyInRange: json['BuyInRange']?.toString(),
       createdDate: _parseCreatedDate(json),
       photoBase64: json['Photo'] as String?,
     );

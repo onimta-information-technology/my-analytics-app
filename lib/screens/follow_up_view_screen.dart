@@ -43,6 +43,10 @@ class FollowUpViewScreen extends StatelessWidget {
 
   bool get _isContacted => item.contactStatus == 'Contacted';
 
+  bool get _hasRange =>
+      (item.dateRange?.isNotEmpty ?? false) ||
+      (item.buyInRange?.isNotEmpty ?? false);
+
   void _openPhoto(BuildContext context) {
     final bytes = item.photoBytes;
     if (bytes == null) return;
@@ -100,6 +104,15 @@ class FollowUpViewScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Search range the follow-up was saved under ───────────────
+              if (_hasRange) ...[
+                _RangeBanner(
+                  dateRange: item.dateRange,
+                  buyInRange: item.buyInRange,
+                ),
+                const SizedBox(height: 6),
+              ],
+
               // ── Member ───────────────────────────────────────────────────
               GuestDisplayCardById(
                 memberId: item.memberId,
@@ -278,6 +291,101 @@ class FollowUpViewScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Highlighted strip showing the inactive-members search filters the
+/// follow-up was saved under.
+class _RangeBanner extends StatelessWidget {
+  final String? dateRange;
+  final String? buyInRange;
+
+  const _RangeBanner({this.dateRange, this.buyInRange});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDate = dateRange?.isNotEmpty ?? false;
+    final hasBuyIn = buyInRange?.isNotEmpty ?? false;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Constants.kPrimaryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Constants.kPrimaryColor.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          if (hasDate)
+            Expanded(
+              child: _RangeItem(
+                icon: Icons.date_range,
+                label: 'Date Range',
+                value: dateRange!,
+              ),
+            ),
+          if (hasDate && hasBuyIn)
+            Container(
+              width: 1,
+              height: 40,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: Constants.kPrimaryColor.withOpacity(0.3),
+            ),
+          if (hasBuyIn)
+            Expanded(
+              child: _RangeItem(
+                icon: Icons.attach_money,
+                label: 'Buy-in Range',
+                value: buyInRange!,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RangeItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _RangeItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 26, color: Constants.kPrimaryColor),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

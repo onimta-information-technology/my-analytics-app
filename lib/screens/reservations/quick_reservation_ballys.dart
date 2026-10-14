@@ -437,8 +437,10 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
   /// package amount moves below what it needs — see [_as_syncServiceWithAmount].
   String? _as_service;
 
-  /// Which leg the service is for. Only asked for once a service is picked,
-  /// the way the air ticket tab asks for its Silk / Gold Route leg.
+  /// Which leg guest 1's service is for. Only asked for once a service is
+  /// picked, the way the air ticket tab asks for its Silk / Gold Route leg.
+  /// Every added guest picks their own on their card — see
+  /// [_ExtraMember.airportLegType].
   String _as_legType = 'Arrival';
 
   /// Guests walked through on the SAME service, each with their own
@@ -1459,6 +1461,7 @@ class _QuickReservationBallysScreenState extends ConsumerState<QuickReservationB
             : 0,
         'companionCount': row.companionCount,
         'service': row.airportService ?? '',
+        'legType': row.airportLegType,
       });
     }
     return out;
@@ -3122,6 +3125,7 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
         'noOfFriends': _as_hasCompanions ? _as_friendsCount : 0,
         'companionCount': _as_companionCount,
         'service': _as_service ?? '',
+        'legType': _as_legType,
       },
       ..._captureExtraMembers(_as_extraMembers),
     ];
@@ -3147,7 +3151,6 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
     final guests = _captureAirportServiceGuests();
     final buf = StringBuffer()
       ..writeln('*AIRPORT SERVICE REQUEST*')
-      ..writeln('Arrival/ Departure : $_as_legType')
       ..writeln('Flight Date        : ${_as_flightDateCtrl.text}')
       ..writeln('Flight Number      : ${_as_flightNoCtrl.text}')
       ..writeln('Flight Time        : ${_as_flightTimeCtrl.text}')
@@ -3159,7 +3162,8 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
         ..writeln('Membership No      : ${g['memberId']}')
         ..writeln('Guest Name         : ${g['guestName']}')
         ..writeln('Package Amount     : ${g['packageAmount']}')
-        ..writeln('Service            : ${g['service']}');
+        ..writeln('Service            : ${g['service']}')
+        ..writeln('Arrival/ Departure : ${g['legType']}');
       buf.writeln(
           'Wife               : ${(g['hasWife'] as bool? ?? false) ? 'Yes' : 'No'}');
       buf
@@ -4245,6 +4249,16 @@ Widget _extraMemberCard(
               onChanged: (value) =>
                   state.setState(() => row.airportService = value),
             ),
+            if (row.airportService != null) ...[
+              const SizedBox(height: 12),
+              _LegSelector(
+                label: 'Service For *',
+                value: row.airportLegType,
+                accent: accent,
+                onChanged: (value) =>
+                    state.setState(() => row.airportLegType = value),
+              ),
+            ],
           ],
           if (showCompanions) ...[
             const SizedBox(height: 12),
@@ -8265,6 +8279,15 @@ class _AirportServiceForm extends StatelessWidget {
               onChanged: (v) => state.setState(() => state._as_service = v),
             ),
             const SizedBox(height: 12),
+            if (state._as_service != null) ...[
+              _LegSelector(
+                label: 'Service For — Guest 1 *',
+                value: state._as_legType,
+                accent: accent,
+                onChanged: (v) => state.setState(() => state._as_legType = v),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // ── Who walks through with guest 1 ────────────────────────────────
             _companionsCard(
@@ -8310,13 +8333,6 @@ class _AirportServiceForm extends StatelessWidget {
             // Only worth asking once guest 1 is on a service; until then there
             // is no request to meet a flight for.
             if (state._as_service != null) ...[
-              _LegSelector(
-                label: 'Service For *',
-                value: state._as_legType,
-                accent: accent,
-                onChanged: (v) => state.setState(() => state._as_legType = v),
-              ),
-              const SizedBox(height: 12),
               _dateField(
                 context,
                 'Flight Date *',
@@ -8566,6 +8582,10 @@ class _ExtraMember {
   /// request can be on different routes. Null until one is picked, and dropped
   /// again if their amount stops covering it.
   String? airportService;
+
+  /// Whether [airportService] meets THIS guest on arrival or sees them off on
+  /// departure. Asked once a service is picked.
+  String airportLegType = 'Arrival';
 
   _ExtraMember({
     this.prefix = 'BM',

@@ -103,6 +103,7 @@ class FollowUpRepository {
     final body = <String, Object?>{
       'FollowupId': followupId,
       'Login_By': userName,
+      'DeviceId': await DeviceId.get(),
     };
     print('Unfollow request body: ${jsonEncode(body)}');
 

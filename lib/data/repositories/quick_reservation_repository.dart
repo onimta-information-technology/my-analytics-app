@@ -682,26 +682,31 @@ class QuickReservationRepository {
       // routes.
       //'service_type': primary['service'] ?? '',
      // 'flight_type': legType,
+      // The flight is shared by every guest on the request; each guest's own
+      // leg (Arrival / Departure) is on their row.
       //'flight_date_time': flightDateTime.toIso8601String(),
-      // 'flight_date': DateTime(
-      //   flightDateTime.year,
-      //   flightDateTime.month,
-      //   flightDateTime.day,
-      // ).toIso8601String(),
-      // 'flight_time': DateFormat('hh:mm a').format(flightDateTime),
-      // 'flight_no': flightNo,
+      'flight_date': DateTime(
+        flightDateTime.year,
+        flightDateTime.month,
+        flightDateTime.day,
+      ).toIso8601String(),
+      'flight_time': DateFormat('hh:mm a').format(flightDateTime),
+      'flight_no': flightNo,
       // 'no_of_guests': guests.length,
       // 'total_pax': totalPax,
       'remarks': remarks,
-      'guests': guests.map(airportServiceGuestOf).toList(),
+      'guests':
+          guests.map((g) => airportServiceGuestOf(g, legType)).toList(),
       'approve_person': approvePersonJson(approver),
       'reservation_status': 'Pending',
     };
   }
 
-  /// One guest on an airport service request: who they are and who walks
+  /// One guest on an airport service request: who they are, which leg they
+  /// picked (Arrival or Departure, falling back to [legType]) and who walks
   /// through with them.
-  Map<String, dynamic> airportServiceGuestOf(Map<String, dynamic> g) {
+  Map<String, dynamic> airportServiceGuestOf(
+      Map<String, dynamic> g, String legType) {
     final children = g['noOfChildren'] as int? ?? 0;
     final friends = g['noOfFriends'] as int? ?? 0;
     final wife = g['hasWife'] as bool? ?? false;
@@ -712,6 +717,7 @@ class QuickReservationRepository {
       'package_amount': packageAmountToInt(packageAmount),
       'currency_type': packageAmountCurrency(packageAmount),
       'service_type': g['service'] ?? '',
+      'flight_type': g['legType'] as String? ?? legType,
       'has_accompanying_members': g['hasCompanions'] as bool? ?? false,
       'has_wife': wife,
       'no_of_children': children,

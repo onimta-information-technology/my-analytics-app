@@ -31,6 +31,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/follow_up_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
+import 'package:ballys_reservation_app/screens/media_preview_screen.dart';
 
 class FollowUpPdfButton extends ConsumerStatefulWidget {
   final FollowUpItem item;
@@ -380,23 +381,56 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
     );
     if (targets == null || targets.isEmpty || !mounted) return;
 
+    // Build the PDF first so the preview can show the real file.
     setState(() => _isSendingToChat = true);
+    final File file;
+    try {
+      final doc = await _buildPdf();
+      final bytes = await doc.save();
+      final dir = await getTemporaryDirectory();
+      file = File('${dir.path}/$_pdfFileName');
+      await file.writeAsBytes(bytes, flush: true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSendingToChat = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to prepare PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    // Same preview + caption screen the chat uses for documents. Null means
+    // the user closed it, so nothing is sent.
+    final preview = await Navigator.of(context).push<MediaPreviewResult>(
+      MaterialPageRoute(
+        builder: (_) => MediaPreviewScreen(
+          filePaths: [file.path],
+          recipientName: targets.names.join(', '),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (preview == null || preview.filePaths.isEmpty) {
+      setState(() => _isSendingToChat = false);
+      return;
+    }
+    final caption = preview.caption;
 
     final sent = <String>[];
     final failed = <String>[];
     String? firstError;
 
     try {
-      final doc = await _buildPdf();
-      final bytes = await doc.save();
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$_pdfFileName');
-      await file.writeAsBytes(bytes, flush: true);
-
       // Groups first, matching the order the picker reports names in.
       for (var i = 0; i < targets.chatIds.length; i++) {
         final name = i < targets.names.length ? targets.names[i] : 'Group';
-        final error = await _uploadPdfTo(targets.chatIds[i], file.path);
+        final error =
+            await _uploadPdfTo(targets.chatIds[i], file.path, caption);
         (error == null ? sent : failed).add(name);
         if (error != null) firstError ??= error;
       }
@@ -417,7 +451,7 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
           }
         }
 
-        final error = await _uploadPdfTo(chatId, file.path);
+        final error = await _uploadPdfTo(chatId, file.path, caption);
         (error == null ? sent : failed).add(contact.name);
         if (error != null) firstError ??= error;
       }
@@ -456,11 +490,16 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
   }
 
   /// Returns null when the upload landed, or why it did not.
-  Future<String?> _uploadPdfTo(String chatId, String filePath) async {
+  Future<String?> _uploadPdfTo(
+    String chatId,
+    String filePath,
+    String? caption,
+  ) async {
     try {
       final result = await FirebaseApiService.uploadFiles(
         chatId: chatId,
         filePaths: [filePath],
+        caption: caption,
       );
       if (result['success'] == true) return null;
       return FirebaseApiService.errorTextFrom(result);
@@ -541,3 +580,4 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
     );
   }
 }
+

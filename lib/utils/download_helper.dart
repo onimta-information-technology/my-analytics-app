@@ -95,6 +95,83 @@ class DownloadHelper {
     }
   }
 
+  /// Open a file for viewing without saving it to Downloads — like tapping a
+  /// document in WhatsApp. The file is fetched into the app cache once and
+  /// reused on later taps; [localPath] (the sender's own copy) is opened
+  /// directly when it still exists.
+  static Future<void> openForViewing(
+    BuildContext context, {
+    String? url,
+    String? localPath,
+    required String fileName,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      String? openPath;
+      if (localPath != null && await File(localPath).exists()) {
+        openPath = localPath;
+      } else if (url != null && url.isNotEmpty) {
+        final cacheDir = Directory(
+          '${(await getTemporaryDirectory()).path}/chat_files',
+        );
+        if (!await cacheDir.exists()) await cacheDir.create(recursive: true);
+        final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final cached = File(
+          '${cacheDir.path}/${url.hashCode.toUnsigned(32)}_$safeName',
+        );
+        if (!await cached.exists() || await cached.length() == 0) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('Opening $fileName...')),
+                ],
+              ),
+              duration: const Duration(seconds: 30),
+            ),
+          );
+          final partial = '${cached.path}.part';
+          await _dio.download(url, partial);
+          await File(partial).rename(cached.path);
+          messenger.hideCurrentSnackBar();
+        }
+        openPath = cached.path;
+      }
+
+      if (openPath == null) return;
+      final result = await OpenFilex.open(openPath);
+      if (result.type != ResultType.done) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              result.type == ResultType.noAppToOpen
+                  ? 'No app found to open this file'
+                  : 'Could not open file: ${result.message}',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Could not open file: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   static Future<Directory> _getSaveDirectory() async {
     if (Platform.isAndroid) {
       // Use the public Downloads folder when it is actually writable.

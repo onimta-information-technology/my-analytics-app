@@ -18,8 +18,8 @@ class MediaPreviewResult {
   const MediaPreviewResult({required this.filePaths, this.caption});
 }
 
-/// Shown between picking photos/videos and uploading them: the picked media
-/// full size, a thumbnail strip with a remove button per item, and a caption
+/// Shown between picking photos/videos/documents and uploading them: the
+/// picked media full size (a file card for a document), a thumbnail strip with a remove button per item, and a caption
 /// field. Nothing is uploaded here — the screen pops a [MediaPreviewResult]
 /// on Send, or null when the user backs out or removes everything.
 class MediaPreviewScreen extends ConsumerStatefulWidget {
@@ -52,6 +52,64 @@ class _MediaPreviewScreenState extends ConsumerState<MediaPreviewScreen> {
   }
 
   bool _isVideo(String path) => AttachmentItem.isVideoPath(path);
+
+  static const _imageExts = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'};
+
+  /// A document (PDF, Word, …) — no picture to draw, so it gets a file card.
+  bool _isDocument(String path) =>
+      !_isVideo(path) &&
+      !_imageExts.contains(path.split('.').last.toLowerCase());
+
+  String _fileName(String path) => path.split('/').last;
+
+  String _fileSize(String path) {
+    try {
+      final bytes = File(path).lengthSync();
+      if (bytes < 1024) return '$bytes B';
+      if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Widget _buildDocumentPage(String path, FontSettings fontSettings) {
+    final ext = path.split('.').last.toUpperCase();
+    final size = _fileSize(path);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.insert_drive_file,
+              color: Colors.white70,
+              size: 96,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _fileName(path),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: fontSettings.fontSize + 2,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              size.isEmpty ? ext : '$ext • $size',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: fontSettings.fontSize - 2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _remove(int index) {
     if (_paths.length == 1) {
@@ -120,6 +178,9 @@ class _MediaPreviewScreenState extends ConsumerState<MediaPreviewScreen> {
                   onPageChanged: (i) => setState(() => _current = i),
                   itemBuilder: (ctx, i) {
                     final path = _paths[i];
+                    if (_isDocument(path)) {
+                      return _buildDocumentPage(path, fontSettings);
+                    }
                     if (_isVideo(path)) {
                       return ChatVideoPlayer(
                         key: ValueKey(path),
@@ -155,7 +216,17 @@ class _MediaPreviewScreenState extends ConsumerState<MediaPreviewScreen> {
         itemBuilder: (ctx, i) {
           final path = _paths[i];
           final selected = i == _current;
-          final thumb = _isVideo(path)
+          final thumb = _isDocument(path)
+              ? Container(
+                  width: size,
+                  height: size,
+                  color: Colors.grey[850],
+                  child: const Icon(
+                    Icons.insert_drive_file,
+                    color: Colors.white70,
+                  ),
+                )
+              : _isVideo(path)
               ? Container(
                   width: size,
                   height: size,

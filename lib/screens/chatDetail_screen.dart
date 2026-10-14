@@ -2016,7 +2016,12 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
         });
 
         if (widget.onMessageSent != null) {
-          final emoji = localItems.first.isVideo ? '🎥' : '📷';
+          final first = localItems.first;
+          final emoji = first.isVideo
+              ? '🎥'
+              : first.isImage
+              ? '📷'
+              : '📄';
           widget.onMessageSent!(
             caption != null
                 ? '$emoji $caption'
@@ -2594,7 +2599,8 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
             .map((f) => f.path!)
             .where((p) => p.isNotEmpty)
             .toList();
-        await _uploadAndSendFiles(paths);
+        // Through the preview, so a message can go with the document.
+        await _previewAndSendMedia(paths);
       }
     } catch (e) {
       _showErrorSnack('Error selecting document: $e');
@@ -5150,12 +5156,19 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     }
 
     final name = message.fileName ?? message.text;
+    // Like WhatsApp: tapping the card opens the file for viewing; only the
+    // download icon saves a copy to the device.
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleSelection(message.id);
-        } else if (message.attachmentUrl != null) {
-          DownloadHelper.downloadAndOpen(context, message.attachmentUrl!, name);
+        } else if (message.attachmentUrl != null || message.filePath != null) {
+          DownloadHelper.openForViewing(
+            context,
+            url: message.attachmentUrl,
+            localPath: message.filePath,
+            fileName: name,
+          );
         }
       },
       child: Container(
@@ -5184,8 +5197,29 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.download, color: ChatColors.bubbleMeta, size: 20),
+            const SizedBox(width: 4),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (_isSelectionMode) {
+                  _toggleSelection(message.id);
+                } else if (message.attachmentUrl != null) {
+                  DownloadHelper.downloadAndOpen(
+                    context,
+                    message.attachmentUrl!,
+                    name,
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  Icons.download,
+                  color: ChatColors.bubbleMeta,
+                  size: 20,
+                ),
+              ),
+            ),
           ],
         ),
       ),

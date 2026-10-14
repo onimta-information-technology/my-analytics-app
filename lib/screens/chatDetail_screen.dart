@@ -11,6 +11,7 @@ import 'package:ballys_reservation_app/components/forward_message_sheet.dart';
 import 'package:ballys_reservation_app/components/group_details_sheet.dart';
 import 'package:ballys_reservation_app/components/voice_message_bubble.dart';
 import 'package:ballys_reservation_app/components/chat_video_player.dart';
+import 'package:ballys_reservation_app/components/document_message_bubble.dart';
 import 'package:ballys_reservation_app/components/typing_indicator_bubble.dart';
 import 'package:ballys_reservation_app/components/voice_recorder_widgets.dart';
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
@@ -5158,7 +5159,13 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     final name = message.fileName ?? message.text;
     // Like WhatsApp: tapping the card opens the file for viewing; only the
     // download icon saves a copy to the device.
-    return GestureDetector(
+    return DocumentMessageBubble(
+      url: message.attachmentUrl,
+      localPath: message.filePath,
+      fileName: name,
+      isMe: message.isMe,
+      fontSize: fontSettings.fontSize,
+      width: _kMediaBubbleWidth,
       onTap: () {
         if (_isSelectionMode) {
           _toggleSelection(message.id);
@@ -5171,58 +5178,17 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
           );
         }
       },
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: message.isMe
-              ? ChatColors.attachmentOnOutgoing
-              : ChatColors.attachmentOnIncoming,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.insert_drive_file,
-              color: ChatColors.bubbleText,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                name,
-                style: TextStyle(
-                  color: ChatColors.bubbleText,
-                  fontSize: fontSettings.fontSize - 2,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                if (_isSelectionMode) {
-                  _toggleSelection(message.id);
-                } else if (message.attachmentUrl != null) {
-                  DownloadHelper.downloadAndOpen(
-                    context,
-                    message.attachmentUrl!,
-                    name,
-                  );
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  Icons.download,
-                  color: ChatColors.bubbleMeta,
-                  size: 20,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      onDownload: () {
+        if (_isSelectionMode) {
+          _toggleSelection(message.id);
+        } else if (message.attachmentUrl != null) {
+          DownloadHelper.downloadAndOpen(
+            context,
+            message.attachmentUrl!,
+            name,
+          );
+        }
+      },
     );
   }
 

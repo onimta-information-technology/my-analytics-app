@@ -111,14 +111,7 @@ class DownloadHelper {
       if (localPath != null && await File(localPath).exists()) {
         openPath = localPath;
       } else if (url != null && url.isNotEmpty) {
-        final cacheDir = Directory(
-          '${(await getTemporaryDirectory()).path}/chat_files',
-        );
-        if (!await cacheDir.exists()) await cacheDir.create(recursive: true);
-        final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-        final cached = File(
-          '${cacheDir.path}/${url.hashCode.toUnsigned(32)}_$safeName',
-        );
+        final cached = await _cacheFileFor(url, fileName);
         if (!await cached.exists() || await cached.length() == 0) {
           messenger.showSnackBar(
             SnackBar(
@@ -170,6 +163,39 @@ class DownloadHelper {
         ),
       );
     }
+  }
+
+  /// The local copy of a chat file: [localPath] when the sender's own copy
+  /// still exists, otherwise the file fetched quietly into the same app cache
+  /// [openForViewing] uses, so a later tap opens it without downloading again.
+  /// Null when there is nothing to fetch.
+  static Future<File?> cachedCopy({
+    String? url,
+    String? localPath,
+    required String fileName,
+  }) async {
+    if (localPath != null && await File(localPath).exists()) {
+      return File(localPath);
+    }
+    if (url == null || url.isEmpty) return null;
+    final cached = await _cacheFileFor(url, fileName);
+    if (!await cached.exists() || await cached.length() == 0) {
+      // Own temp name, so a tap's download and this one never share a file.
+      final partial =
+          '${cached.path}.${DateTime.now().microsecondsSinceEpoch}.part';
+      await _dio.download(url, partial);
+      await File(partial).rename(cached.path);
+    }
+    return cached;
+  }
+
+  static Future<File> _cacheFileFor(String url, String fileName) async {
+    final cacheDir = Directory(
+      '${(await getTemporaryDirectory()).path}/chat_files',
+    );
+    if (!await cacheDir.exists()) await cacheDir.create(recursive: true);
+    final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    return File('${cacheDir.path}/${url.hashCode.toUnsigned(32)}_$safeName');
   }
 
   static Future<Directory> _getSaveDirectory() async {

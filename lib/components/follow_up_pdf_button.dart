@@ -185,8 +185,8 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
     final responseColor = _item.isPositive
         ? PdfColors.green700
         : _item.isNegative
-            ? PdfColors.red
-            : null;
+        ? PdfColors.red
+        : null;
 
     final pdf = pw.Document();
     pdf.addPage(
@@ -197,8 +197,7 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
           theme: theme,
           // Background, so the watermark repeats on every page and sits
           // behind the content.
-          buildBackground: (context) =>
-              _buildWatermark(sharedBy, generatedAt),
+          buildBackground: (context) => _buildWatermark(sharedBy, generatedAt),
         ),
         footer: (context) => pw.Container(
           alignment: pw.Alignment.center,
@@ -430,8 +429,11 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
       // Groups first, matching the order the picker reports names in.
       for (var i = 0; i < targets.chatIds.length; i++) {
         final name = i < targets.names.length ? targets.names[i] : 'Group';
-        final error =
-            await _uploadPdfTo(targets.chatIds[i], file.path, caption);
+        final error = await _uploadPdfTo(
+          targets.chatIds[i],
+          file.path,
+          caption,
+        );
         (error == null ? sent : failed).add(name);
         if (error != null) firstError ??= error;
       }
@@ -476,9 +478,9 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
     final message = failed.isEmpty
         ? 'Follow-up PDF sent to ${sent.join(', ')}'
         : sent.isEmpty
-            ? 'Could not send to ${failed.join(', ')}$reason'
-            : 'Sent to ${sent.join(', ')} · failed for '
-                '${failed.join(', ')}$reason';
+        ? 'Could not send to ${failed.join(', ')}$reason'
+        : 'Sent to ${sent.join(', ')} · failed for '
+              '${failed.join(', ')}$reason';
 
     messenger.showSnackBar(
       SnackBar(
@@ -552,7 +554,9 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
             0xFF0C3B79,
           ).withValues(alpha: 0.6),
           disabledForegroundColor: Colors.white70,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
         onPressed: busy ? null : _showShareOptions,
@@ -562,41 +566,53 @@ class _FollowUpPdfButtonState extends ConsumerState<FollowUpPdfButton> {
 
   /// The popup behind the Share button: WhatsApp or the in-app chat.
   Future<void> _showShareOptions() async {
-    final choice = await showDialog<VoidCallback>(
+    final choice = await showModalBottomSheet<VoidCallback>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Share follow-up',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-        ),
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _shareOption(
-             // label: 'WhatsApp',
-              button: _pdfButton(
-                color: const Color(0xFF25D366),
-                icon: FontAwesomeIcons.whatsapp,
-                tooltip: 'Share follow-up via WhatsApp',
-                busy: false,
-                onPressed: () =>
-                    Navigator.pop(dialogContext, _sharePdfToWhatsApp),
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (dialogContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Share follow-up',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
-            ),
-            _shareOption(
-             // label: 'Chat',
-              button: _pdfButton(
-                color: const Color.fromARGB(255, 221, 117, 5),
-                iconAsset: 'assets/images/logo.png',
-                tooltip: 'Send follow-up via chat',
-                busy: false,
-                onPressed: () => Navigator.pop(dialogContext, _sendPdfToChat),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _shareOption(
+                    // label: 'WhatsApp',
+                    button: _pdfButton(
+                      color: const Color(0xFF25D366),
+                      icon: FontAwesomeIcons.whatsapp,
+                      tooltip: 'Share follow-up via WhatsApp',
+                      busy: false,
+                      onPressed: () =>
+                          Navigator.pop(dialogContext, _sharePdfToWhatsApp),
+                    ),
+                  ),
+                  _shareOption(
+                    // label: 'Chat',
+                    button: _pdfButton(
+                      color: const Color.fromARGB(255, 221, 117, 5),
+                      iconAsset: 'assets/images/logo.png',
+                      tooltip: 'Send follow-up via chat',
+                      busy: false,
+                      onPressed: () =>
+                          Navigator.pop(dialogContext, _sendPdfToChat),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

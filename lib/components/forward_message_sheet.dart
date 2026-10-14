@@ -59,6 +59,8 @@ Future<ForwardTargets?> showForwardMessageSheet({
   return showModalBottomSheet<ForwardTargets>(
     context: context,
     isScrollControlled: true,
+    // Keeps the sheet below the status bar once search makes it full screen.
+    useSafeArea: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -101,6 +103,11 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
   String? _error;
   String _query = '';
 
+  /// Set once the search field is tapped: the sheet grows to full screen so
+  /// the keyboard does not leave only a sliver of the list.
+  bool _expanded = false;
+  final FocusNode _searchFocus = FocusNode();
+
   /// Picked targets, keyed by groupId / userUuid so the order of picking is
   /// preserved for the confirmation message.
   final Map<String, ChatGroup> _selectedGroups = {};
@@ -111,7 +118,18 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
   @override
   void initState() {
     super.initState();
+    _searchFocus.addListener(() {
+      if (_searchFocus.hasFocus && !_expanded) {
+        setState(() => _expanded = true);
+      }
+    });
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -130,7 +148,9 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
       final raw = await FirebaseApiService.fetchUserGroups();
       groups = raw
           .map(ChatGroup.fromApiJson)
-          .where((g) => g.groupId.isNotEmpty && g.groupId != widget.excludeChatId)
+          .where(
+            (g) => g.groupId.isNotEmpty && g.groupId != widget.excludeChatId,
+          )
           .toList();
     } catch (e) {
       failure = e;
@@ -173,8 +193,10 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
               avatarUrl: ChatContact.parseAvatarUrl(user),
             );
           })
-          .where((c) =>
-              c.userUuid.isNotEmpty && c.userUuid != widget.excludeUserUuid)
+          .where(
+            (c) =>
+                c.userUuid.isNotEmpty && c.userUuid != widget.excludeUserUuid,
+          )
           .toList();
     } catch (e) {
       failure ??= e;
@@ -208,9 +230,8 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
       if (chatId.isEmpty || participants.length != 2) continue;
 
       for (final participant in participants.whereType<Map>()) {
-        final uuid =
-            (participant['user_uuid'] ?? participant['userUuid'] ?? '')
-                .toString();
+        final uuid = (participant['user_uuid'] ?? participant['userUuid'] ?? '')
+            .toString();
         if (uuid.isEmpty || uuid == deviceId) continue;
         byUser[uuid] = chatId;
       }
@@ -250,88 +271,102 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.8,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(widget.icon ?? Icons.forward, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.title ??
-                          (widget.messageCount > 1
-                              ? 'Forward ${widget.messageCount} messages'
-                              : 'Forward message'),
-                      style: TextStyle(
-                        fontSize: _fs.fontSize + 2,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                style: TextStyle(fontSize: _fs.fontSize - 2),
-                decoration: InputDecoration(
-                  hintText: 'Search groups and contacts...',
-                  hintStyle: TextStyle(fontSize: _fs.fontSize - 2),
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
-                onChanged: (value) => setState(() => _query = value),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _selectedCount == 0
-                    ? 'Select where to send it'
-                    : '$_selectedCount selected',
-                style: TextStyle(
-                  fontSize: _fs.fontSize - 3,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Expanded(child: _buildBody()),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
+    final keyboard = MediaQuery.of(context).viewInsets.bottom;
+    return LayoutBuilder(
+      builder: (context, constraints) => Padding(
+        padding: EdgeInsets.only(bottom: keyboard),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          height: _expanded
+              ? constraints.maxHeight - keyboard
+              : MediaQuery.of(context).size.height * 0.8,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(widget.icon ?? Icons.forward, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: Text(
-                        'Cancel',
-                        style: TextStyle(fontSize: _fs.fontSize - 2),
+                        widget.title ??
+                            (widget.messageCount > 1
+                                ? 'Forward ${widget.messageCount} messages'
+                                : 'Forward message'),
+                        style: TextStyle(
+                          fontSize: _fs.fontSize + 2,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  focusNode: _searchFocus,
+                  style: TextStyle(fontSize: _fs.fontSize - 2),
+                  decoration: InputDecoration(
+                    hintText: 'Search groups and contacts...',
+                    hintStyle: TextStyle(fontSize: _fs.fontSize - 2),
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: _selectedCount == 0 ? null : _submit,
-                      icon: const Icon(Icons.send, size: 18),
-                      label: Text(
-                        'Send',
-                        style: TextStyle(fontSize: _fs.fontSize - 2),
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _selectedCount == 0
+                      ? 'Select where to send it'
+                      : '$_selectedCount selected',
+                  style: TextStyle(
+                    fontSize: _fs.fontSize - 3,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Expanded(child: _buildBody()),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontSize: _fs.fontSize - 2),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _selectedCount == 0 ? null : _submit,
+                        icon: const Icon(Icons.send, size: 18),
+                        label: Text(
+                          'Send',
+                          style: TextStyle(fontSize: _fs.fontSize - 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -389,17 +424,17 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
   }
 
   Widget _sectionHeader(String label) => Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 4),
-        child: Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: _fs.fontSize - 5,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[600],
-            letterSpacing: 0.5,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(top: 8, bottom: 4),
+    child: Text(
+      label.toUpperCase(),
+      style: TextStyle(
+        fontSize: _fs.fontSize - 5,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey[600],
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 
   Widget _buildGroupTile(ChatGroup group) {
     // An admin-only group rejects forwards from ordinary members, so flag it
@@ -428,10 +463,7 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
       ),
       title: Text(
         group.groupName,
-        style: TextStyle(
-          fontSize: _fs.fontSize,
-          fontWeight: _fs.fontWeight,
-        ),
+        style: TextStyle(fontSize: _fs.fontSize, fontWeight: _fs.fontWeight),
       ),
       subtitle: Text(
         blocked
@@ -467,10 +499,7 @@ class _ForwardMessageSheetState extends State<_ForwardMessageSheet> {
       ),
       title: Text(
         contact.name,
-        style: TextStyle(
-          fontSize: _fs.fontSize,
-          fontWeight: _fs.fontWeight,
-        ),
+        style: TextStyle(fontSize: _fs.fontSize, fontWeight: _fs.fontWeight),
       ),
       subtitle: Text(
         contact.isOnline ? 'Online' : 'Offline',

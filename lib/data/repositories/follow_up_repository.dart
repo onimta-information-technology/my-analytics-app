@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ballys_reservation_app/core/exceptions.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 // import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
@@ -75,8 +76,36 @@ class FollowUpRepository {
     }
     print('Follow-up request body: ${jsonEncode(logBody)}');
 
-    return apiService.post('followup_Insert', body);
-    print('Follow-up request body: ${jsonEncode(logBody)}');
+    // Read the raw response: [ApiService.post] turns a 409 into a generic
+    // ApiException and drops the body, but the body says who already holds
+    // the follow-up.
+    final response = await apiService.postResponse('followup_Insert', body);
+    print('API response for followup_Insert: ${response.body}');
+
+    if (response.statusCode == 409) {
+      throw AlreadyFollowedException.fromJson(_decodeOrEmpty(response.body));
+    }
+    if (response.statusCode >= 500) {
+      throw ServerException(
+        response.reasonPhrase ?? 'Server error',
+        response.statusCode,
+      );
+    }
+    if (response.statusCode != 200) {
+      throw ApiException(
+        'Request failed: ${response.statusCode} ${response.reasonPhrase}',
+        statusCode: response.statusCode,
+      );
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Map<String, dynamic> _decodeOrEmpty(String body) {
+    try {
+      return jsonDecode(body) as Map<String, dynamic>;
+    } catch (_) {
+      return const <String, dynamic>{};
+    }
   }
 
   /// Fetches every saved follow-up from `GetAllFollowup`.

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/core/exceptions.dart';
 import 'package:ballys_reservation_app/providers/follow_up_provider.dart';
 
 /// Contact status options. The customer response section is only shown when
@@ -156,6 +157,128 @@ class _FollowScreenState extends ConsumerState<FollowScreen> {
     );
   }
 
+  /// Shown when the API answers 409: the member already has an active
+  /// follow-up, which must be unfollowed before a new one can be added.
+  Future<void> _showAlreadyFollowedDialog(AlreadyFollowedException e) {
+    final date = e.insertDate;
+    final dateText = date == null
+        ? null
+        : '${date.year}-${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')} '
+            '${date.hour.toString().padLeft(2, '0')}:'
+            '${date.minute.toString().padLeft(2, '0')}';
+
+    return showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person_pin_circle_rounded,
+                  size: 40,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Already Followed',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                e.message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  children: [
+                    if (e.memberName != null)
+                      _followDetailRow(Icons.person_outline, 'Member', e.memberName!),
+                    if (e.loginBy != null)
+                      _followDetailRow(Icons.badge_outlined, 'Followed by', e.loginBy!),
+                    if (e.salesCode != null)
+                      _followDetailRow(Icons.tag, 'Sales code', e.salesCode!),
+                    if (dateText != null)
+                      _followDetailRow(Icons.schedule, 'Followed on', dateText),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Constants.kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Got it',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// One "icon  label ........ value" line in the already-followed card.
+  Widget _followDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Constants.kPrimaryColor),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     if (_descriptionController.text.trim().isEmpty) {
       _showError('Please add a description');
@@ -218,6 +341,11 @@ class _FollowScreenState extends ConsumerState<FollowScreen> {
             dateRange: widget.dateRange,
             buyInRange: widget.buyInRange,
           );
+    } on AlreadyFollowedException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      await _showAlreadyFollowedDialog(e);
+      return;
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);

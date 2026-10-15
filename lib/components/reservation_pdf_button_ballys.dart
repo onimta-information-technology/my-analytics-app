@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -1031,39 +1032,9 @@ class _ReservationPdfButtonBallysState
   @override
   Widget build(BuildContext context) {
     final enabled = _fontsReady && !_isSendingToChat;
+    final busy = !_fontsReady || _isSendingToChat;
 
-    return Column(
-      children: [
-        _pdfButton(
-          color: const Color(0xFF25D366),
-          icon: Icons.share,
-          label: _fontsReady
-              ? 'SEND RESERVATION DETAILS VIA WHATSAPP'
-              : 'PREPARING...',
-          busy: !_fontsReady,
-          onPressed: enabled ? () => _sharePdfToWhatsApp(context) : null,
-        ),
-        const SizedBox(height: 10),
-        _pdfButton(
-          color: const Color(0xFF0C3B79),
-          icon: Icons.forum,
-          label: _isSendingToChat
-              ? 'SENDING...'
-              : 'SEND RESERVATION DETAILS VIA CHAT',
-          busy: _isSendingToChat || !_fontsReady,
-          onPressed: enabled ? _sendPdfToChat : null,
-        ),
-      ],
-    );
-  }
-
-  Widget _pdfButton({
-    required Color color,
-    required IconData icon,
-    required String label,
-    required bool busy,
-    required VoidCallback? onPressed,
-  }) {
+    // One Share button; the ways to share are picked from a bottom sheet.
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
@@ -1076,20 +1047,110 @@ class _ReservationPdfButtonBallysState
                   color: Colors.white,
                 ),
               )
-            : Icon(icon, size: 20),
+            : const Icon(Icons.share, size: 20),
         label: Text(
-          label,
+          !_fontsReady
+              ? 'PREPARING...'
+              : _isSendingToChat
+              ? 'SENDING...'
+              : 'SHARE',
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: const Color(0xFF0C3B79),
           foregroundColor: Colors.white,
-          disabledBackgroundColor: color.withOpacity(0.6),
+          disabledBackgroundColor: const Color(
+            0xFF0C3B79,
+          ).withValues(alpha: 0.6),
           disabledForegroundColor: Colors.white70,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
-        onPressed: onPressed,
+        onPressed: enabled ? _showShareOptions : null,
+      ),
+    );
+  }
+
+  /// The sheet behind the Share button: WhatsApp or the in-app chat.
+  Future<void> _showShareOptions() async {
+    final choice = await showModalBottomSheet<VoidCallback>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Share reservation',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _pdfButton(
+                    color: const Color(0xFF25D366),
+                    icon: FontAwesomeIcons.whatsapp,
+                    tooltip: 'Share reservation via WhatsApp',
+                    onPressed: () => Navigator.pop(
+                      sheetContext,
+                      () => _sharePdfToWhatsApp(context),
+                    ),
+                  ),
+                  _pdfButton(
+                    color: const Color.fromARGB(255, 221, 117, 5),
+                    iconAsset: 'assets/images/logo.png',
+                    tooltip: 'Send reservation via chat',
+                    onPressed: () =>
+                        Navigator.pop(sheetContext, _sendPdfToChat),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice != null && mounted) choice();
+  }
+
+  Widget _pdfButton({
+    required Color color,
+    IconData? icon,
+    String? iconAsset,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white,
+        shape: CircleBorder(side: BorderSide(color: color, width: 2)),
+        elevation: 2,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Padding(
+              // The logo has its own margin baked in; give it more of the
+              // circle so it reads at the same size as the WhatsApp glyph.
+              padding: EdgeInsets.all(icon != null ? 10 : 2),
+              child: icon != null
+                  ? FittedBox(child: FaIcon(icon, color: color))
+                  : Image.asset(iconAsset!, fit: BoxFit.contain),
+            ),
+          ),
+        ),
       ),
     );
   }

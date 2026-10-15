@@ -24,16 +24,21 @@ class GuestSearchResponse {
   });
 
   factory GuestSearchResponse.fromJson(Map<String, dynamic> json) {
+    // LVD sometimes comes back as an empty object ({}) instead of a date
+    // string or null — parse only real strings so one row can't break the
+    // whole search result.
+    final lvdRaw = json['LVD'];
     return GuestSearchResponse(
-      mid: json["MID"] ?? '',
-      mName: json["MName"] ?? '',
-      rowNum: json["RowNum"] ?? 0,
-      memImage2: json["MemImage2"] ?? '',
-      // lvd: DateTime.parse(json['LVD']),
-       lvd: json['LVD'] != null ? DateTime.parse(json['LVD']) : null,
-      gName: json["GName"],
-      gRating: json["G_Rating"],
-      mGroup: json["mGroup"],
+      mid: json["MID"]?.toString() ?? '',
+      mName: json["MName"]?.toString() ?? '',
+      rowNum: json["RowNum"] is int
+          ? json["RowNum"]
+          : int.tryParse('${json["RowNum"]}') ?? 0,
+      memImage2: json["MemImage2"]?.toString() ?? '',
+      lvd: lvdRaw is String ? DateTime.tryParse(lvdRaw) : null,
+      gName: json["GName"]?.toString(),
+      gRating: json["G_Rating"]?.toString(),
+      mGroup: json["mGroup"]?.toString(),
     );
   }
 

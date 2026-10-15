@@ -111,6 +111,43 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                     ),
                   ],
                 ),
+                Row(
+                  children: [
+                    // ── Unfollowed ──────────────────────────────────────────
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          context.go('/inctiveMemberMain/unfollowups');
+                        },
+                        child: Card(
+                          color: const Color.fromARGB(255, 214, 69, 65),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            child: Column(
+                              children: [
+                                Lottie.asset(
+                                  'assets/icon/menu_screen/followMembers.json',
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.contain,
+                                ),
+                                const Text(
+                                  'Unfollowed',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: SizedBox()),
+                  ],
+                ),
               ],
             ),
           ),

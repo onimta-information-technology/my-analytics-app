@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 // import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
+import 'package:ballys_reservation_app/models/unfollow_item.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 
@@ -75,6 +76,7 @@ class FollowUpRepository {
     print('Follow-up request body: ${jsonEncode(logBody)}');
 
     return apiService.post('followup_Insert', body);
+    print('Follow-up request body: ${jsonEncode(logBody)}');
   }
 
   /// Fetches every saved follow-up from `GetAllFollowup`.
@@ -82,6 +84,10 @@ class FollowUpRepository {
   /// The endpoint answers `{ "Status": true, "Data": [ ... ] }`; a false or
   /// missing `Status` is treated as an empty list rather than an error, since
   /// the API has no error payload of its own.
+  ///
+  /// The endpoint also returns unfollowed records (`Status: "Unfollowup"`);
+  /// only active ones are kept — unfollowed ones come from
+  /// [fetchAllUnfollowups].
   Future<List<FollowUpItem>> fetchAllFollowUps() async {
     final response = await apiService.get('GetAllFollowup');
 
@@ -90,6 +96,20 @@ class FollowUpRepository {
     final data = response['Data'] as List<dynamic>? ?? const [];
     return data
         .map((e) => FollowUpItem.fromJson(e as Map<String, dynamic>))
+        .where((item) => item.isActive)
+        .toList();
+  }
+
+  /// Fetches every unfollowed follow-up from `GetAllUnfollowup`. Each record
+  /// carries the unfollow reason plus the original follow-up it closed.
+  Future<List<UnfollowItem>> fetchAllUnfollowups() async {
+    final response = await apiService.get('GetAllUnfollowup');
+
+    if (response['Status'] != true) return const <UnfollowItem>[];
+
+    final data = response['Data'] as List<dynamic>? ?? const [];
+    return data
+        .map((e) => UnfollowItem.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 

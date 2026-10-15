@@ -27,6 +27,9 @@ class FollowUpItem {
   /// When the follow-up was saved. Null when the API sends no date.
   final DateTime? createdDate;
 
+  /// Record status from the API, e.g. "Active" or "Unfollowup".
+  final String? status;
+
   /// Raw base64 photo. Decoded lazily via [photoBytes] — a follow-up list can
   /// hold dozens of these, so we only pay for the ones that get rendered.
   final String? photoBase64;
@@ -50,7 +53,15 @@ class FollowUpItem {
     this.buyInRange,
     this.createdDate,
     this.photoBase64,
+    this.status,
   });
+
+  /// True unless the API marks the follow-up as anything other than
+  /// "Active" (e.g. "Unfollowup"). A missing status counts as active.
+  bool get isActive {
+    final s = status?.trim().toLowerCase() ?? '';
+    return s.isEmpty || s == 'active';
+  }
 
   bool get isPositive => responseType?.toLowerCase() == 'positive';
   bool get isNegative => responseType?.toLowerCase() == 'negative';
@@ -109,6 +120,7 @@ class FollowUpItem {
       buyInRange: json['BuyInRange']?.toString(),
       createdDate: _parseCreatedDate(json),
       photoBase64: json['Photo'] as String?,
+      status: json['Status']?.toString(),
     );
   }
 }

@@ -351,7 +351,7 @@ print('API response for guest image: $response');
   }
 
   // TODO: replace with the real change-marketer endpoint name.
-  static const String changeMarketerEndpoint = 'ChangeMarketer_Insert';
+  static const String changeMarketerEndpoint = 'marketer_change_Insert';
 
   /// POST `{baseUrl}/ChangeMarketer_Insert` — saves a member's marketer
   /// change along with the member's current marketing person and group.

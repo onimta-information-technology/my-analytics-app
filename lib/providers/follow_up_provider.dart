@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/repositories/follow_up_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
+import 'package:ballys_reservation_app/models/unfollow_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -46,9 +47,29 @@ class FollowUpListNotifier extends AsyncNotifier<List<FollowUpItem>> {
           reason: reason,
           remarks: remarks,
         );
+    ref.invalidate(unfollowListProvider);
     await refresh();
   }
 }
+
+/// Loads every unfollowed follow-up for the unfollowed list screen.
+class UnfollowListNotifier extends AsyncNotifier<List<UnfollowItem>> {
+  @override
+  Future<List<UnfollowItem>> build() => _load();
+
+  Future<List<UnfollowItem>> _load() =>
+      ref.read(followUpRepositoryProvider).fetchAllUnfollowups();
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_load);
+  }
+}
+
+final unfollowListProvider =
+    AsyncNotifierProvider<UnfollowListNotifier, List<UnfollowItem>>(
+  UnfollowListNotifier.new,
+);
 
 /// The logged-in user's name, compared against a follow-up's `Login_By` to
 /// decide who may unfollow it.

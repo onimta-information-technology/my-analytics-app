@@ -30,6 +30,7 @@ import 'package:ballys_reservation_app/screens/chat_screen.dart';
 import 'package:ballys_reservation_app/models/follow_up_item.dart';
 import 'package:ballys_reservation_app/screens/follow_up_view_screen.dart';
 import 'package:ballys_reservation_app/screens/follow_ups_screen.dart';
+import 'package:ballys_reservation_app/screens/unfollowed_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_main.dart';
 import 'package:ballys_reservation_app/screens/gifts/guest_gifts_screen.dart';
 import 'package:ballys_reservation_app/screens/gifts/gifts_screen.dart';
@@ -1142,6 +1143,23 @@ class AppNavigation {
             ],
           ),
 
+          GoRoute(
+            path: '/unfollowups',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              fullscreenDialog: true,
+              key: state.pageKey,
+              child: const UnfollowedScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: CurveTween(
+                        curve: Curves.easeInOutCirc,
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+            ),
+          ),
         ]),
           GoRoute(
             path: '/gifts',

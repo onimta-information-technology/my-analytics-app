@@ -538,11 +538,6 @@ class _FollowUpCard extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        if (_daysSinceLabel != null)
-                          _Chip(
-                            label: _daysSinceLabel!,
-                            color: _daysSinceColor,
-                          ),
                         if (item.contactStatus.isNotEmpty)
                           _Chip(
                             label: item.contactStatus,
@@ -556,17 +551,29 @@ class _FollowUpCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    if (onUnfollow != null) ...[
+                    // ── Days since + Unfollow, side by side ─────────────
+                    if (_daysSinceLabel != null || onUnfollow != null) ...[
                       const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: onUnfollow,
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        icon: const Icon(Icons.person_remove_outlined, size: 18, color: Colors.white),
-                        label: const Text('Unfollow', style: TextStyle(color: Colors.white)),
+                      Row(
+                        children: [
+                          if (_daysSinceLabel != null)
+                            _DaysBadge(
+                              label: _daysSinceLabel!,
+                              color: _daysSinceColor,
+                            ),
+                          const Spacer(),
+                          if (onUnfollow != null)
+                            OutlinedButton.icon(
+                              onPressed: onUnfollow,
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              icon: const Icon(Icons.person_remove_outlined, size: 18, color: Colors.white),
+                              label: const Text('Unfollow', style: TextStyle(color: Colors.white)),
+                            ),
+                        ],
                       ),
                     ],
                   ],
@@ -592,6 +599,40 @@ class _FollowUpCard extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: Constants.kPrimaryColor,
         ),
+      ),
+    );
+  }
+}
+
+/// "12 days ago"-style badge, sized to sit beside the Unfollow button.
+class _DaysBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _DaysBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timelapse, size: 18, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

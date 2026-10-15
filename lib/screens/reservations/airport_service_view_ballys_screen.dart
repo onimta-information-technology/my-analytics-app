@@ -92,6 +92,7 @@ class _AirportServiceViewBallysScreenState
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   children: [
                     _summaryCard(request, fontSettings),
+                    _flightCard(request, fontSettings),
                     _approvalCard(request, fontSettings),
                     for (final guest in request.guests)
                       _guestCard(guest, fontSettings),
@@ -463,6 +464,32 @@ class _AirportServiceViewBallysScreenState
     );
   }
 
+  Widget _flightCard(
+    AirportServiceBallys request,
+    FontSettings fontSettings,
+  ) {
+    if (!request.hasFlightDetails) return const SizedBox.shrink();
+
+    final date = request.flightDate;
+    return _section(
+      title: 'Flight',
+      fontSettings: fontSettings,
+      children: [
+        _row('Flight no', request.flightNo ?? '', fontSettings),
+        _row(
+          'Flight date',
+          date == null
+              ? ''
+              : '${date.day.toString().padLeft(2, '0')}/'
+                  '${date.month.toString().padLeft(2, '0')}/${date.year}',
+          fontSettings,
+        ),
+        _row('Flight time', request.flightTime ?? '', fontSettings),
+        //_row('Flight type', request.flightTypes.join(', '), fontSettings),
+      ],
+    );
+  }
+
   Widget _approvalCard(
     AirportServiceBallys request,
     FontSettings fontSettings,
@@ -515,6 +542,8 @@ class _AirportServiceViewBallysScreenState
       fontSettings: fontSettings,
       children: [
         _row('Service', guest.serviceType, fontSettings),
+        if (guest.flightType != null)
+          _row('Service type', guest.flightType!, fontSettings),
         _row(
           'Package',
           '${guest.currencyType} ${_formatAmount(guest.packageAmount)}',

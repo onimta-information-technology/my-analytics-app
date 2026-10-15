@@ -334,6 +334,26 @@ class _AirportServiceBallysScreenState
               ),
               const SizedBox(height: 4),
             ],
+            if (request.hasFlightDetails) ...[
+              _iconRow(
+                request.flightTypes.contains('Arrival') &&
+                        !request.flightTypes.contains('Departure')
+                    ? Icons.flight_land
+                    : Icons.flight_takeoff,
+                'Flight: ${[
+                  if (request.flightNo != null) request.flightNo!,
+                  if (request.flightDate != null)
+                    _formatDate(request.flightDate),
+                  if (request.flightTime != null) request.flightTime!,
+                  if (request.flightTypes.isNotEmpty)
+                    request.flightTypes.join(', '),
+                ].join('  ·  ')}',
+                fontSize,
+                fontWeight,
+                Colors.teal,
+              ),
+              const SizedBox(height: 4),
+            ],
             if (request.approvePerson != null) ...[
               _iconRow(
                 Icons.verified_user_outlined,

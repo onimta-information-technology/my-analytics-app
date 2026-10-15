@@ -10,6 +10,11 @@ class AirportServiceBallys {
   final String deviceId;
   final String marketingCode;
   final String? remarks;
+  final DateTime? flightDate;
+
+  /// Kept as the API's display string, e.g. `03:59 PM`.
+  final String? flightTime;
+  final String? flightNo;
   final AirportServiceApprovePersonBallys? approvePerson;
   final String reservationStatus;
 
@@ -35,6 +40,9 @@ class AirportServiceBallys {
     required this.deviceId,
     required this.marketingCode,
     this.remarks,
+    this.flightDate,
+    this.flightTime,
+    this.flightNo,
     this.approvePerson,
     required this.reservationStatus,
     this.checkedBy,
@@ -63,6 +71,9 @@ class AirportServiceBallys {
       deviceId: json['device_id']?.toString() ?? '',
       marketingCode: json['marketing_code']?.toString() ?? '',
       remarks: _parseText(json['remarks']),
+      flightDate: _parseDate(json['flight_date']),
+      flightTime: _parseText(json['flight_time']),
+      flightNo: _parseText(json['flight_no']),
       approvePerson: rawApprover is Map
           ? AirportServiceApprovePersonBallys.fromJson(
               Map<String, dynamic>.from(rawApprover))
@@ -108,6 +119,19 @@ class AirportServiceBallys {
   /// First guest, used as the request's headline in the list.
   AirportServiceGuestBallys? get leadGuest =>
       guests.isEmpty ? null : guests.first;
+
+  /// Distinct `flight_type` values (Arrival / Departure) across guests.
+  List<String> get flightTypes => guests
+      .map((g) => g.flightType)
+      .whereType<String>()
+      .toSet()
+      .toList();
+
+  bool get hasFlightDetails =>
+      flightNo != null ||
+      flightDate != null ||
+      flightTime != null ||
+      flightTypes.isNotEmpty;
 
   /// Sum of every guest's pax.
   int get totalPax => guests.fold(0, (sum, g) => sum + g.noOfPax);
@@ -167,6 +191,9 @@ class AirportServiceGuestBallys {
   final int noOfFriends;
   final int noOfPax;
 
+  /// `Arrival` or `Departure`; null on older requests.
+  final String? flightType;
+
   AirportServiceGuestBallys({
     required this.id,
     required this.mid,
@@ -179,6 +206,7 @@ class AirportServiceGuestBallys {
     required this.noOfChildren,
     required this.noOfFriends,
     required this.noOfPax,
+    this.flightType,
   });
 
   factory AirportServiceGuestBallys.fromJson(Map<String, dynamic> json) {
@@ -194,6 +222,7 @@ class AirportServiceGuestBallys {
       noOfChildren: _parseInt(json['no_of_children']),
       noOfFriends: _parseInt(json['no_of_friends']),
       noOfPax: _parseInt(json['no_of_pax']),
+      flightType: _parseText(json['flight_type']),
     );
   }
 }

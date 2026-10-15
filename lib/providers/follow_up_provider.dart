@@ -32,10 +32,20 @@ class FollowUpListNotifier extends AsyncNotifier<List<FollowUpItem>> {
     state = await AsyncValue.guard(_load);
   }
 
-  /// Unfollows [followupId], then reloads the list. Errors propagate so the
-  /// caller can show them.
-  Future<void> unfollow(int followupId) async {
-    await ref.read(followUpRepositoryProvider).unfollow(followupId);
+  /// Unfollows [item] with the given [reason]/[remarks], then reloads the
+  /// list. Errors propagate so the caller can show them.
+  Future<void> unfollow(
+    FollowUpItem item, {
+    required String reason,
+    String remarks = '',
+  }) async {
+    await ref.read(followUpRepositoryProvider).unfollow(
+          followupId: item.followupId,
+          memberId: item.memberId,
+          memberName: item.memberName,
+          reason: reason,
+          remarks: remarks,
+        );
     await refresh();
   }
 }

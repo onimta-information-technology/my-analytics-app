@@ -93,21 +93,37 @@ class FollowUpRepository {
         .toList();
   }
 
-  /// Removes (unfollows) the follow-up [followupId].
+  /// Unfollows the follow-up [followupId] via `unfollowup_Insert`.
   ///
-  /// TODO: confirm the endpoint name and payload with the backend —
-  /// `followup_Delete` is assumed to mirror `followup_Insert`.
-  Future<Map<String, dynamic>> unfollow(int followupId) async {
+  /// [reason] is required by the UI; [remarks] is optional. `Photo` is sent
+  /// as null for now — the unfollow flow doesn't capture one yet.
+  Future<Map<String, dynamic>> unfollow({
+    required int followupId,
+    required String memberId,
+    required String memberName,
+    required String reason,
+    String remarks = '',
+  }) async {
     final userName = await StorageUtil.getUserName();
+    final salesCode = await StorageUtil.getSalesCode();
+    final marketingCode = await StorageUtil.getMarketingCode();
 
     final body = <String, Object?>{
       'FollowupId': followupId,
-      'Login_By': userName,
+      'MId': memberId,
+      'MName': memberName,
+      'Reason': reason,
+      'Remarks': remarks,
+      'Photo': null,
       'DeviceId': await DeviceId.get(),
+      'Login_By': userName,
+      'Sales_Code': salesCode,
+      'Marketing_Code': marketingCode,
+      'CreatedDate': DateTime.now().toIso8601String(),
     };
     print('Unfollow request body: ${jsonEncode(body)}');
 
-    return apiService.post('followup_Delete', body);
+    return apiService.post('unfollowup_Insert', body);
   }
 
   /// Returns an ISO `yyyy-MM-dd` date string, or null when [date] is null.

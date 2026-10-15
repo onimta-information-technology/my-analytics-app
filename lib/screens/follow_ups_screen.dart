@@ -71,30 +71,18 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
   }
 
   Future<void> _confirmUnfollow(FollowUpItem item) async {
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<({String reason, String remarks})>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unfollow'),
-        content: Text(
-          'Unfollow ${item.memberId} - ${item.memberName}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Unfollow', style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      builder: (context) => _UnfollowDialog(item: item),
     );
-    if (confirmed != true || !mounted) return;
+    if (result == null || !mounted) return;
 
     try {
-      await ref.read(followUpListProvider.notifier).unfollow(item.followupId);
+      await ref.read(followUpListProvider.notifier).unfollow(
+            item,
+            reason: result.reason,
+            remarks: result.remarks,
+          );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -632,6 +620,91 @@ class _Chip extends StatelessWidget {
           color: color,
         ),
       ),
+    );
+  }
+}
+
+/// Asks for the unfollow reason (required) and optional remarks. Pops a
+/// `(reason, remarks)` record on confirm, or null on cancel.
+class _UnfollowDialog extends StatefulWidget {
+  final FollowUpItem item;
+
+  const _UnfollowDialog({required this.item});
+
+  @override
+  State<_UnfollowDialog> createState() => _UnfollowDialogState();
+}
+
+class _UnfollowDialogState extends State<_UnfollowDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _reasonController = TextEditingController();
+  final _remarksController = TextEditingController();
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _remarksController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop((
+      reason: _reasonController.text.trim(),
+      remarks: _remarksController.text.trim(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Unfollow'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Unfollow ${widget.item.memberId} - ${widget.item.memberName}?'),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _reasonController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Reason *',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Please enter a reason'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _remarksController,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Remarks',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        TextButton(
+          onPressed: _submit,
+          style: TextButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Unfollow', style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold)),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,6 @@
+import 'package:ballys_reservation_app/models/pendingCounts.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/pending_count_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +33,10 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
   void initState() {
     super.initState();
     _resolveLocation();
+    // Refresh the pending badges each time this screen opens.
+    Future.microtask(() {
+      ref.read(pendingCountProvider.notifier).fetch();
+    });
   }
 
   Future<void> _resolveLocation() async {
@@ -134,9 +140,46 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
     return location.code.split('_').first.toUpperCase() == 'BALLYS';
   }
 
+  /// Red pending-count badge on a card's top-right corner; hidden at zero.
+  Widget _badged(int count, Widget card) {
+    if (count <= 0) return card;
+    return Stack(
+      // Passthrough keeps the Expanded width, so the card does not shrink
+      // to its content.
+      fit: StackFit.passthrough,
+      children: [
+        card,
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
+    // Pending counts per type from StatusCounts/Get — only filled on Ballys,
+    // so every badge stays hidden elsewhere.
+    final counts =
+        ref.watch(pendingCountProvider).valueOrNull ?? const PendingCounts();
 
     return Scaffold(
       appBar: AppBar(
@@ -181,27 +224,30 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                                 : '/reservationMain/reservations',
                           );
                         },
-                        child: Card(
-                          color: Colors.orange[700],
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Column(
-                              children: [
-                                Lottie.asset(
-                                  'assets/icon/menu_screen/reservation.json',
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.contain,
-                                ),
-                                const Text(
-                                  'Reservations',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
+                        child: _badged(
+                          counts.pendingFor('reservation'),
+                          Card(
+                            color: Colors.orange[700],
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: [
+                                  Lottie.asset(
+                                    'assets/icon/menu_screen/reservation.json',
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.contain,
                                   ),
-                                ),
-                              ],
+                                  const Text(
+                                    'Reservations',
+                                    style: TextStyle(
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -272,27 +318,32 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                               '/reservationMain/group-reservations-ballys',
                             );
                           },
-                          child: Card(
-                            color: const Color.fromARGB(255, 103, 58, 183),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Column(
-                                children: const [
-                                  Icon(
-                                    Icons.groups,
-                                    size: 80,
-                                    color: Colors.white,
-                                  ),
-                                  Text(
-                                    'Group Reservation',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
+                          child: _badged(
+                            counts.pendingFor('group_reservation'),
+                            Card(
+                              color: const Color.fromARGB(255, 103, 58, 183),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: Column(
+                                  children: const [
+                                    Icon(
+                                      Icons.groups,
+                                      size: 80,
                                       color: Colors.white,
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'Group Reservation',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -383,33 +434,38 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
-                                 if (_userLevel == '3') {
+                            if (_userLevel == '3') {
                               _showAccessDeniedDialog();
                               return;
                             }
                             context.go('/reservationMain/transport-ballys');
                           },
-                          child: Card(
-                            color: const Color.fromARGB(255, 0, 150, 136),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Column(
-                                children: const [
-                                  Icon(
-                                    Icons.directions_car_filled,
-                                    size: 80,
-                                    color: Colors.white,
-                                  ),
-                                  Text(
-                                    'Transport',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
+                          child: _badged(
+                            counts.pendingFor('transport'),
+                            Card(
+                              color: const Color.fromARGB(255, 0, 150, 136),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: Column(
+                                  children: const [
+                                    Icon(
+                                      Icons.directions_car_filled,
+                                      size: 80,
                                       color: Colors.white,
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'Transport',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -431,27 +487,32 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                             }
                             context.go('/reservationMain/visa-ballys');
                           },
-                          child: Card(
-                            color: const Color(0xFF6A1B9A),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Column(
-                                children: const [
-                                  Icon(
-                                    Icons.badge,
-                                    size: 80,
-                                    color: Colors.white,
-                                  ),
-                                  Text(
-                                    'Visa',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
+                          child: _badged(
+                            counts.pendingFor('visa_request'),
+                            Card(
+                              color: const Color(0xFF6A1B9A),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: Column(
+                                  children: const [
+                                    Icon(
+                                      Icons.badge,
+                                      size: 80,
                                       color: Colors.white,
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'Visa',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -465,29 +526,36 @@ class _ReservationMainScreenState extends ConsumerState<ReservationMainScreen>
                               _showAccessDeniedDialog();
                               return;
                             }
-                            context.go('/reservationMain/airport-service-ballys');
+                            context.go(
+                              '/reservationMain/airport-service-ballys',
+                            );
                           },
-                          child: Card(
-                            color: const Color(0xFF0277BD),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Column(
-                                children: const [
-                                  Icon(
-                                    Icons.local_airport,
-                                    size: 80,
-                                    color: Colors.white,
-                                  ),
-                                  Text(
-                                    'Airport Services',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.normal,
+                          child: _badged(
+                            counts.pendingFor('airport_service'),
+                            Card(
+                              color: const Color(0xFF0277BD),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: Column(
+                                  children: const [
+                                    Icon(
+                                      Icons.local_airport,
+                                      size: 80,
                                       color: Colors.white,
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'Airport Services',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

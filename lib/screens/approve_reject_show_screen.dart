@@ -111,6 +111,10 @@ class _ApproveReservationsMenuScreenState
   void initState() {
     super.initState();
     _resolveLocation();
+    // Refresh the badges each time this menu opens.
+    Future.microtask(() {
+      ref.read(pendingCountProvider.notifier).fetch();
+    });
   }
 
   Future<void> _resolveLocation() async {
@@ -140,7 +144,11 @@ class _ApproveReservationsMenuScreenState
       // Ballys logins get their own Reservations screen; every other
       // location keeps the shared one.
       _CardWithBadge(
-        count: counts.reservation,
+        // Ballys shows only the plain reservation pending count here; the
+        // other types have their own cards below.
+        count: _isBallys
+            ? counts.pendingFor('reservation')
+            : counts.reservation,
         onTap: () =>
             _open(_isBallys ? 'reservations-ballys' : 'reservations'),
         gradient: const LinearGradient(
@@ -158,7 +166,7 @@ class _ApproveReservationsMenuScreenState
       // buttons — nothing is created from the Approve flow.
       if (_isBallys) ...[
         _CardWithBadge(
-          count: 0,
+          count: counts.pendingFor('group_reservation'),
           onTap: () => _open('group-reservations-ballys'),
           gradient: const LinearGradient(
             colors: [
@@ -169,6 +177,7 @@ class _ApproveReservationsMenuScreenState
           icon: Icons.groups,
           label: 'Group Reservation',
         ),
+        // StatusCounts/Get has no amendment row yet.
         _CardWithBadge(
           count: 0,
           onTap: () => _open('amendments-ballys'),
@@ -182,7 +191,7 @@ class _ApproveReservationsMenuScreenState
           label: 'Amendments',
         ),
         _CardWithBadge(
-          count: 0,
+          count: counts.pendingFor('transport'),
           onTap: () => _open('transport-ballys'),
           gradient: const LinearGradient(
             colors: [
@@ -194,7 +203,7 @@ class _ApproveReservationsMenuScreenState
           label: 'Transport',
         ),
         _CardWithBadge(
-          count: 0,
+          count: counts.pendingFor('visa_request'),
           onTap: () => _open('visa-ballys'),
           gradient: const LinearGradient(
             colors: [Color(0xFF6A1B9A), Color(0xFF6A1B9A)],
@@ -203,7 +212,7 @@ class _ApproveReservationsMenuScreenState
           label: 'Visa',
         ),
         _CardWithBadge(
-          count: 0,
+          count: counts.pendingFor('airport_service'),
           onTap: () => _open('airport-service-ballys'),
           gradient: const LinearGradient(
             colors: [Color(0xFF0277BD), Color(0xFF0277BD)],

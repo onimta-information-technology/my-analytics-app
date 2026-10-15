@@ -36,10 +36,20 @@ const List<String> _kPositiveStatuses = <String>[
   'Customer Confirmed',
 ];
 
-class FollowUpViewScreen extends StatelessWidget {
+class FollowUpViewScreen extends StatefulWidget {
   final FollowUpItem item;
 
   const FollowUpViewScreen({super.key, required this.item});
+
+  @override
+  State<FollowUpViewScreen> createState() => _FollowUpViewScreenState();
+}
+
+class _FollowUpViewScreenState extends State<FollowUpViewScreen> {
+  /// Text size multiplier picked from the 1x / 1.2x / 1.3x selector.
+  double _textScale = 1.0;
+
+  FollowUpItem get item => widget.item;
 
   bool get _isContacted => item.contactStatus == 'Contacted';
 
@@ -78,6 +88,54 @@ class FollowUpViewScreen extends StatelessWidget {
     );
   }
 
+  // ── Text scale (1x / 1.2x / 1.3x) selector ──────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final photo = item.photoBytes;
@@ -98,166 +156,101 @@ class FollowUpViewScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Search range the follow-up was saved under ───────────────
-              if (_hasRange) ...[
-                _RangeBanner(
-                  dateRange: item.dateRange,
-                  buyInRange: item.buyInRange,
-                ),
-                const SizedBox(height: 6),
-              ],
+        child: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(_textScale)),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Text size selector (1x / 1.2x / 1.3x) ───────────────────
+                  MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.noScaling),
+                    child: _buildTextScaleSelector(),
+                  ),
+                  const SizedBox(height: 12),
 
-              // ── Member ───────────────────────────────────────────────────
-              GuestDisplayCardById(
-                memberId: item.memberId,
-                showLastVisitDate: true,
-              ),
-              if (item.createdDate != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time,
-                        size: 16, color: Colors.black54),
-                    const SizedBox(width: 6),
-                    Text(
-                      DateFormat('dd MMM yyyy  hh:mm a')
-                          .format(item.createdDate!),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.black54,
-                      ),
+                  // ── Search range the follow-up was saved under ───────────────
+                  if (_hasRange) ...[
+                    _RangeBanner(
+                      dateRange: item.dateRange,
+                      buyInRange: item.buyInRange,
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+
+                  // ── Member ───────────────────────────────────────────────────
+                  GuestDisplayCardById(
+                    memberId: item.memberId,
+                    showLastVisitDate: true,
+                  ),
+                  if (item.createdDate != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          DateFormat(
+                            'dd MMM yyyy  hh:mm a',
+                          ).format(item.createdDate!),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-              const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-              // ── Photo ────────────────────────────────────────────────────
-              GestureDetector(
-                onTap: photo == null ? null : () => _openPhoto(context),
-                child: Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: photo != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(
-                            photo,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const _NoPhotoPlaceholder(),
-                          ),
-                        )
-                      : const _NoPhotoPlaceholder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Description ──────────────────────────────────────────────
-              _ReadOnlyField(
-                label: 'Description',
-                value: item.description,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Contact status ───────────────────────────────────────────
-              const Text(
-                'Contact Status',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Column(
-                  children: _kContactStatuses
-                      .map((status) => _ReadOnlyRadioItem(
-                            label: status,
-                            selected: status == item.contactStatus,
-                          ))
-                      .toList(),
-                ),
-              ),
-
-              if (_isContacted) ...[
-                const SizedBox(height: 16),
-
-                // ── Response type ──────────────────────────────────────────
-                if (item.responseType != null &&
-                    item.responseType!.isNotEmpty) ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
+                  // ── Photo ────────────────────────────────────────────────────
+                  GestureDetector(
+                    onTap: photo == null ? null : () => _openPhoto(context),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                      height: 160,
+                      width: double.infinity,
                       decoration: BoxDecoration(
-                        color: responseColor.withOpacity(0.12),
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: responseColor, width: 2),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                      child: Text(
-                        item.responseType!,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: responseColor,
-                          fontSize: 18,
-                        ),
-                      ),
+                      child: photo != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                photo,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const _NoPhotoPlaceholder(),
+                              ),
+                            )
+                          : const _NoPhotoPlaceholder(),
                     ),
                   ),
                   const SizedBox(height: 16),
-                ],
 
-                // ── Customer response ──────────────────────────────────────
-                _ReadOnlyField(
-                  label: 'Customer Response',
-                  value: item.customerResponse ?? '',
-                ),
-
-                if (item.remarks != null && item.remarks!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  // ── Description ──────────────────────────────────────────────
                   _ReadOnlyField(
-                    label: 'Remarks',
-                    value: item.remarks!,
-                    maxLines: 3,
-                  ),
-                ],
-
-                if (item.isPositive) ...[
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Positive Follow-up',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  ..._kPositiveChecklist.map(
-                    (checklistItem) => _ReadOnlyCheckItem(
-                      label: checklistItem,
-                      checked: item.checklistItems.contains(checklistItem),
-                    ),
+                    label: 'Description',
+                    value: item.description,
+                    maxLines: 4,
                   ),
                   const SizedBox(height: 16),
+
+                  // ── Contact status ───────────────────────────────────────────
                   const Text(
-                    'Status',
+                    'Contact Status',
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 20,
@@ -270,24 +263,123 @@ class FollowUpViewScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: Column(
-                      children: _kPositiveStatuses
-                          .map((status) => _ReadOnlyRadioItem(
-                                label: status,
-                                selected: status == item.positiveStatus,
-                              ))
+                      children: _kContactStatuses
+                          .map(
+                            (status) => _ReadOnlyRadioItem(
+                              label: status,
+                              selected: status == item.contactStatus,
+                            ),
+                          )
                           .toList(),
                     ),
                   ),
-                ],
-              ],
 
-              // ── Share (AD001, or the user who saved it) ──────────────────
-              const SizedBox(height: 24),
-              FollowUpPdfButton(item: item),
-            ],
+                  if (_isContacted) ...[
+                    const SizedBox(height: 16),
+
+                    // ── Response type ──────────────────────────────────────────
+                    if (item.responseType != null &&
+                        item.responseType!.isNotEmpty) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: responseColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: responseColor, width: 2),
+                          ),
+                          child: Text(
+                            item.responseType!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: responseColor,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // ── Customer response ──────────────────────────────────────
+                    _ReadOnlyField(
+                      label: 'Customer Response',
+                      value: item.customerResponse ?? '',
+                    ),
+
+                    if (item.remarks != null && item.remarks!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _ReadOnlyField(
+                        label: 'Remarks',
+                        value: item.remarks!,
+                        maxLines: 3,
+                      ),
+                    ],
+
+                    if (item.isPositive) ...[
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Positive Follow-up',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ..._kPositiveChecklist.map(
+                        (checklistItem) => _ReadOnlyCheckItem(
+                          label: checklistItem,
+                          checked: item.checklistItems.contains(checklistItem),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Status',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Column(
+                          children: _kPositiveStatuses
+                              .map(
+                                (status) => _ReadOnlyRadioItem(
+                                  label: status,
+                                  selected: status == item.positiveStatus,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ],
+                  ],
+
+                  // ── Share (AD001, or the user who saved it) ──────────────────
+                  const SizedBox(height: 24),
+                  FollowUpPdfButton(item: item),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -398,8 +490,11 @@ class _NoPhotoPlaceholder extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.image_not_supported_outlined,
-            size: 36, color: Colors.grey.shade500),
+        Icon(
+          Icons.image_not_supported_outlined,
+          size: 36,
+          color: Colors.grey.shade500,
+        ),
         const SizedBox(height: 8),
         Text('No photo', style: TextStyle(color: Colors.grey.shade600)),
       ],

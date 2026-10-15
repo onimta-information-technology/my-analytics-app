@@ -28,6 +28,9 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
   /// The "Followed by" user being drilled into; null shows the user summary.
   String? _selectedUser;
 
+  /// Text size multiplier picked from the 1x / 1.2x / 1.3x selector.
+  double _textScale = 1.0;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -78,11 +81,9 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
     if (result == null || !mounted) return;
 
     try {
-      await ref.read(followUpListProvider.notifier).unfollow(
-            item,
-            reason: result.reason,
-            remarks: result.remarks,
-          );
+      await ref
+          .read(followUpListProvider.notifier)
+          .unfollow(item, reason: result.reason, remarks: result.remarks);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -122,6 +123,54 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
               item.memberId.toLowerCase().contains(q),
         )
         .toList();
+  }
+
+  // ── Text scale (1x / 1.2x / 1.3x) selector ──────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
   }
 
   @override
@@ -179,102 +228,120 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
           ),
           body: Stack(
             children: [
-              Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) =>
-                          setState(() => _query = value.trim()),
-                      decoration: InputDecoration(
-                        hintText: 'Search',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _query.isEmpty
-                            ? null
-                            : IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _query = '');
-                                },
-                              ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
+              Builder(
+                builder: (context) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(_textScale)),
+                  child: Column(
+                    children: [
+                      MediaQuery(
+                        data: MediaQuery.of(
+                          context,
+                        ).copyWith(textScaler: TextScaler.noScaling),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: _buildTextScaleSelector(),
                         ),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: hasError
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  size: 48,
-                                  color: Colors.red,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Failed to load.\n${asyncFollowUps.error}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                                const SizedBox(height: 12),
-                                ElevatedButton.icon(
-                                  onPressed: () => ref
-                                      .read(followUpListProvider.notifier)
-                                      .refresh(),
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Retry'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : isEmpty
-                        ? Center(
-                            child: Text(
-                              _query.isEmpty
-                                  ? 'No follow-ups available'
-                                  : 'No follow-ups match "$_query"',
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => ref
-                                .read(followUpListProvider.notifier)
-                                .refresh(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: selectedUser == null
-                                  ? ListView.builder(
-                                      itemCount: userCounts.length,
-                                      itemBuilder: (context, index) {
-                                        final entry = userCounts[index];
-                                        return _FollowedByCard(
-                                          user: entry.key,
-                                          count: entry.value,
-                                          onTap: () => _selectUser(entry.key),
-                                        );
-                                      },
-                                    )
-                                  : ListView.builder(
-                                      itemCount: visible.length,
-                                      itemBuilder: (context, index) {
-                                        final item = visible[index];
-                                        return _FollowUpCard(
-                                          item: item,
-                                          onUnfollow: _isMine(item, currentUser)
-                                              ? () => _confirmUnfollow(item)
-                                              : null,
-                                        );
-                                      },
-                                    ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) =>
+                              setState(() => _query = value.trim()),
+                          decoration: InputDecoration(
+                            hintText: 'Search',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _query.isEmpty
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _query = '');
+                                    },
+                                  ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
                             ),
                           ),
+                        ),
+                      ),
+                      Expanded(
+                        child: hasError
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline,
+                                      size: 48,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Failed to load.\n${asyncFollowUps.error}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Colors.red),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ElevatedButton.icon(
+                                      onPressed: () => ref
+                                          .read(followUpListProvider.notifier)
+                                          .refresh(),
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : isEmpty
+                            ? Center(
+                                child: Text(
+                                  _query.isEmpty
+                                      ? 'No follow-ups available'
+                                      : 'No follow-ups match "$_query"',
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: () => ref
+                                    .read(followUpListProvider.notifier)
+                                    .refresh(),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: selectedUser == null
+                                      ? ListView.builder(
+                                          itemCount: userCounts.length,
+                                          itemBuilder: (context, index) {
+                                            final entry = userCounts[index];
+                                            return _FollowedByCard(
+                                              user: entry.key,
+                                              count: entry.value,
+                                              onTap: () =>
+                                                  _selectUser(entry.key),
+                                            );
+                                          },
+                                        )
+                                      : ListView.builder(
+                                          itemCount: visible.length,
+                                          itemBuilder: (context, index) {
+                                            final item = visible[index];
+                                            return _FollowUpCard(
+                                              item: item,
+                                              onUnfollow:
+                                                  _isMine(item, currentUser)
+                                                  ? () => _confirmUnfollow(item)
+                                                  : null,
+                                            );
+                                          },
+                                        ),
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
               if (asyncFollowUps.isLoading)
                 Positioned.fill(
@@ -291,7 +358,7 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
                     ),
                   ),
                 ),
-             // const Watermark(),
+              // const Watermark(),
             ],
           ),
         ),
@@ -383,9 +450,11 @@ class _FollowUpCard extends StatelessWidget {
     final created = item.createdDate;
     if (created == null) return null;
     final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day)
-        .difference(DateTime(created.year, created.month, created.day))
-        .inDays;
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).difference(DateTime(created.year, created.month, created.day)).inDays;
   }
 
   /// e.g. "Today", "1 day ago", "12 days ago".
@@ -570,8 +639,15 @@ class _FollowUpCard extends StatelessWidget {
                                 side: const BorderSide(color: Colors.red),
                                 visualDensity: VisualDensity.compact,
                               ),
-                              icon: const Icon(Icons.person_remove_outlined, size: 18, color: Colors.white),
-                              label: const Text('Unfollow', style: TextStyle(color: Colors.white)),
+                              icon: const Icon(
+                                Icons.person_remove_outlined,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Unfollow',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                         ],
                       ),
@@ -707,7 +783,9 @@ class _UnfollowDialogState extends State<_UnfollowDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Unfollow ${widget.item.memberId} - ${widget.item.memberName}?'),
+              Text(
+                'Unfollow ${widget.item.memberId} - ${widget.item.memberName}?',
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _reasonController,
@@ -738,12 +816,18 @@ class _UnfollowDialogState extends State<_UnfollowDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         TextButton(
           onPressed: _submit,
           style: TextButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text('Unfollow', style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Unfollow',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
       ],
     );

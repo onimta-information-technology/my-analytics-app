@@ -101,6 +101,20 @@ class FollowUpItem {
     return null;
   }
 
+  /// `GetAllFollowup` sends a JSON list, but the follow-up nested in
+  /// `GetAllUnfollowup` sends a comma-separated string — accept both.
+  static List<String> _parseChecklist(Object? raw) {
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    if (raw is String) {
+      return raw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const <String>[];
+  }
+
   factory FollowUpItem.fromJson(Map<String, dynamic> json) {
     return FollowUpItem(
       followupId: (json['FollowupId'] as num?)?.toInt() ?? 0,
@@ -111,9 +125,7 @@ class FollowUpItem {
       responseType: json['ResponseType'] as String?,
       customerResponse: json['CustomerResponse'] as String?,
       remarks: json['Remarks'] as String?,
-      checklistItems: (json['ChecklistItems'] as List<dynamic>? ?? const [])
-          .map((e) => e.toString())
-          .toList(),
+      checklistItems: _parseChecklist(json['ChecklistItems']),
       positiveStatus: json['PositiveStatus'] as String?,
       loginBy: (json['Login_By'] ?? json['LoginBy'])?.toString(),
       dateRange: json['DateRange']?.toString(),

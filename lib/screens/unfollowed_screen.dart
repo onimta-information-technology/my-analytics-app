@@ -22,6 +22,9 @@ class _UnfollowedScreenState extends ConsumerState<UnfollowedScreen>
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
+  /// Text size multiplier picked from the 1x / 1.2x / 1.3x selector.
+  double _textScale = 1.0;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -48,6 +51,54 @@ class _UnfollowedScreenState extends ConsumerState<UnfollowedScreen>
               item.reason.toLowerCase().contains(q),
         )
         .toList();
+  }
+
+  // ── Text scale (1x / 1.2x / 1.3x) selector ──────────────────────────────
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
   }
 
   @override
@@ -83,97 +134,115 @@ class _UnfollowedScreenState extends ConsumerState<UnfollowedScreen>
         ),
         body: Stack(
           children: [
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _query = value.trim()),
-                    decoration: InputDecoration(
-                      hintText: 'Search member, user or reason',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _query.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _query = '');
-                              },
-                            ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
+            Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(_textScale)),
+                child: Column(
+                  children: [
+                    MediaQuery(
+                      data: MediaQuery.of(
+                        context,
+                      ).copyWith(textScaler: TextScaler.noScaling),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                        child: _buildTextScaleSelector(),
                       ),
                     ),
-                  ),
-                ),
-                if (all.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '${visible.length} unfollowed member'
-                        '${visible.length == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black54,
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) =>
+                            setState(() => _query = value.trim()),
+                        decoration: InputDecoration(
+                          hintText: 'Search member, user or reason',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _query = '');
+                                  },
+                                ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                Expanded(
-                  child: hasError
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Failed to load.\n${asyncItems.error}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                onPressed: () => ref
-                                    .read(unfollowListProvider.notifier)
-                                    .refresh(),
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : visible.isEmpty
-                      ? Center(
+                    if (all.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
                           child: Text(
-                            asyncItems.isLoading
-                                ? ''
-                                : _query.isEmpty
-                                ? 'No unfollowed members'
-                                : 'No results for "$_query"',
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () =>
-                              ref.read(unfollowListProvider.notifier).refresh(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(8.0),
-                            itemCount: visible.length,
-                            itemBuilder: (context, index) =>
-                                _UnfollowCard(item: visible[index]),
+                            '${visible.length} unfollowed member'
+                            '${visible.length == 1 ? '' : 's'}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black54,
+                            ),
                           ),
                         ),
+                      ),
+                    Expanded(
+                      child: hasError
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline,
+                                    size: 48,
+                                    color: Colors.red,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Failed to load.\n${asyncItems.error}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton.icon(
+                                    onPressed: () => ref
+                                        .read(unfollowListProvider.notifier)
+                                        .refresh(),
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : visible.isEmpty
+                          ? Center(
+                              child: Text(
+                                asyncItems.isLoading
+                                    ? ''
+                                    : _query.isEmpty
+                                    ? 'No unfollowed members'
+                                    : 'No results for "$_query"',
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () => ref
+                                  .read(unfollowListProvider.notifier)
+                                  .refresh(),
+                              child: ListView.builder(
+                                padding: const EdgeInsets.all(8.0),
+                                itemCount: visible.length,
+                                itemBuilder: (context, index) =>
+                                    _UnfollowCard(item: visible[index]),
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
             if (asyncItems.isLoading)
               Positioned.fill(
@@ -210,9 +279,11 @@ class _UnfollowCard extends StatelessWidget {
     final from = item.followUp?.createdDate;
     final to = item.createdDate;
     if (from == null || to == null) return null;
-    final days = DateTime(to.year, to.month, to.day)
-        .difference(DateTime(from.year, from.month, from.day))
-        .inDays;
+    final days = DateTime(
+      to.year,
+      to.month,
+      to.day,
+    ).difference(DateTime(from.year, from.month, from.day)).inDays;
     if (days <= 0) return 'Unfollowed same day';
     return days == 1 ? 'Followed for 1 day' : 'Followed for $days days';
   }
@@ -245,6 +316,8 @@ class _UnfollowCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const _UnfollowedBadge(),
+                    const SizedBox(height: 6),
                     Text(
                       '${item.memberId} - ${item.memberName}',
                       maxLines: 2,
@@ -340,7 +413,6 @@ class _UnfollowCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          const _Chip(label: 'Unfollowed', color: Colors.red),
                           if (_followedForLabel != null)
                             _Chip(
                               label: _followedForLabel!,
@@ -371,6 +443,45 @@ class _UnfollowCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Solid red "UNFOLLOWED" badge so the status stands out on every card.
+class _UnfollowedBadge extends StatelessWidget {
+  const _UnfollowedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.35),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person_remove, size: 18, color: Colors.white),
+          SizedBox(width: 6),
+          Text(
+            'UNFOLLOWED',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

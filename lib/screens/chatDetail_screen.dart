@@ -3493,16 +3493,29 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    'Message info',
-                    style: TextStyle(
-                      fontSize: fontSettings.fontSize,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  padding: const EdgeInsets.only(left: 20, right: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Message info',
+                          style: TextStyle(
+                            fontSize: fontSettings.fontSize,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        color: ChatColors.textSecondary,
+                        tooltip: 'Close',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 2),
                 // Which message this is about — the thread is behind a modal
                 // by now, so the sheet has to say so itself.
                 Padding(

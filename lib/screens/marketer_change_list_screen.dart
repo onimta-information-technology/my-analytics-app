@@ -36,6 +36,7 @@ class _MarketerChangeListScreenState
   // Starts true so the overlay is up from the first frame on open.
   bool _isLoading = true;
   bool _hasError = false;
+  double _textScale = 1.0;
 
   double get _fs => ref.watch(fontSettingsProvider).fontSize;
 
@@ -74,6 +75,53 @@ class _MarketerChangeListScreenState
     if (submitted == true && mounted) _refresh();
   }
 
+  Widget _buildTextScaleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          "Text Size",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ...[1.0, 1.2, 1.3].map((scale) {
+          final bool selected = _textScale == scale;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _textScale = scale),
+              child: Container(
+                width: 44,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? Constants.kSecondaryColor
+                      : Colors.transparent,
+                  border: Border.all(color: Constants.kSecondaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${scale.toDouble()}x",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : Constants.kSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
@@ -102,7 +150,25 @@ class _MarketerChangeListScreenState
       ),
       body: Stack(
         children: [
-          _buildContent(),
+          MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(_textScale)),
+            child: Column(
+              children: [
+                MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.noScaling),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: _buildTextScaleSelector(),
+                  ),
+                ),
+                Expanded(child: _buildContent()),
+              ],
+            ),
+          ),
           if (_isLoading)
             Positioned.fill(
               child: Container(

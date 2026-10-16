@@ -1048,6 +1048,7 @@ print('updateUserAvatar response: ${streamedResponse.statusCode} $responseBody')
     try {
       final domain = await resolveDomain();
       final url = '$domain${endpoints['groups']}/$groupId';
+      print('Fetching group details from URL: $url');
       final response = await getRequest(url);
       if (response['success'] == true) {
         final group = response['data']?['group'];

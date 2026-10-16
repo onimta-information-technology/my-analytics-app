@@ -13,6 +13,9 @@ class Guest {
   double? mDrop;
   String? mobile;
   String? categoryCode;
+  // Follow-up already recorded for this member (inactive-members SP).
+  final String? fupBy;
+  final String? fupDate;
 
   Guest({
     required this.mid,
@@ -29,6 +32,8 @@ class Guest {
     this.mDrop,
     this.mobile,
     this.categoryCode,
+    this.fupBy,
+    this.fupDate,
   });
 
   Guest copyWith({String? memImage2}) {
@@ -47,6 +52,8 @@ class Guest {
       mDrop: mDrop ?? this.mDrop,
       mobile: mobile ?? this.mobile,
       categoryCode: categoryCode,
+      fupBy: fupBy,
+      fupDate: fupDate,
     );
   }
 
@@ -82,6 +89,8 @@ class Guest {
       gift: getValue(['GIFT']),
       mDrop: double.tryParse(getValue(['MDROP']) ?? '0'),
       // mobile: getValue(['Mobile', 'MOBILE']),
+      fupBy: getValue(['FUP_By']),
+      fupDate: getValue(['FUP_Date']),
     );
   }
 

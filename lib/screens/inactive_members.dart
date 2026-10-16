@@ -229,6 +229,32 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
     return rating.isEmpty ? 'N/A' : rating.toUpperCase();
   }
 
+  /// FUP_Date as `dd MMM yyyy`, or null when missing / unparseable.
+  String? _followUpDate(Guest guest) {
+    final date = DateTime.tryParse(guest.fupDate ?? '');
+    return date == null ? null : DateFormat('dd MMM yyyy').format(date);
+  }
+
+  /// One green icon + text line of the follow-up block.
+  Widget _followUpRow(IconData icon, String text, FontSettings fontSettings) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color.fromARGB(255, 255, 0, 0), size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: fontSettings.fontSize,
+              fontWeight: fontSettings.fontWeight,
+              color: const Color.fromARGB(255, 255, 0, 0),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Scope + search, with the rating chip deliberately left out: these are the
   /// numbers the chips show, so tapping one lands on exactly that many rows.
   List<Guest> _searchedMembers() {
@@ -550,6 +576,23 @@ class _InactiveMembersScreenState extends ConsumerState<InactiveMembersScreen> w
                                                 ),
                                               ],
                                             ),
+                                            // Follow-up already taken for this member.
+                                            if ((guest.fupBy ?? '').trim().isNotEmpty) ...[
+                                              const SizedBox(height: 8),
+                                              _followUpRow(
+                                                Icons.person_pin_circle_outlined,
+                                                'Follow up by: ${guest.fupBy!.trim()}',
+                                                fontSettings,
+                                              ),
+                                              if (_followUpDate(guest) != null) ...[
+                                                const SizedBox(height: 6),
+                                                _followUpRow(
+                                                  Icons.event_available,
+                                                  'Follow up date: ${_followUpDate(guest)}',
+                                                  fontSettings,
+                                                ),
+                                              ],
+                                            ],
                                           ],
                                         ),
                                       ),

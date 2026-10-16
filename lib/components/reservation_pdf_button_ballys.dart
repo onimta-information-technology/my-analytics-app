@@ -1087,10 +1087,29 @@ class _ReservationPdfButtonBallysState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Share reservation',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 40),
+                    child: Text(
+                      'Share reservation',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.pop(sheetContext),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               Row(

@@ -22,6 +22,9 @@ class FollowUpRepository {
   ///
   /// [photo] is optional and, when present, is sent as a base64 string so the
   /// payload stays pure JSON.
+  ///
+  /// [inMStatus] tags where the follow-up came from: `InactiveMembers` from the
+  /// Inactive Members search, `otherMemebers` from any other profile.
   Future<Map<String, dynamic>> saveFollowUp({
     required String memberId,
     required String memberName,
@@ -37,6 +40,7 @@ class FollowUpRepository {
     File? photo,
     String? dateRange,
     String? buyInRange,
+    String inMStatus = 'InactiveMembers',
   }) async {
     final deviceId = await DeviceId.get();
     final userName = await StorageUtil.getUserName();
@@ -66,6 +70,7 @@ class FollowUpRepository {
       'Marketing_Code': marketingCode,
       'DateRange': dateRange,
       'BuyInRange': buyInRange,
+      'InMstatus': inMStatus,
       'CreatedDate': DateTime.now().toIso8601String(),
     };
     // Log a readable copy: the full base64 photo would swamp the terminal, so

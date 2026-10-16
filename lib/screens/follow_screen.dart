@@ -62,6 +62,9 @@ class FollowScreen extends ConsumerStatefulWidget {
   /// and "2.5M". Sent with the saved follow-up.
   final String? dateRange;
   final String? buyInRange;
+
+  /// Sent as `InMstatus`: `InactiveMembers` or `otherMemebers`.
+  final String inMStatus;
   final void Function(
     File? photo,
     String description,
@@ -76,6 +79,7 @@ class FollowScreen extends ConsumerStatefulWidget {
     required this.memberName,
     this.dateRange,
     this.buyInRange,
+    this.inMStatus = 'InactiveMembers',
     this.onSubmit,
   });
 
@@ -340,6 +344,7 @@ class _FollowScreenState extends ConsumerState<FollowScreen> {
             photo: _selectedImage,
             dateRange: widget.dateRange,
             buyInRange: widget.buyInRange,
+            inMStatus: widget.inMStatus,
           );
     } on AlreadyFollowedException catch (e) {
       if (!mounted) return;

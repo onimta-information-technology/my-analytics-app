@@ -52,6 +52,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   String? _userSalesCode;
   bool _useBadgeForRating = false;
 bool _showFollowButton = false;
+  // Ballys shows the follow button on every profile; Bellagio only when opened
+  // from Inactive Members ([_showFollowButton]).
+  bool _isBallys = false;
   String? _followDateRange;
   String? _followBuyInRange;
   bool _isNormalGift = false;
@@ -68,8 +71,11 @@ bool _showFollowButton = false;
 
       // Check if we should use badge instead of rating image
       final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
+      final location = await StorageUtil.getCurrentLocation();
       setState(() {
         _useBadgeForRating = apiUrl.contains('bty.world');
+        _isBallys =
+            location?.code.split('_').first.toUpperCase() == 'BALLYS';
       });
 
       final extra = GoRouterState.of(context).extra;
@@ -763,7 +769,7 @@ bool _showFollowButton = false;
               ),
             ),
     ),
-   if (_showFollowButton)
+   if (_showFollowButton || _isBallys)
     // ⭐ Follow button — floats on the right side, picture stays centered
    Positioned(
   bottom: 10,
@@ -783,6 +789,7 @@ bool _showFollowButton = false;
                   memberName: guest.memberName,
                   dateRange: _followDateRange,
                   buyInRange: _followBuyInRange,
+                  inMStatus: _showFollowButton ? 'InactiveMembers' : 'otherMemebers',
                   onSubmit: (File? photo, String description, String contactStatus,
                       String? customerResponse, String? remarks) {
                     debugPrint(

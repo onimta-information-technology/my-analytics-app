@@ -22,7 +22,7 @@ class InactiveMembersRepository {
     // Ballys moved to a new stored-procedure branch that returns the marketing
     // group summary (Table1) alongside the members; Bellagio stays on 9006.
     final iid = isBellagio ? 9006 : 1059006;
-
+print('Fetching inactive members with SP: $spName, IID: $iid, Text1: $text1, Text2: $text2, SalesCode: $salesCode, DeviceId: $deviceId');
     final response = await apiService.post('CommonExecute', {
       "HasReturnData": "T",
       "Parameters": [
@@ -76,7 +76,7 @@ class InactiveMembersRepository {
     final groupData = commonResult['Table1'] is List
         ? commonResult['Table1'] as List
         : const [];
-
+print('Inactive members response: ${response.toString()}');
     List<Guest> inactiveGuestList = [];
     for (var table in tableData) {
       final guest = Guest.fromJson(table);

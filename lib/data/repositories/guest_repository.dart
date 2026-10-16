@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
+import 'package:ballys_reservation_app/models/marketer_change.dart';
 import 'package:ballys_reservation_app/models/marketing_group.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -393,5 +394,26 @@ print('API response for guest image: $response');
     if (response['Status'] == false) {
       throw Exception(response['Message'] ?? 'Failed to change marketer');
     }
+  }
+
+  /// GET `{baseUrl}/GetAllMarketerChange` — marketer-change requests already
+  /// submitted, newest first.
+  Future<List<MarketerChange>> getAllMarketerChanges() async {
+    final response = await apiService.get('GetAllMarketerChange');
+    if (response['Status'] == false) {
+      throw Exception(response['Message'] ?? 'Failed to load marketer changes');
+    }
+    final data = response['Data'];
+    if (data is! List) return [];
+    final items = data
+        .whereType<Map>()
+        .map((e) => MarketerChange.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+    items.sort((a, b) {
+      final ad = a.insertDate, bd = b.insertDate;
+      if (ad == null || bd == null) return b.changeId.compareTo(a.changeId);
+      return bd.compareTo(ad);
+    });
+    return items;
   }
 }

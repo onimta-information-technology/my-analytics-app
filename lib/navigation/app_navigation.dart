@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/screens/member_visits/cdd_cards_screen.da
 import 'package:ballys_reservation_app/models/cdd/cdd_history_item.dart';
 import 'package:ballys_reservation_app/screens/member_visits/cdd_names_screen.dart';
 import 'package:ballys_reservation_app/screens/change_marketing_person_screen.dart';
+import 'package:ballys_reservation_app/screens/marketer_change_list_screen.dart';
 import 'package:ballys_reservation_app/models/gift/birthday_gift_request.dart';
 import 'package:ballys_reservation_app/models/gift/special_gift_request.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -1451,6 +1452,20 @@ GoRoute(
 
 GoRoute(
   path: '/change-marketing-person',
+  pageBuilder: (context, state) => CustomTransitionPage(
+    fullscreenDialog: true,
+    key: state.pageKey,
+    child: const MarketerChangeListScreen(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        FadeTransition(
+          opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+          child: child,
+        ),
+  ),
+),
+
+GoRoute(
+  path: '/change-marketing-person/new',
   pageBuilder: (context, state) => CustomTransitionPage(
     fullscreenDialog: true,
     key: state.pageKey,

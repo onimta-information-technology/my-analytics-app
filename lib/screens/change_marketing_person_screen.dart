@@ -303,7 +303,12 @@ class _ChangeMarketingPersonScreenState
         'Marketer changed for ${member.mid}',
         Colors.green.shade600,
       );
-      _clearSearch();
+      // Back to the request list, which reloads to show the new entry.
+      if (context.canPop()) {
+        context.pop(true);
+      } else {
+        context.go('/memberMain/change-marketing-person');
+      }
     } catch (_) {
       if (!mounted) return;
       _showSnackBar(
@@ -945,8 +950,9 @@ class _ChangeMarketingPersonScreenState
           title: const Text('Change Marketer'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/memberMain'),
+            onPressed: () => context.canPop()
+                ? context.pop()
+                : context.go('/memberMain/change-marketing-person'),
           ),
         ),
         body: Stack(

@@ -397,9 +397,17 @@ print('API response for guest image: $response');
   }
 
   /// GET `{baseUrl}/GetAllMarketerChange` — marketer-change requests already
-  /// submitted, newest first.
+  /// submitted, newest first. AD001 sees every request; everyone else only
+  /// the requests under their own marketing code.
   Future<List<MarketerChange>> getAllMarketerChanges() async {
-    final response = await apiService.get('GetAllMarketerChange');
+    var endpoint = 'GetAllMarketerChange';
+    if (!await StorageUtil.isAdminSalesCode()) {
+      final marketingCode = await StorageUtil.getMarketingCode();
+      if (marketingCode == null) return [];
+      endpoint =
+          'GetAllMarketerChange?marketingCodes=${Uri.encodeQueryComponent(marketingCode)}';
+    }
+    final response = await apiService.get(endpoint);
     if (response['Status'] == false) {
       throw Exception(response['Message'] ?? 'Failed to load marketer changes');
     }

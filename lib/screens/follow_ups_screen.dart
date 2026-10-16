@@ -31,6 +31,10 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
   /// Text size multiplier picked from the 1x / 1.2x / 1.3x selector.
   double _textScale = 1.0;
 
+  /// Tab index: 0 = other members (`InMstatus` Pending),
+  /// 1 = inactive members (`InMstatus` Checked/null). Opens on inactive.
+  int _tabIndex = 1;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -56,6 +60,16 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
         final byCount = b.value.compareTo(a.value);
         return byCount != 0 ? byCount : a.key.compareTo(b.key);
       });
+  }
+
+  void _selectTab(int index) {
+    if (index == _tabIndex) return;
+    _searchController.clear();
+    setState(() {
+      _tabIndex = index;
+      _selectedUser = null;
+      _query = '';
+    });
   }
 
   void _selectUser(String? user) {
@@ -178,7 +192,9 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
     final asyncFollowUps = ref.watch(followUpListProvider);
     // Keep the last-known list on screen while a refresh runs, so the loading
     // overlay sits on top of the cards instead of replacing them.
-    final all = asyncFollowUps.valueOrNull ?? const <FollowUpItem>[];
+    final all = (asyncFollowUps.valueOrNull ?? const <FollowUpItem>[])
+        .where((i) => i.isPending == (_tabIndex == 0))
+        .toList();
     final currentUser = ref.watch(currentUserNameProvider).valueOrNull;
     final selectedUser = _selectedUser;
     final visible = selectedUser == null
@@ -201,165 +217,181 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen>
         onTap: () {
           FocusScope.of(context).unfocus();
         },
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(
-              selectedUser == null ? 'Followed' : 'Followed by: $selectedUser',
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                if (selectedUser != null) {
-                  _selectUser(null);
-                } else if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/inctiveMemberMain');
-                }
-              },
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 30),
-                onPressed: () =>
-                    ref.read(followUpListProvider.notifier).refresh(),
+        child: DefaultTabController(
+          length: 2,
+          initialIndex: _tabIndex,
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(
+                selectedUser == null
+                    ? 'Followed'
+                    : 'Followed by: $selectedUser',
               ),
-            ],
-          ),
-          body: Stack(
-            children: [
-              Builder(
-                builder: (context) => MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.linear(_textScale)),
-                  child: Column(
-                    children: [
-                      MediaQuery(
-                        data: MediaQuery.of(
-                          context,
-                        ).copyWith(textScaler: TextScaler.noScaling),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                          child: _buildTextScaleSelector(),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  if (selectedUser != null) {
+                    _selectUser(null);
+                  } else if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/inctiveMemberMain');
+                  }
+                },
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 30),
+                  onPressed: () =>
+                      ref.read(followUpListProvider.notifier).refresh(),
+                ),
+              ],
+              bottom: TabBar(
+                onTap: _selectTab,
+                tabs: const [
+                  Tab(text: 'Others'),
+                  Tab(text: 'Inactive Members'),
+                ],
+              ),
+            ),
+            body: Stack(
+              children: [
+                Builder(
+                  builder: (context) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.linear(_textScale)),
+                    child: Column(
+                      children: [
+                        MediaQuery(
+                          data: MediaQuery.of(
+                            context,
+                          ).copyWith(textScaler: TextScaler.noScaling),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                            child: _buildTextScaleSelector(),
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (value) =>
-                              setState(() => _query = value.trim()),
-                          decoration: InputDecoration(
-                            hintText: 'Search',
-                            prefixIcon: const Icon(Icons.search),
-                            suffixIcon: _query.isEmpty
-                                ? null
-                                : IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _query = '');
-                                    },
-                                  ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (value) =>
+                                setState(() => _query = value.trim()),
+                            decoration: InputDecoration(
+                              hintText: 'Search',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: _query.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _query = '');
+                                      },
+                                    ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: hasError
-                            ? Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.error_outline,
-                                      size: 48,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Failed to load.\n${asyncFollowUps.error}',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ElevatedButton.icon(
-                                      onPressed: () => ref
-                                          .read(followUpListProvider.notifier)
-                                          .refresh(),
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Retry'),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : isEmpty
-                            ? Center(
-                                child: Text(
-                                  _query.isEmpty
-                                      ? 'No follow-ups available'
-                                      : 'No follow-ups match "$_query"',
-                                ),
-                              )
-                            : RefreshIndicator(
-                                onRefresh: () => ref
-                                    .read(followUpListProvider.notifier)
-                                    .refresh(),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: selectedUser == null
-                                      ? ListView.builder(
-                                          itemCount: userCounts.length,
-                                          itemBuilder: (context, index) {
-                                            final entry = userCounts[index];
-                                            return _FollowedByCard(
-                                              user: entry.key,
-                                              count: entry.value,
-                                              onTap: () =>
-                                                  _selectUser(entry.key),
-                                            );
-                                          },
-                                        )
-                                      : ListView.builder(
-                                          itemCount: visible.length,
-                                          itemBuilder: (context, index) {
-                                            final item = visible[index];
-                                            return _FollowUpCard(
-                                              item: item,
-                                              onUnfollow:
-                                                  _isMine(item, currentUser)
-                                                  ? () => _confirmUnfollow(item)
-                                                  : null,
-                                            );
-                                          },
+                        Expanded(
+                          child: hasError
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.error_outline,
+                                        size: 48,
+                                        color: Colors.red,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Failed to load.\n${asyncFollowUps.error}',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.red,
                                         ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ElevatedButton.icon(
+                                        onPressed: () => ref
+                                            .read(followUpListProvider.notifier)
+                                            .refresh(),
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('Retry'),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : isEmpty
+                              ? Center(
+                                  child: Text(
+                                    _query.isEmpty
+                                        ? 'No follow-ups available'
+                                        : 'No follow-ups match "$_query"',
+                                  ),
+                                )
+                              : RefreshIndicator(
+                                  onRefresh: () => ref
+                                      .read(followUpListProvider.notifier)
+                                      .refresh(),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: selectedUser == null
+                                        ? ListView.builder(
+                                            itemCount: userCounts.length,
+                                            itemBuilder: (context, index) {
+                                              final entry = userCounts[index];
+                                              return _FollowedByCard(
+                                                user: entry.key,
+                                                count: entry.value,
+                                                onTap: () =>
+                                                    _selectUser(entry.key),
+                                              );
+                                            },
+                                          )
+                                        : ListView.builder(
+                                            itemCount: visible.length,
+                                            itemBuilder: (context, index) {
+                                              final item = visible[index];
+                                              return _FollowUpCard(
+                                                item: item,
+                                                onUnfollow:
+                                                    _isMine(item, currentUser)
+                                                    ? () =>
+                                                          _confirmUnfollow(item)
+                                                    : null,
+                                              );
+                                            },
+                                          ),
+                                  ),
                                 ),
-                              ),
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              if (asyncFollowUps.isLoading)
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Color.fromARGB(134, 0, 0, 0),
-                    ),
-                    child: const Center(
-                      child: RefreshProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Constants.kSecondaryColor,
+                if (asyncFollowUps.isLoading)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(134, 0, 0, 0),
+                      ),
+                      child: const Center(
+                        child: RefreshProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Constants.kSecondaryColor,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              // const Watermark(),
-            ],
+                // const Watermark(),
+              ],
+            ),
           ),
         ),
       ),

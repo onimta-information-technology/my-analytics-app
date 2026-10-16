@@ -30,6 +30,10 @@ class FollowUpItem {
   /// Record status from the API, e.g. "Active" or "Unfollowup".
   final String? status;
 
+  /// Where the follow-up came from (`InMstatus` on the wire): "Checked" or
+  /// null for inactive members, "Pending" for any other member.
+  final String? inMStatus;
+
   /// Raw base64 photo. Decoded lazily via [photoBytes] — a follow-up list can
   /// hold dozens of these, so we only pay for the ones that get rendered.
   final String? photoBase64;
@@ -54,6 +58,7 @@ class FollowUpItem {
     this.createdDate,
     this.photoBase64,
     this.status,
+    this.inMStatus,
   });
 
   /// True unless the API marks the follow-up as anything other than
@@ -62,6 +67,9 @@ class FollowUpItem {
     final s = status?.trim().toLowerCase() ?? '';
     return s.isEmpty || s == 'active';
   }
+
+  /// True for follow-ups saved from a non-inactive member's profile.
+  bool get isPending => inMStatus?.trim().toLowerCase() == 'pending';
 
   bool get isPositive => responseType?.toLowerCase() == 'positive';
   bool get isNegative => responseType?.toLowerCase() == 'negative';
@@ -133,6 +141,7 @@ class FollowUpItem {
       createdDate: _parseCreatedDate(json),
       photoBase64: json['Photo'] as String?,
       status: json['Status']?.toString(),
+      inMStatus: json['InMstatus']?.toString(),
     );
   }
 }

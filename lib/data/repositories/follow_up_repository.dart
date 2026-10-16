@@ -40,7 +40,7 @@ class FollowUpRepository {
     File? photo,
     String? dateRange,
     String? buyInRange,
-    String inMStatus = 'InactiveMembers',
+    String inMStatus = 'Checked',
   }) async {
     final deviceId = await DeviceId.get();
     final userName = await StorageUtil.getUserName();

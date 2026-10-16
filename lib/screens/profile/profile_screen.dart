@@ -789,7 +789,7 @@ bool _showFollowButton = false;
                   memberName: guest.memberName,
                   dateRange: _followDateRange,
                   buyInRange: _followBuyInRange,
-                  inMStatus: _showFollowButton ? 'InactiveMembers' : 'otherMemebers',
+                  inMStatus: _showFollowButton ? 'Checked' : 'Pending',
                   onSubmit: (File? photo, String description, String contactStatus,
                       String? customerResponse, String? remarks) {
                     debugPrint(

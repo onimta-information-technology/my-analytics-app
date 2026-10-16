@@ -79,7 +79,7 @@ class FollowScreen extends ConsumerStatefulWidget {
     required this.memberName,
     this.dateRange,
     this.buyInRange,
-    this.inMStatus = 'InactiveMembers',
+    this.inMStatus = 'Checked',
     this.onSubmit,
   });
 

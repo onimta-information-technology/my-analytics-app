@@ -1572,6 +1572,25 @@ GoRoute(
             ),
             routes: [
               GoRoute(
+                path: 'notifications',
+                pageBuilder: (context, state) {
+                  return CustomTransitionPage(
+                    fullscreenDialog: false,
+                    key: state.pageKey,
+                    child: const NotificationsScreen(),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: CurveTween(
+                              curve: Curves.easeInOutCirc,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
+                  );
+                },
+              ),
+              GoRoute(
                 path: 'chats',
                 pageBuilder: (context, state) {
                   final notificationData = state.extra as Map<String, dynamic>?;

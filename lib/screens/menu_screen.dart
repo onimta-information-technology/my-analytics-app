@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/notification_bell.dart';
 import 'package:ballys_reservation_app/providers/guest_booking_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -164,9 +165,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
     final hasPendingGuestBookings =
         guestBookingState.pendingBookings.isNotEmpty;
     return Scaffold(
-       appBar: AppBar(
-centerTitle: true, 
+      appBar: AppBar(
+        centerTitle: true,
         title: const Text('My Analytics'),
+        actions: const [NotificationBell(route: '/menu/notifications')],
       ),
       body: SafeArea(
         child: SingleChildScrollView(

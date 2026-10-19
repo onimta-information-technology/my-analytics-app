@@ -8,6 +8,7 @@ import 'package:ballys_reservation_app/components/marketing_performance.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/BirthdayGiftIncreesNotifier.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
+import 'package:ballys_reservation_app/components/notification_bell.dart';
 import 'package:ballys_reservation_app/providers/app_notifications_provider.dart';
 import 'package:ballys_reservation_app/providers/birthdays_provider.dart';
 import 'package:ballys_reservation_app/providers/daily_walking_provider.dart';
@@ -471,49 +472,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  /// Bell in the app bar with a red badge showing how many notifications
-  /// arrived since the list was last opened.
-  Widget _buildNotificationBell(int unreadCount) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        IconButton(
-          padding: const EdgeInsets.all(10.0),
-          tooltip: 'Notifications',
-          icon: const Icon(Icons.notifications_none, size: 30),
-          onPressed: () => context.push('/home/notifications'),
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            top: 6,
-            right: 4,
-            child: IgnorePointer(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.rectangle,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: Text(
-                  unreadCount > 99 ? '99+' : '$unreadCount',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
   /// Level 3 users can see the counts but not drill into the guest lists -
   /// tapping a count box shows the same Access Denied dialog used elsewhere.
   void _showAccessDeniedDialog() {
@@ -654,7 +612,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final guests = ref.watch(guestsProvider);
     final counts = ref.watch(guestCountsProvider);
     final activeEvent = ref.watch(activeEventProvider);
-    final unreadNotifications = ref.watch(unreadNotificationCountProvider);
 
     // Watch the new state
     final runDateState = ref.watch(runDateProvider);
@@ -684,7 +641,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           style: const TextStyle(fontSize: 16, fontFamily: 'ABCArizonaFlare'),
         ),
         actions: [
-          _buildNotificationBell(unreadNotifications),
+          const NotificationBell(),
           IconButton(
             padding: const EdgeInsets.all(10.0),
             icon: const Icon(Icons.refresh, size: 30),

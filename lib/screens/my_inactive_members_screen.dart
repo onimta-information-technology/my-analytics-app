@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/models/my_inactive_member.dart';
 import 'package:ballys_reservation_app/providers/my_inactive_members_provider.dart';
 import 'package:ballys_reservation_app/providers/selected_guest_provider.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -175,8 +176,16 @@ class _MyInactiveMembersScreenState
     );
   }
 
-  void _openProfile(MyInactiveMember member) {
-    ref.read(selectedGuestProvider.notifier).setSelectedGuest(member.toGuest());
+  Future<void> _openProfile(MyInactiveMember member) async {
+    // The logged-in user is the marketing person shown on the profile.
+    final marketingCode = await StorageUtil.getMarketingCode();
+    final userName = await StorageUtil.getUserName();
+    if (!mounted) return;
+    ref
+        .read(selectedGuestProvider.notifier)
+        .setSelectedGuest(
+          member.toGuest(mGroup: marketingCode, gName: userName),
+        );
     context.push('/home/profile', extra: {'showFollowButton': true});
   }
 

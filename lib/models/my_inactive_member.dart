@@ -49,15 +49,16 @@ class MyInactiveMember {
     );
   }
 
-  /// Guest used to open the member profile.
-  Guest toGuest() => Guest(
+  /// Guest used to open the member profile. These are the logged-in user's own
+  /// members, so that user is their marketing person ([mGroup] / [gName]).
+  Guest toGuest({String? mGroup, String? gName}) => Guest(
         mid: mid,
         memberName: memberName,
         country: country,
         lastVisitDate: lastVisitRaw,
         age: 0,
         gRating: rating.isEmpty ? null : rating,
-        mGroup: null,
-        gName: null,
+        mGroup: mGroup,
+        gName: gName,
       );
 }

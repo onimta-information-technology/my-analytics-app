@@ -204,16 +204,30 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> with ConnectivityMixi
                 Padding(
                   padding: const EdgeInsets.only(right: 12.0),
                   child: Center(
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor:
-                          const Color.fromARGB(255, 152, 98, 6).withAlpha(90),
+                    child: Container(
+                                      constraints:
+                                          const BoxConstraints(minWidth: 36),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromARGB(
+                                          255,
+                                          0,
+                                          0,
+                                          0,
+                                        ),
+                                        borderRadius:
+                                            BorderRadius.circular(6.0),
+                                      ),
                       child: Text(
                         (_marketingPersons[_selectedMGroup]?.length ?? 0)
-                            .toString(),
+                            .toString(),                 
                         style: TextStyle(
                           fontSize: fontSettings.fontSize,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -278,16 +292,30 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> with ConnectivityMixi
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    trailing: CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor:
-                                          const Color.fromARGB(255, 152, 98, 6)
-                                              .withAlpha(90),
+                                    trailing: Container(
+                                      constraints:
+                                          const BoxConstraints(minWidth: 36),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromARGB(
+                                          255,
+                                          0,
+                                          0,
+                                          0,
+                                        ),
+                                        borderRadius:
+                                            BorderRadius.circular(6.0),
+                                      ),
                                       child: Text(
                                         guests.length.toString(),
+                                        textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: fontSettings.fontSize,
                                           fontWeight: FontWeight.bold,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     ),

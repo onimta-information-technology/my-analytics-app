@@ -2,6 +2,7 @@
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/inactive_member_group.dart';
+import 'package:ballys_reservation_app/models/my_inactive_member.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
 import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
@@ -103,5 +104,51 @@ print('Inactive members response: ${response.toString()}');
       ..sort((a, b) => b.count.compareTo(a.count));
 
     return InactiveMembersResult(members: inactiveGuestList, groups: groups);
+  }
+
+  /// The logged-in user's own inactive members (Ballys only, iid 885263).
+  /// The SP returns them newest last visit first.
+  Future<List<MyInactiveMember>> getMyInactiveMembers() async {
+    final marketingCode = await StorageUtil.getMarketingCode();
+    final deviceId = await DeviceId.get();
+    final spName = await StorageUtil.getStoredProcedureName();
+print('Fetching my inactive members with SP: $spName, IID: 885263, MarketingCode: $marketingCode, DeviceId: $deviceId');
+    final response = await apiService.post('CommonExecute', {
+      "HasReturnData": "T",
+      "Parameters": [
+        {
+          "Para_Data": 885263,
+          "Para_Direction": "Input",
+          "Para_Lenth": 1,
+          "Para_Name": "@Iid",
+          "Para_Type": "int"
+        },
+        {
+          "Para_Data": marketingCode,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text1",
+          "Para_Type": "varchar"
+        },
+        {
+          "Para_Data": deviceId,
+          "Para_Direction": "Input",
+          "Para_Lenth": 100,
+          "Para_Name": "@Text30",
+          "Para_Type": "varchar"
+        },
+      ],
+      "SpName": spName,
+      "con": "1"
+    });
+
+    final table = response['CommonResult']?['Table'];
+    print("responce is my inactive $table");
+    if (table is! List) return const [];
+    return table
+        .whereType<Map<String, dynamic>>()
+        .map(MyInactiveMember.fromJson)
+        .where((m) => m.mid.isNotEmpty)
+        .toList();
   }
 }

@@ -1,4 +1,6 @@
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
+import 'package:ballys_reservation_app/providers/my_inactive_members_provider.dart';
+import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/connectivity_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +15,32 @@ class InactiveMembermainScreen extends ConsumerStatefulWidget {
       _InactiveMembermainScreenState();
 }
 
-class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScreen>
+class _InactiveMembermainScreenState
+    extends ConsumerState<InactiveMembermainScreen>
     with ConnectivityMixin {
+  /// The "My Inactive" card (and its count call) is Ballys only.
+  bool _isBallys = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveLocation();
+  }
+
+  Future<void> _resolveLocation() async {
+    // Location code saved at login, e.g. "BALLYS_..." / "BELLAGIO_...".
+    final location = await StorageUtil.getCurrentLocation();
+    final isBallys =
+        location?.code.split('_').first.toUpperCase() == 'BALLYS';
+    if (mounted) setState(() => _isBallys = isBallys);
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(fontSettingsProvider);
+    final myInactiveCount = _isBallys
+        ? ref.watch(myInactiveMembersProvider).valueOrNull?.length
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -57,7 +80,7 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                             child: Column(
                               children: [
                                 Lottie.asset(
-                                'assets/icon/menu_screen/inactiveMember.json',
+                                  'assets/icon/menu_screen/inactiveMember.json',
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.contain,
@@ -113,6 +136,80 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                 ),
                 Row(
                   children: [
+                    // ── My Inactive (logged-in user's own) ─────────────────
+                    if (_isBallys)
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            context.go(
+                              '/inctiveMemberMain/my-inactive-members',
+                            );
+                          },
+                          child: Stack(
+                            fit: StackFit.passthrough,
+                            clipBehavior: Clip.none, // let badge overflow the card corner
+                            children: [
+                              Card(
+                                color: const Color.fromARGB(255, 33, 120, 214),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Center(
+                                        child: Lottie.asset(
+                                          'assets/icon/menu_screen/user.json',
+                                          width: 80,
+                                          height: 80,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'My Inactive',
+                                        style: TextStyle(
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Badge – only shown when count > 0, same as the
+                              // Approve / Reject cards.
+                              if ((myInactiveCount ?? 0) > 0)
+                                Positioned(
+                                  top: -6,
+                                  right: -6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '$myInactiveCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     // ── Unfollowed ──────────────────────────────────────────
                     Expanded(
                       child: GestureDetector(
@@ -145,7 +242,7 @@ class _InactiveMembermainScreenState extends ConsumerState<InactiveMembermainScr
                         ),
                       ),
                     ),
-                    const Expanded(child: SizedBox()),
+                    if (!_isBallys) const Expanded(child: SizedBox()),
                   ],
                 ),
               ],

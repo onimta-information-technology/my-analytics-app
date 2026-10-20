@@ -15,243 +15,206 @@ class MyInactiveBanner extends StatelessWidget {
   });
 
   static const Color _gold = Color(0xFFE2B84C);
-  static const Color _goldDark = Color(0xFFB8862B);
   static const Color _ink = Color(0xFF1A1206);
+  static const Color _surface = Color(0xFF17120B);
+
+  static const double _headerHeight = 150;
 
   @override
   Widget build(BuildContext context) {
-    final noun = count == 1 ? 'member has' : 'members have';
+    final isOne = count == 1;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        height: 440,
-        constraints: const BoxConstraints(maxWidth: 480),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _gold.withOpacity(0.7), width: 1.2),
-          boxShadow: const [
-            BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.35),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            // Casino photo: chandelier and table visible up top.
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/others/inactive_banner.jpg',
-                fit: BoxFit.cover,
-                alignment: const Alignment(0, -0.1),
-              ),
-            ),
-            // Dark wash, heaviest at the bottom behind the text.
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.25),
-                      Colors.black.withOpacity(0.55),
-                      Colors.black.withOpacity(0.92),
-                    ],
-                    stops: const [0.0, 0.4, 0.75],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 14, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Top: label + dismiss ──────────────────────────────
-                  Row(
+    return Semantics(
+      container: true,
+      label: '$count ${isOne ? 'member is' : 'members are'} inactive',
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
+        child: Material(
+          color: _surface,
+          elevation: 12,
+          shadowColor: Colors.black,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: _gold.withOpacity(0.55), width: 1.2),
+          ),
+          // Scrolls only when space is tight (landscape / large text sizes).
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildHeader(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 4, 22, 20),
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.45),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _gold.withOpacity(0.8)),
-                        ),
-                        child: const Text(
-                          'INACTIVE MEMBERS',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.6,
-                            color: _gold,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: onDismiss,
-                        customBorder: const CircleBorder(),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black.withOpacity(0.45),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.6),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '$count',
+                              style: const TextStyle(color: _gold),
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            size: 20,
-                            color: Colors.white,
-                          ),
+                            TextSpan(
+                              text: isOne
+                                  ? ' member is inactive'
+                                  : ' members are inactive',
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 21,
+                          height: 1.25,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'ABCArizonaFlare',
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // ── Top: count medallion ──────────────────────────────
-                  Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          constraints: const BoxConstraints(minWidth: 96),
-                          height: 96,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(48),
-                            gradient: const LinearGradient(
-                              colors: [_gold, _goldDark],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _gold.withOpacity(0.6),
-                                blurRadius: 22,
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            '$count',
-                            style: const TextStyle(
-                              fontSize: 38,
-                              fontWeight: FontWeight.w900,
-                              color: _ink,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            count == 1 ? 'member inactive' : 'members inactive',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-
-                  // ── Bottom: message, actions ──────────────────────────
-                  const Text(
-                    'We miss them at the tables',
-                    style: TextStyle(
-                      fontSize: 21,
-                      height: 1.2,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'ABCArizonaFlare',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '$count of your $noun not visited recently. '
-                    'A quick follow-up can bring them back.',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.35,
-                      color: Color.fromARGB(230, 255, 255, 255),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onDismiss,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(
-                              color: Colors.white.withOpacity(0.6),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Later',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "They haven't visited recently. A quick follow-up "
+                        'can bring them back to the tables.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.4,
+                          color: Colors.white.withOpacity(0.78),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
+                      const SizedBox(height: 22),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
                         child: ElevatedButton.icon(
                           onPressed: onView,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _gold,
                             foregroundColor: _ink,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           icon: const Icon(Icons.people_alt_outlined, size: 20),
-                          label: const Text(
-                            'View members',
+                          label: Text(
+                            isOne ? 'View member' : 'View members',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: TextButton(
+                          onPressed: onDismiss,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white.withOpacity(0.75),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Remind me later',
                             style: TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Photo header with the label chip and close button.
+  Widget _buildHeader() {
+    return SizedBox(
+      height: _headerHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Casino photo: chandelier and table visible.
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: _headerHeight,
+            child: Image.asset(
+              'assets/images/others/inactive_banner2.jpg',
+              fit: BoxFit.cover,
+              alignment: const Alignment(0, -0.1),
+            ),
+          ),
+          // Fade the photo into the card surface so the edge isn't harsh.
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: _headerHeight,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.35),
+                    Colors.transparent,
+                    _surface,
+                  ],
+                  stops: const [0.0, 0.45, 1.0],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            left: 14,
+            top: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: _gold.withOpacity(0.8)),
+              ),
+              child: const Text(
+                'INACTIVE MEMBERS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                  color: _gold,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 6,
+            top: 6,
+            child: IconButton(
+              onPressed: onDismiss,
+              tooltip: 'Close',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withOpacity(0.5),
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withOpacity(0.5)),
+              ),
+              icon: const Icon(Icons.close, size: 20),
+            ),
+          ),
+        ],
       ),
     );
   }

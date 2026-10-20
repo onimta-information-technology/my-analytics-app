@@ -200,6 +200,7 @@ flutter:
     - assets/sounds/messageReceiveNotification.mp3
     - assets/sounds/callRingback.wav
     - assets/sounds/callJoin.wav
+    - assets/images/others/inactive_banner2.jpg
  
 
   fonts:

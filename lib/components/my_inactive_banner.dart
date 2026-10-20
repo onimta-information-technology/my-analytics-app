@@ -1,6 +1,7 @@
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 
 /// Home-screen reminder of how many of the logged-in user's own members have
 /// gone inactive, with a shortcut to the "My Inactive Members" list.
@@ -79,7 +80,7 @@ class MyInactiveBanner extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildIcon(),
+                        _buildIcon(context),
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -206,24 +207,34 @@ class MyInactiveBanner extends StatelessWidget {
     );
   }
 
-  /// Round white badge with a people icon, the card's focal point.
-  Widget _buildIcon() {
+  /// Round red badge with the menu's animated Inactive Members icon, the
+  /// card's focal point.
+  Widget _buildIcon(BuildContext context) {
     return Container(
-      width: 84,
-      height: 84,
+      width: 92,
+      height: 92,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _accent,
         shape: BoxShape.circle,
-        border: Border.all(color: _accent.withValues(alpha: 0.18), width: 5),
+        border: Border.all(color: Colors.white, width: 4),
         boxShadow: [
           BoxShadow(
-            color: _accent.withValues(alpha: 0.18),
+            color: _accent.withValues(alpha: 0.35),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: const Icon(Icons.groups_rounded, size: 42, color: _accent),
+      // White-stroke animation, so it needs the coloured badge behind it.
+      child: Lottie.asset(
+        'assets/icon/menu_screen/inactiveMember.json',
+        fit: BoxFit.contain,
+        // Hold still when the user has turned off animations.
+        animate: !MediaQuery.disableAnimationsOf(context),
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.groups_rounded, size: 42, color: Colors.white),
+      ),
     );
   }
 }

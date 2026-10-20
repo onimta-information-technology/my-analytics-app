@@ -5,6 +5,7 @@ import 'package:ballys_reservation_app/components/lastThreemonth.dart';
 import 'package:ballys_reservation_app/components/location_selector_widget.dart';
 import 'package:ballys_reservation_app/components/marketing_breakdown_chart_card.dart';
 import 'package:ballys_reservation_app/components/marketing_performance.dart';
+import 'package:ballys_reservation_app/components/my_inactive_banner.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/providers/BirthdayGiftIncreesNotifier.dart';
 import 'package:ballys_reservation_app/providers/app_mode_setting_provider.dart';
@@ -15,6 +16,7 @@ import 'package:ballys_reservation_app/providers/daily_walking_provider.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/guests_provider.dart';
 import 'package:ballys_reservation_app/providers/marketing_provider.dart';
+import 'package:ballys_reservation_app/providers/my_inactive_members_provider.dart';
 import 'package:ballys_reservation_app/providers/reservation_provider.dart';
 import 'package:ballys_reservation_app/providers/run_date_provider.dart';
 import 'package:ballys_reservation_app/providers/special_gift_provider.dart';
@@ -55,6 +57,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   AppMode? _lastRequestedMode;
   String? locationLogo;
   Timer? _eventTimer;
+
+  /// Logged-in user's own inactive-member count for the entry banner (Ballys
+  /// only). Null hides the banner.
+  int? _myInactiveCount;
   @override
   bool get wantKeepAlive => true;
 @override
@@ -93,6 +99,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (initializedFor != cacheKey) {
         ref.read(homeScreenInitializedProvider.notifier).state = cacheKey;
         _checkAndShowEvent();
+        // Only on the first entry after login, so it doesn't nag on every
+        // return to home.
+        _loadMyInactiveBanner();
         // Resolve the user's app mode BEFORE fetching, otherwise the first
         // fetch runs with the default mode and gets thrown away.
         await _initializeAppMode();
@@ -109,6 +118,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     WidgetsBinding.instance.removeObserver(this); // 👈 Add this
     super.dispose();
   }
+
+  /// Fetches the user's own inactive members and shows the entry banner when
+  /// there are any. Ballys only, not for level 3; a failed call simply shows
+  /// no banner.
+  Future<void> _loadMyInactiveBanner() async {
+    try {
+      final location = await StorageUtil.getCurrentLocation();
+      final isBallys =
+          location?.code.split('_').first.toUpperCase() == 'BALLYS';
+      // Level 3 users are denied the Inactive Members section on the menu.
+      final userLevel = await StorageUtil.getUserLevel();
+      if (!isBallys || userLevel == '3') return;
+      final members = await ref
+          .read(inactiveMembersRepositoryProvider)
+          .getMyInactiveMembers();
+      if (!mounted || members.isEmpty) return;
+      setState(() => _myInactiveCount = members.length);
+    } catch (e) {
+      debugPrint('My inactive banner: $e');
+    }
+  }
+
+  void _dismissMyInactiveBanner() => setState(() => _myInactiveCount = null);
 
   /// 🎉 Unified event checking method
   void _checkAndShowEvent() {
@@ -971,6 +1003,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 const LastThreeMonthsGuestCard(), 
                 ],
               ),
+            ),
+          ),
+
+          // Entry banner: user's inactive members, centred over a dimmed
+          // backdrop. Tapping the backdrop dismisses it.
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.85, end: 1).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutBack,
+                    ),
+                  ),
+                  child: child,
+                ),
+              ),
+              child: _myInactiveCount == null
+                  ? const SizedBox.shrink()
+                  : Stack(
+                      key: const ValueKey('my-inactive-banner'),
+                      children: [
+                        Positioned.fill(
+                          child: GestureDetector(
+                            onTap: _dismissMyInactiveBanner,
+                            child: Container(
+                              color: const Color.fromARGB(110, 0, 0, 0),
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                            child: MyInactiveBanner(
+                              count: _myInactiveCount!,
+                              onDismiss: _dismissMyInactiveBanner,
+                              onView: () {
+                                _dismissMyInactiveBanner();
+                                context.go(
+                                  '/inctiveMemberMain/my-inactive-members',
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
 

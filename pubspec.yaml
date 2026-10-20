@@ -146,6 +146,7 @@ flutter:
     - assets/images/ratings/SILVER-2.png
     - assets/images/others/gift.png
     - assets/images/others/whatsapp.png
+    - assets/images/others/inactive_banner.jpg
     - assets/events/snow.json
     - assets/events/ChristmasTree.json
     - assets/events/independenceDaySl.json

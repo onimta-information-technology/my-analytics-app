@@ -11,8 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-/// The logged-in user's own inactive members (Ballys, iid 885263), in the
-/// order the SP returns them (latest last visit first).
+/// The logged-in user's own inactive members (Ballys, iid 885263), highest
+/// G_RatingID first; members with the same rating keep the SP order (latest
+/// last visit first).
 class MyInactiveMembersScreen extends ConsumerStatefulWidget {
   const MyInactiveMembersScreen({super.key});
 
@@ -40,6 +41,17 @@ class _MyInactiveMembersScreenState
 
   String _ratingKey(MyInactiveMember m) =>
       m.rating.isEmpty ? 'N/A' : m.rating;
+
+  /// Highest G_RatingID first. Ties fall back to the original index because
+  /// List.sort is not stable.
+  List<MyInactiveMember> _byRating(List<MyInactiveMember> items) {
+    final indexed = items.asMap().entries.toList()
+      ..sort((a, b) {
+        final byRating = b.value.ratingId.compareTo(a.value.ratingId);
+        return byRating != 0 ? byRating : a.key.compareTo(b.key);
+      });
+    return [for (final e in indexed) e.value];
+  }
 
   List<MyInactiveMember> _searched(List<MyInactiveMember> items) {
     if (_query.isEmpty) return items;
@@ -177,14 +189,18 @@ class _MyInactiveMembersScreenState
   }
 
   Future<void> _openProfile(MyInactiveMember member) async {
-    // The logged-in user is the marketing person shown on the profile.
+    // The SP's GCode / GName is the marketing person shown on the profile;
+    // fall back to the logged-in user when it comes back blank.
     final marketingCode = await StorageUtil.getMarketingCode();
     final userName = await StorageUtil.getUserName();
     if (!mounted) return;
     ref
         .read(selectedGuestProvider.notifier)
         .setSelectedGuest(
-          member.toGuest(mGroup: marketingCode, gName: userName),
+          member.toGuest(
+            fallbackMGroup: marketingCode,
+            fallbackGName: userName,
+          ),
         );
     context.push('/home/profile', extra: {'showFollowButton': true});
   }
@@ -193,7 +209,7 @@ class _MyInactiveMembersScreenState
   Widget build(BuildContext context) {
     final asyncItems = ref.watch(myInactiveMembersProvider);
     // Keep the last-known list on screen while a refresh runs.
-    final all = asyncItems.valueOrNull ?? const <MyInactiveMember>[];
+    final all = _byRating(asyncItems.valueOrNull ?? const <MyInactiveMember>[]);
     final searched = _searched(all);
     final visible = _selectedRating == null
         ? searched

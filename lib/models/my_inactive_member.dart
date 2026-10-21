@@ -12,6 +12,11 @@ class MyInactiveMember {
   final DateTime? lastVisitDate;
   final String lastVisitRaw;
 
+  /// Marketing person the member belongs to (GCode / GName from the SP).
+  /// Only passed on to the profile, not shown on the list.
+  final String gCode;
+  final String gName;
+
   const MyInactiveMember({
     required this.mid,
     required this.memberName,
@@ -20,6 +25,8 @@ class MyInactiveMember {
     required this.country,
     required this.lastVisitDate,
     required this.lastVisitRaw,
+    required this.gCode,
+    required this.gName,
   });
 
   factory MyInactiveMember.fromJson(Map<String, dynamic> json) {
@@ -46,19 +53,22 @@ class MyInactiveMember {
       country: (getValue(['Country']) ?? '').trim(),
       lastVisitDate: DateTime.tryParse(lvd),
       lastVisitRaw: lvd,
+      gCode: (getValue(['GCode']) ?? '').trim(),
+      gName: (getValue(['GName']) ?? '').trim(),
     );
   }
 
-  /// Guest used to open the member profile. These are the logged-in user's own
-  /// members, so that user is their marketing person ([mGroup] / [gName]).
-  Guest toGuest({String? mGroup, String? gName}) => Guest(
+  /// Guest used to open the member profile, carrying the member's marketing
+  /// person ([gCode] / [gName]). The fallbacks fill in when the SP sends them
+  /// blank.
+  Guest toGuest({String? fallbackMGroup, String? fallbackGName}) => Guest(
         mid: mid,
         memberName: memberName,
         country: country,
         lastVisitDate: lastVisitRaw,
         age: 0,
         gRating: rating.isEmpty ? null : rating,
-        mGroup: mGroup,
-        gName: gName,
+        mGroup: gCode.isNotEmpty ? gCode : fallbackMGroup,
+        gName: gName.isNotEmpty ? gName : fallbackGName,
       );
 }

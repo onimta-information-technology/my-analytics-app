@@ -33,6 +33,9 @@ class _MarketingPerformanceWidgetState
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  // Target view rows (by Gcode) whose "Cost" breakdown is expanded.
+  final Set<String> _expandedCostGcodes = {};
+
   // Captured in initState so dispose() never touches `ref` (illegal in
   // Riverpod once the element is disposed — it throws and corrupts the
   // element-tree teardown).
@@ -1249,9 +1252,84 @@ Widget _buildViewTypeButton(
               valueColor: _achievementColor(target.achievement),
               labelColor: _achievementColor(target.achievement),
             ),
+            // Row 5: Cost — tap to expand the cost breakdown
+            _buildTargetCostSection(target, fontSettings),
           ],
         ),
       ),
+    );
+  }
+
+  // ── Expandable cost breakdown for a target row ───────────────────────────
+  // The header has its own tap handler, so toggling it doesn't trigger the
+  // row's navigation to the detail page.
+  Widget _buildTargetCostSection(MarketingTarget target, fontSettings) {
+    final isExpanded = _expandedCostGcodes.contains(target.gcode);
+    final costs = <String, double>{
+      'Commission': target.commAmt,
+      'Non Cash Chips': target.ncAmount,
+      'OTP Chips': target.otpAmount,
+      'AP Chips': target.apAmount,
+      'Air Tickets': target.atCost,
+      'Hotels': target.htCost,
+      'Loan': target.loanCost,
+      'F & B ': target.fbCost,
+      'Transport': target.tpCost,
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() {
+            if (!_expandedCostGcodes.remove(target.gcode)) {
+              _expandedCostGcodes.add(target.gcode);
+            }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Cost',
+                  style: TextStyle(
+                    fontSize: fontSettings.fontSize,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.deepPurple[400],
+                  ),
+                ),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: Colors.deepPurple[400],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isExpanded)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple[50],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              children: costs.entries
+                  .map((e) => _buildTargetDetailRow(
+                        e.key,
+                        e.value == 0 ? '0' : _formatWithThousands(e.value),
+                        fontSettings,
+                      ))
+                  .toList(),
+            ),
+          ),
+      ],
     );
   }
 

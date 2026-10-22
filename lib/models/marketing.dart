@@ -157,12 +157,33 @@ class MarketingTarget {
   final double mTarget;
   final double achievement; // percentage
 
+  // Cost breakdown for the group, shown in the expandable "Cost" section
+  // of the Target tab.
+  final double commAmt;
+  final double ncAmount;
+  final double otpAmount;
+  final double apAmount;
+  final double atCost;
+  final double htCost;
+  final double loanCost;
+  final double fbCost;
+  final double tpCost;
+
   MarketingTarget({
     required this.gcode,
     required this.gName,
     required this.actualDrop,
     required this.mTarget,
     required this.achievement,
+    this.commAmt = 0,
+    this.ncAmount = 0,
+    this.otpAmount = 0,
+    this.apAmount = 0,
+    this.atCost = 0,
+    this.htCost = 0,
+    this.loanCost = 0,
+    this.fbCost = 0,
+    this.tpCost = 0,
   });
 
   factory MarketingTarget.fromJson(Map<String, dynamic> json) {
@@ -172,6 +193,15 @@ class MarketingTarget {
       actualDrop: _toDouble(json['ActualDrop']),
       mTarget: _toDouble(json['M_Target']),
       achievement: _toDouble(json['Achievement']),
+      commAmt: _toDouble(json['Comm_Amt']),
+      ncAmount: _toDouble(json['NC_Amount']),
+      otpAmount: _toDouble(json['OTP_Amount']),
+      apAmount: _toDouble(json['AP_Amount']),
+      atCost: _toDouble(json['AT_Cost']),
+      htCost: _toDouble(json['HT_Cost']),
+      loanCost: _toDouble(json['Loan_Cost']),
+      fbCost: _toDouble(json['FB_Cost']),
+      tpCost: _toDouble(json['TP_Cost']),
     );
   }
 
@@ -181,6 +211,15 @@ class MarketingTarget {
         'ActualDrop': actualDrop,
         'M_Target': mTarget,
         'Achievement': achievement,
+        'Comm_Amt': commAmt,
+        'NC_Amount': ncAmount,
+        'OTP_Amount': otpAmount,
+        'AP_Amount': apAmount,
+        'AT_Cost': atCost,
+        'HT_Cost': htCost,
+        'Loan_Cost': loanCost,
+        'FB_Cost': fbCost,
+        'TP_Cost': tpCost,
       };
 
   @override

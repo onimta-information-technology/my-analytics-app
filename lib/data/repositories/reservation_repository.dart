@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/reservation/reservation_duplicate_check.dart';
+import 'package:ballys_reservation_app/models/reservation/air_ticket_warning.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
 import 'package:ballys_reservation_app/models/reservation.dart';
 import 'package:ballys_reservation_app/models/reservation/new_reservation_ballys.dart';
@@ -337,6 +338,30 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
           response['message'] ??
           'Failed to save air ticket warning');
     }
+  }
+
+  Future<List<AirTicketWarning>> getAirTicketWarnings({
+    required String masterId,
+  }) async {
+    final endpoint =
+        'AirTicketWarnings/Get?master_id=${Uri.encodeQueryComponent(masterId)}';
+    final response = await apiService.get(endpoint);
+    final status = response['Status'] as bool? ?? false;
+    if (!status) {
+      throw Exception(response['Message'] ??
+          response['message'] ??
+          'Failed to load air ticket warnings');
+    }
+
+    final warnings = response['AirTicketWarnings'];
+    if (warnings is! List) {
+      throw Exception('Unexpected air ticket warnings response');
+    }
+
+    return warnings
+        .whereType<Map<String, dynamic>>()
+        .map(AirTicketWarning.fromJson)
+        .toList();
   }
 
   /// Re-posts an existing reservation to `Reservation_InsertReservation` with a

@@ -13,6 +13,7 @@ import 'package:ballys_reservation_app/models/guest_modal.dart';
 import 'package:ballys_reservation_app/models/guest_reservation_entryBallys.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reervationBallys.dart';
+import 'package:ballys_reservation_app/models/reservation/air_ticket_warning.dart';
 import 'package:ballys_reservation_app/models/reservation/flight_bookng_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_desc_ballys.dart';
 import 'package:ballys_reservation_app/models/reservation/reservation_passport_image_ballys.dart';
@@ -71,6 +72,9 @@ class _ReservationViewScreenBallysState
   double _textScale = 1.0;
   bool _isGuestLoading = false;
   bool _guestDataLoaded = false;
+  bool _isAirTicketWarningsLoading = false;
+  String? _airTicketWarningsError;
+  List<AirTicketWarning> _airTicketWarnings = const [];
 
   bool _hasResChk = false;
   bool _hasResApp = false;
@@ -96,7 +100,33 @@ class _ReservationViewScreenBallysState
       if (selectedReservation != null && !_guestDataLoaded) {
         _loadGuestDataForView();
       }
+      if (selectedReservation != null) {
+        _loadAirTicketWarnings(selectedReservation.reservNo);
+      }
     });
+  }
+
+  Future<void> _loadAirTicketWarnings(String masterId) async {
+    setState(() {
+      _isAirTicketWarningsLoading = true;
+      _airTicketWarningsError = null;
+    });
+    try {
+      final warnings = await ref
+          .read(reservationRepositoryProvider)
+          .getAirTicketWarnings(masterId: masterId);
+      if (!mounted) return;
+      setState(() {
+        _airTicketWarnings = warnings;
+        _isAirTicketWarningsLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _airTicketWarningsError = e.toString();
+        _isAirTicketWarningsLoading = false;
+      });
+    }
   }
 
   Future<void> _loadPermissions() async {
@@ -546,6 +576,158 @@ class _ReservationViewScreenBallysState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAirTicketWarningsSection(
+    double fontSize,
+    FontWeight fontWeight,
+  ) {
+    if (_isAirTicketWarningsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_airTicketWarningsError != null) {
+      return Card(
+        color: Colors.red.shade50,
+        child: ListTile(
+          leading: const Icon(Icons.error_outline, color: Colors.red),
+          title: Text(
+            'Unable to load air ticket warnings',
+            style: TextStyle(fontSize: fontSize, fontWeight: fontWeight),
+          ),
+          subtitle: Text(_airTicketWarningsError!),
+          trailing: IconButton(
+            tooltip: 'Retry',
+            onPressed: () {
+              final reservation = ref.read(selectedReservationBallysProvider);
+              if (reservation != null) {
+                _loadAirTicketWarnings(reservation.reservNo);
+              }
+            },
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+      );
+    }
+
+    if (_airTicketWarnings.isEmpty) return const SizedBox.shrink();
+
+    String formatDate(String value) {
+      final date = DateTime.tryParse(value);
+      return date == null ? value : DateFormat('dd/MM/yyyy').format(date);
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.deepOrange,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Already has air tickets for these dates.',
+                    style: TextStyle(
+                      fontSize: fontSize + 3,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.deepOrange.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ..._airTicketWarnings.map((warning) {
+              final departureRoute =
+                  '${warning.existingDepartureFrom} -> ${warning.existingDepartureTo}';
+              final returnRoute =
+                  '${warning.existingReturnFrom} -> ${warning.existingReturnTo}';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      warning.existingBmNumber.isEmpty
+                          ? 'Existing reservation'
+                          : warning.existingBmNumber,
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (warning.existingMasterId.isNotEmpty)
+                      Text('Reservation ID: ${warning.existingMasterId}',
+                          style: TextStyle(
+                            fontSize: fontSize - 1,
+                            fontWeight: FontWeight.w500,
+                           // color: Colors.grey[700],
+                          )),
+                    if (warning.existingAirLine.isNotEmpty)
+                      Text('Airline: ${warning.existingAirLine}',
+                          style: TextStyle(
+                            fontSize: fontSize - 1,
+                            fontWeight: FontWeight.w500,
+                           // color: Colors.grey[700],
+                          )),
+                    if (warning.existingDepartureFrom.isNotEmpty ||
+                        warning.existingDepartureTo.isNotEmpty)
+                      Text('Departure: $departureRoute',
+                          style: TextStyle(
+                            fontSize: fontSize - 1,
+                            fontWeight: FontWeight.w500,
+                          //  color: Colors.grey[700],
+                          )),
+                    if (warning.existingReturnFrom.isNotEmpty ||
+                        warning.existingReturnTo.isNotEmpty)
+                      Text('Return: $returnRoute',
+                          style: TextStyle(
+                            fontSize: fontSize - 1,
+                            fontWeight: FontWeight.w500,
+                         //   color: Colors.grey[700],
+                          )),
+                    if (warning.existingArrivalDate.isNotEmpty)
+                      Text(
+                        'Arrival date: ${formatDate(warning.existingArrivalDate)}',
+                        style: TextStyle(
+                          fontSize: fontSize - 1,
+                          fontWeight: FontWeight.w500,
+//color: Colors.grey[700],
+                        ),
+                      ),
+                    if (warning.existingDepartureDate.isNotEmpty)
+                      Text(
+                        'Departure date: ${formatDate(warning.existingDepartureDate)}',
+                        style: TextStyle(
+                          fontSize: fontSize - 1,
+                          fontWeight: FontWeight.w500,
+                         // color: Colors.grey[700],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2519,6 +2701,11 @@ class _ReservationViewScreenBallysState
                             }).toList(),
                           ),
                   ],
+
+                  _buildAirTicketWarningsSection(
+                    fontSettings.fontSize,
+                    fontSettings.fontWeight,
+                  ),
 
                   const SizedBox(height: 10.0),
 

@@ -330,7 +330,7 @@ Future<Map<String, dynamic>> _buildReservationBodyBallys(
 
     // TODO: confirm the endpoint name with the backend.
     final response = await apiService.post(
-        'Reservation_InsertAirTicketDuplicate', requestBody);
+        'AirTicketWarnings/Insert', requestBody);
     final status = response['Status'] as bool? ?? false;
     if (!status) {
       throw Exception(response['Message'] ??

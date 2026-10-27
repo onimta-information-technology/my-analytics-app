@@ -19,6 +19,11 @@ class HotelDescipBallys {
   final dynamic selectedCost;
   final int? costIndex;
   final String? ecLcoFacility;
+
+  /// Early check-in / late check-out times as "HH:mm" (24h). Only set when
+  /// [ecLcoFacility] asks for that facility.
+  final String? eciTime;
+  final String? lcoTime;
   final String? paymentBy;
 
   /// The guests this room is booked for. Empty on rooms picked before the
@@ -42,6 +47,8 @@ class HotelDescipBallys {
     this.selectedCost,
     this.costIndex,
     this.ecLcoFacility,
+    this.eciTime,
+    this.lcoTime,
     this.paymentBy,
     this.assignedGuests = const [],
   });
@@ -64,9 +71,22 @@ class HotelDescipBallys {
       selectedCost: _parseCost(json['selected_cost']),
       costIndex: _toInt(json['cost_index']),
       ecLcoFacility: json['ec_lco_facility'] as String?,
+      eciTime: json['eci_time'] as String?,
+      lcoTime: json['lco_time'] as String?,
       paymentBy: json['payment_by'] as String?,
       assignedGuests: AssignedGuest.listFrom(json['assigned_guests']),
     );
+  }
+
+  /// "ECI 10:00 · LCO 14:00" for the room cards; null when no facility is set.
+  String? get ecLcoSummary {
+    final parts = [
+      if (eciTime != null && eciTime!.isNotEmpty) "ECI $eciTime",
+      if (lcoTime != null && lcoTime!.isNotEmpty) "LCO $lcoTime",
+    ];
+    if (parts.isNotEmpty) return parts.join(' · ');
+    final facility = ecLcoFacility?.trim() ?? '';
+    return facility.isEmpty || facility == 'NA' ? null : facility;
   }
 
 // Helper method to safely parse integers
@@ -146,6 +166,8 @@ class HotelDescipBallys {
       'selected_cost': _parseCostToDouble(selectedCost),
       'cost_index': costIndex,
       'ec_lco_facility': ecLcoFacility,
+      'eci_time': eciTime,
+      'lco_time': lcoTime,
       // `payment_by` is a reservation-level field now — sent once at the top of
       // the body instead of on every room. Still read back from older rows.
       // Everyone the room is booked for. The row itself is repeated per

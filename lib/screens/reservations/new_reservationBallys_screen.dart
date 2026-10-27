@@ -3962,6 +3962,16 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
                                                         .fontWeight,
                                                   ),
                                                 ),
+                                                if (hotel.ecLcoSummary != null)
+                                                  Text(
+                                                    hotel.ecLcoSummary!,
+                                                    style: TextStyle(
+                                                      fontSize: fontSettings
+                                                          .fontSize,
+                                                      fontWeight: fontSettings
+                                                          .fontWeight,
+                                                    ),
+                                                  ),
                                               ],
                                             ),
                                           ],

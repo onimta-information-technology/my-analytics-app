@@ -122,6 +122,11 @@ class _HotelAndRoomSelectionBallysBottomSheetState
 
   List<HotelDescipBallys> hotelList = [];
 String selectedEcLcoFacility = 'NA';
+  TimeOfDay? _eciTime;
+  TimeOfDay? _lcoTime;
+
+  bool get _needsEciTime => selectedEcLcoFacility.contains('ECI');
+  bool get _needsLcoTime => selectedEcLcoFacility.contains('LCO');
 
   // Validation error flags for required fields
   bool _dateRangeError = false;
@@ -130,6 +135,8 @@ String selectedEcLcoFacility = 'NA';
   bool _roomCategoryError = false;
   bool _roomTypeError = false;
   bool _guestAssignError = false;
+  bool _eciTimeError = false;
+  bool _lcoTimeError = false;
 
   /// The guests the room being added is booked for, by [_guestKey]. A room can
   /// go to one guest or to several, so this is a set rather than a single pick.
@@ -648,6 +655,10 @@ String selectedEcLcoFacility = 'NA';
       selectedEcLcoFacility = ecLcoOptions.contains(hotel.ecLcoFacility)
           ? hotel.ecLcoFacility!
           : 'NA';
+      _eciTime = _needsEciTime ? _parseTime(hotel.eciTime) : null;
+      _lcoTime = _needsLcoTime ? _parseTime(hotel.lcoTime) : null;
+      _eciTimeError = false;
+      _lcoTimeError = false;
 
       _applyAssignedGuests(hotel.assignedGuests);
       _syncRoomCountToGuests();
@@ -668,6 +679,68 @@ String selectedEcLcoFacility = 'NA';
     }
   }
 
+  /// "HH:mm" (24h) — how the times are stored on the row.
+  static String? _timeToJson(TimeOfDay? time) => time == null
+      ? null
+      : "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+
+  static TimeOfDay? _parseTime(String? value) {
+    final parts = (value ?? '').split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0].trim());
+    final minute = int.tryParse(parts[1].trim());
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  Future<void> _pickEcLcoTime({required bool eci}) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: (eci ? _eciTime : _lcoTime) ??
+          (eci
+              ? const TimeOfDay(hour: 10, minute: 0)
+              : const TimeOfDay(hour: 14, minute: 0)),
+      helpText: eci ? "Early Check-In Time" : "Late Check-Out Time",
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      if (eci) {
+        _eciTime = picked;
+        _eciTimeError = false;
+      } else {
+        _lcoTime = picked;
+        _lcoTimeError = false;
+      }
+    });
+  }
+
+  Widget _buildEcLcoTimeField({required bool eci}) {
+    final time = eci ? _eciTime : _lcoTime;
+    final hasError = eci ? _eciTimeError : _lcoTimeError;
+    return InkWell(
+      onTap: () => _pickEcLcoTime(eci: eci),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: eci ? 'ECI Time' : 'LCO Time',
+          labelStyle: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          border: const OutlineInputBorder(),
+          errorText: hasError ? "Required" : null,
+          suffixIcon: const Icon(Icons.access_time),
+        ),
+        child: Text(
+          time?.format(context) ?? '',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _removeHotel(int index) {
     setState(() => hotelList.removeAt(index));
   }
@@ -683,14 +756,20 @@ String selectedEcLcoFacility = 'NA';
     // shared member or already holds a room of their own.
     final bool guestsMissing =
         _selectableGuests().isNotEmpty && _assignedGuestKeys.isEmpty;
+    final bool eciTimeMissing = _needsEciTime && _eciTime == null;
+    final bool lcoTimeMissing = _needsLcoTime && _lcoTime == null;
 
     if (dateMissing ||
         hotelTypeMissing ||
         hotelMissing ||
         categoryMissing ||
         roomTypeMissing ||
-        guestsMissing) {
+        guestsMissing ||
+        eciTimeMissing ||
+        lcoTimeMissing) {
       setState(() {
+        _eciTimeError = eciTimeMissing;
+        _lcoTimeError = lcoTimeMissing;
         _dateRangeError = dateMissing;
         _hotelLocationError = hotelTypeMissing;
         _hotelError = hotelMissing;
@@ -725,6 +804,8 @@ String selectedEcLcoFacility = 'NA';
       selectedCost: 0,
       costIndex: costIndex,
       ecLcoFacility: selectedEcLcoFacility,
+      eciTime: _needsEciTime ? _timeToJson(_eciTime) : null,
+      lcoTime: _needsLcoTime ? _timeToJson(_lcoTime) : null,
       assignedGuests: _selectedAssignedGuests(),
     );
 
@@ -800,6 +881,10 @@ String selectedEcLcoFacility = 'NA';
       editIndex = null;
       staleSelectionNotifier.value = null;
       selectedEcLcoFacility = 'NA';
+      _eciTime = null;
+      _lcoTime = null;
+      _eciTimeError = false;
+      _lcoTimeError = false;
 
       _useReservationDates = false;
       _dateRangeError = false;
@@ -1684,9 +1769,24 @@ DropdownButtonFormField<String>(
     DropdownMenuItem(value: 'ECI & LCO', child: Text('ECI & LCO')),
   ],
   onChanged: (value) {
-    setState(() => selectedEcLcoFacility = value ?? 'NA');
+    setState(() {
+      selectedEcLcoFacility = value ?? 'NA';
+      // Drop a time the new choice no longer asks for.
+      if (!_needsEciTime) _eciTime = null;
+      if (!_needsLcoTime) _lcoTime = null;
+      _eciTimeError = false;
+      _lcoTimeError = false;
+    });
   },
 ),
+if (_needsEciTime) ...[
+  const SizedBox(height: 16),
+  _buildEcLcoTimeField(eci: true),
+],
+if (_needsLcoTime) ...[
+  const SizedBox(height: 16),
+  _buildEcLcoTimeField(eci: false),
+],
 // Payment By is picked once on the reservation form now — it describes the
 // reservation, not the individual room, so it is no longer asked for here.
 const SizedBox(height: 16),
@@ -2044,6 +2144,14 @@ const SizedBox(height: 16),
                                                           fontWeight: FontWeight.bold,
                                                         ),
                                                       ),
+                                                      if (hotel.ecLcoSummary != null)
+                                                        Text(
+                                                          hotel.ecLcoSummary!,
+                                                          style: const TextStyle(
+                                                            fontSize: 18,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
                                                     ],
                                                   ),
                                                   const SizedBox(height: 24),

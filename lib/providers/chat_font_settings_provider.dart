@@ -96,10 +96,11 @@ final chatFontSettingsProvider =
 /// the content of any sheet or dialog the chat opens — those get their own
 /// route, so they would otherwise fall back to the app-wide theme.
 ///
-/// It also carries the chat's own light / dark mode ([chatDarkModeProvider]):
-/// in dark mode the Material defaults below it (text, dialogs, sheets, list
-/// tiles) switch to a dark theme, and when the mode flips every widget under
-/// the scope is rebuilt so the [ChatColors] getters are read afresh.
+/// It also carries the chat's own light / dark mode ([chatDarkModeProvider])
+/// and colour theme ([chatThemeProvider]): in dark mode the Material defaults
+/// below it (text, dialogs, sheets, list tiles) switch to a dark theme, and
+/// when the mode or the theme changes every widget under the scope is rebuilt
+/// so the [ChatColors] getters are read afresh.
 class ChatFontScope extends ConsumerStatefulWidget {
   const ChatFontScope({super.key, required this.child});
 
@@ -112,7 +113,8 @@ class ChatFontScope extends ConsumerStatefulWidget {
 class _ChatFontScopeState extends ConsumerState<ChatFontScope> {
   /// Most chat widgets read [ChatColors] directly rather than through the
   /// theme, so a theme change alone would leave them stale — mark the whole
-  /// subtree dirty instead. Runs only when the user flips the switch.
+  /// subtree dirty instead. Runs only when the user flips the dark-mode switch
+  /// or picks another colour theme.
   void _rebuildSubtree() {
     if (!mounted) return;
     void rebuild(Element element) {
@@ -140,6 +142,11 @@ class _ChatFontScopeState extends ConsumerState<ChatFontScope> {
   Widget build(BuildContext context) {
     final dark = ref.watch(chatDarkModeProvider);
     ref.listen<bool>(chatDarkModeProvider, (previous, next) {
+      if (previous != next) _rebuildSubtree();
+    });
+    // The dark theme below is seeded from the theme colour, so watch it too.
+    ref.watch(chatThemeProvider);
+    ref.listen<ChatTheme>(chatThemeProvider, (previous, next) {
       if (previous != next) _rebuildSubtree();
     });
 

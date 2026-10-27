@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/chat_wallpaper.dart';
 import 'package:ballys_reservation_app/core/chat_colors.dart';
 import 'package:ballys_reservation_app/providers/chat_font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/chat_notification_sound_provider.dart';
@@ -8,7 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Chat's own theme, font, notification-tone and device-permission settings, reached from the overflow
+/// Chat's own dark mode, colour theme, font, notification-tone and
+/// device-permission settings, reached from the overflow
 /// menu in the chat list and inside a conversation. The typography here is
 /// deliberately separate from the app-wide
 /// "Font Size Settings" on the app Settings screen: changing one leaves the other
@@ -30,6 +32,7 @@ class ChatSettingsScreen extends ConsumerWidget {
     final sound = ref.watch(chatNotificationSoundProvider);
     final soundNotifier = ref.read(chatNotificationSoundProvider.notifier);
     final darkMode = ref.watch(chatDarkModeProvider);
+    final theme = ref.watch(chatThemeProvider);
 
     return ChatFontScope(
       child: Scaffold(
@@ -47,31 +50,80 @@ class ChatSettingsScreen extends ConsumerWidget {
           children: [
             _sectionLabel('Theme'),
             _buildCard(
-              child: SwitchListTile(
-                value: darkMode,
-                onChanged: (value) =>
-                    ref.read(chatDarkModeProvider.notifier).setDark(value),
-                secondary: Icon(
-                  darkMode ? Icons.dark_mode : Icons.light_mode,
-                  color: ChatColors.primaryDark,
-                ),
-                title: Text(
-                  'Dark mode',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: ChatColors.textPrimary,
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    value: darkMode,
+                    onChanged: (value) =>
+                        ref.read(chatDarkModeProvider.notifier).setDark(value),
+                    secondary: Icon(
+                      darkMode ? Icons.dark_mode : Icons.light_mode,
+                      color: ChatColors.primaryDark,
+                    ),
+                    title: Text(
+                      'Dark mode',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: ChatColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      darkMode ? 'On · chats only' : 'Off · chats only',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ChatColors.textSecondary,
+                      ),
+                    ),
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: ChatColors.primary,
                   ),
-                ),
-                subtitle: Text(
-                  darkMode ? 'On · chats only' : 'Off · chats only',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: ChatColors.textSecondary,
+                  Divider(height: 1, indent: 16, color: ChatColors.inputFill),
+                  ListTile(
+                    leading: Icon(
+                      Icons.palette_outlined,
+                      color: ChatColors.primaryDark,
+                    ),
+                    title: Text(
+                      'Chat theme',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: ChatColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      theme.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ChatColors.textSecondary,
+                      ),
+                    ),
                   ),
-                ),
-                activeThumbColor: Colors.white,
-                activeTrackColor: ChatColors.primary,
+                  GridView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisExtent: 104,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                        ),
+                    children: [
+                      for (final option in ChatTheme.values)
+                        _themeSwatch(
+                          theme: option,
+                          palette: darkMode ? option.dark : option.light,
+                          selected: theme == option,
+                          onTap: () => ref
+                              .read(chatThemeProvider.notifier)
+                              .select(option),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -151,10 +203,11 @@ class ChatSettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                'Dark mode and this size apply to chats only. The rest of the '
-                'app stays light and follows the font size in Settings. The '
-                'notification sound applies to chat messages only. Dark mode '
-                'and the sound are kept by the reset above.',
+                'The theme, dark mode and this size apply to chats only. The '
+                'rest of the app stays light and follows the font size in '
+                'Settings. The notification sound applies to chat messages '
+                'only. The theme, dark mode and the sound are kept by the '
+                'reset above.',
                 style: TextStyle(
                   fontSize: 12,
                   color: ChatColors.textSecondary,
@@ -182,6 +235,98 @@ class ChatSettingsScreen extends ConsumerWidget {
       color: selected ? ChatColors.primary : ChatColors.textFaint,
     ),
   );
+
+  /// One theme choice, drawn as a tiny conversation in that theme's colours
+  /// for the current mode — wallpaper, an incoming and an outgoing bubble, and
+  /// the send button — so the user picks by what the chat will look like.
+  Widget _themeSwatch({
+    required ChatTheme theme,
+    required ChatThemePalette palette,
+    required bool selected,
+    required VoidCallback onTap,
+  }) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Column(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: palette.chatBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? palette.primary : ChatColors.divider,
+                width: selected ? 2.5 : 1,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _swatchBubble(
+                      color: ChatColors.incomingBubble,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    const SizedBox(height: 6),
+                    _swatchBubble(
+                      color: palette.outgoingBubble,
+                      alignment: Alignment.centerRight,
+                    ),
+                  ],
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: CircleAvatar(
+                    radius: 6,
+                    backgroundColor: palette.accent,
+                  ),
+                ),
+                if (selected)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Icon(
+                      Icons.check_circle,
+                      size: 18,
+                      color: palette.primary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          theme.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected ? ChatColors.primaryDark : ChatColors.textMuted,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _swatchBubble({required Color color, required Alignment alignment}) =>
+      Align(
+        alignment: alignment,
+        child: FractionallySizedBox(
+          widthFactor: 0.6,
+          child: Container(
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+      );
 
   /// One tone choice. The app's own tone gets a play button, so the user can
   /// hear it before living with it; the phone default is whatever the system
@@ -241,31 +386,34 @@ class ChatSettingsScreen extends ConsumerWidget {
     child: child,
   );
 
-  /// Two bubbles in the conversation's own colours, so the size choice is read
-  /// against the thing it actually changes.
+  /// Two bubbles on the conversation's own wallpaper, so the theme and size
+  /// choices are read against the thing they actually change.
   Widget _buildPreview(FontSettings settings) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: ChatColors.chatBackground,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _bubble(
-            text: 'How does this size look?',
-            settings: settings,
-            isMine: false,
+        child: ChatWallpaper(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _bubble(
+                  text: 'How does this size look?',
+                  settings: settings,
+                  isMine: false,
+                ),
+                const SizedBox(height: 8),
+                _bubble(
+                  text: 'Easy to read now 👍',
+                  settings: settings,
+                  isMine: true,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          _bubble(
-            text: 'Easy to read now 👍',
-            settings: settings,
-            isMine: true,
-          ),
-        ],
+        ),
       ),
     );
   }

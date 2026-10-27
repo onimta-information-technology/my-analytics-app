@@ -42,3 +42,47 @@ class ChatDarkModeNotifier extends StateNotifier<bool> {
 final chatDarkModeProvider = StateNotifierProvider<ChatDarkModeNotifier, bool>(
   (ref) => ChatDarkModeNotifier(),
 );
+
+/// The chat's colour theme, picked on the chat settings screen. Independent of
+/// [chatDarkModeProvider]: every theme has a light and a dark variant, and the
+/// mode switch chooses between them.
+///
+/// Mirrors [ChatDarkModeNotifier] — it keeps [ChatColors.theme] in step, and
+/// `ChatFontScope` watches it to rebuild the chat widgets when it changes.
+class ChatThemeNotifier extends StateNotifier<ChatTheme> {
+  ChatThemeNotifier() : super(ChatColors.theme) {
+    _load();
+  }
+
+  static const _key = 'chatTheme';
+
+  static ChatTheme _parse(String? name) =>
+      ChatTheme.values.asNameMap()[name] ?? ChatTheme.green;
+
+  /// Reads the saved theme into [ChatColors.theme] before the first frame, so
+  /// the first chat opened after launch does not flash green.
+  static Future<void> preload() async {
+    final prefs = await SharedPreferences.getInstance();
+    ChatColors.theme = _parse(prefs.getString(_key));
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = _parse(prefs.getString(_key));
+    if (!mounted) return;
+    ChatColors.theme = stored;
+    state = stored;
+  }
+
+  Future<void> select(ChatTheme theme) async {
+    if (state == theme) return;
+    ChatColors.theme = theme;
+    state = theme;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, theme.name);
+  }
+}
+
+final chatThemeProvider = StateNotifierProvider<ChatThemeNotifier, ChatTheme>(
+  (ref) => ChatThemeNotifier(),
+);

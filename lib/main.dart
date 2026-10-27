@@ -145,6 +145,7 @@ late ProviderContainer globalContainer;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ChatDarkModeNotifier.preload();
+  await ChatThemeNotifier.preload();
 
   //await ScreenProtector.preventScreenshotOn();
  await ConnectivityService.instance.initialize();

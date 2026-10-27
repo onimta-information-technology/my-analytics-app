@@ -135,7 +135,7 @@ class AmendmentRepository {
 
     final endpoint = '${_feedSegment(amendment.kind)}/$action';
     final actionedBy = await StorageUtil.getUserName() ?? '';
-
+print('Updating amendment ${amendment.rowId} to $status by $actionedBy');
     final response = await apiService.post(endpoint, {
       'MasterRowId': amendment.rowId,
       'Remark': remarks,

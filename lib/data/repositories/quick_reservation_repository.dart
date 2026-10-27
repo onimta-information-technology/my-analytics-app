@@ -46,7 +46,8 @@ class QuickReservationRepository {
   /// of `guestName` / `memberId` / `packageAmount` / `sharedPackage` and a
   /// `hotels` list of [QuickHotelEntry]. [extraMembers] are the captured
   /// share-the-booking rows. [liveRemarks] is the remark still on screen, which
-  /// wins over anything banked with a hotel.
+  /// wins over anything banked with a hotel. [masterId] lets the caller know
+  /// the new reservation's id up front, to file air ticket warnings against.
   Future<QuickReservationResult> saveHotelReservation({
     required List<Map<String, dynamic>> members,
     required List<Map<String, dynamic>> extraMembers,
@@ -55,6 +56,7 @@ class QuickReservationRepository {
     AuthorizationLevel? approver,
     String paymentBy = '',
     String contactPerson = '',
+    String? masterId,
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildHotelBody(
@@ -65,6 +67,7 @@ class QuickReservationRepository {
       approver: approver,
       paymentBy: paymentBy,
       contactPerson: contactPerson,
+      masterId: masterId,
     );
     log?.call('Saving hotel reservation', body);
     final response = await apiService.post(_reservationEndpoint, body);
@@ -82,6 +85,7 @@ class QuickReservationRepository {
     // are sent once at the top of the body.
     String paymentBy = '',
     String contactPerson = '',
+    String? masterId,
   }) async {
     // Flatten all hotel entries from all members into room_details. Each room
     // is sent once and names the guests it was ticked for inside its own
@@ -156,7 +160,7 @@ class QuickReservationRepository {
     }
 
     return {
-      ...await _requestEnvelope(),
+      ...await _requestEnvelope(masterId: masterId),
       'marketing_code': await StorageUtil.getMarketingCode(),
       'bm_number': primary['memberId'],
       'guest_name': primary['guestName'],
@@ -206,11 +210,38 @@ class QuickReservationRepository {
   List<QuickHotelEntry> _hotelsOf(Map<String, dynamic> m) =>
       (m['hotels'] as List?)?.cast<QuickHotelEntry>() ?? const [];
 
+  /// The hotel tab's rows for `Reservation_CheckDuplicate`, in the shape the
+  /// new reservation screen sends: one per BM number, each hotel booked for
+  /// them with its check-in / check-out days. A room counts for the guests
+  /// ticked on it, or for the member it was entered under when it names no one.
+  List<Map<String, dynamic>> buildHotelCheckGuests({
+    required List<Map<String, dynamic>> members,
+    required List<Map<String, dynamic>> extraMembers,
+  }) {
+    final rooms = [
+      for (final m in members)
+        for (final h in _hotelsOf(m)) (owner: _memberIdOf(m), hotel: h),
+    ];
+    return _checkGuestRows(
+      members: members,
+      extraMembers: extraMembers,
+      hotelsFor: (bm) => rooms
+          .where((e) => _isBookedFor(bm, e.hotel.assignedGuests, e.owner))
+          .map((e) => <String, dynamic>{
+                'hotel_id': e.hotel.hotelId,
+                'hotel_name': e.hotel.hotel.trim(),
+                'check_in_date': e.hotel.arrivalDate?.toIso8601String(),
+                'check_out_date': e.hotel.departureDate?.toIso8601String(),
+              })
+          .toList(),
+    );
+  }
+
   // ── Air ticket ──────────────────────────────────────────────────────────────
 
   /// [tickets] are the banked tickets plus the one still on the form. They are
   /// tagged here with the primary member so each row can name the guest it is
-  /// booked for.
+  /// booked for. [masterId] is as in [saveHotelReservation].
   Future<QuickReservationResult> saveAirReservation({
     required List<Map<String, dynamic>> members,
     required List<Map<String, dynamic>> tickets,
@@ -220,6 +251,7 @@ class QuickReservationRepository {
     AuthorizationLevel? approver,
     String paymentBy = '',
     String contactPerson = '',
+    String? masterId,
     void Function(String label, Object? payload)? log,
   }) async {
     final body = await buildAirBody(
@@ -231,6 +263,7 @@ class QuickReservationRepository {
       approver: approver,
       paymentBy: paymentBy,
       contactPerson: contactPerson,
+      masterId: masterId,
     );
     log?.call('Saving air ticket reservation', body);
     final response = await apiService.post(_reservationEndpoint, body);
@@ -248,6 +281,7 @@ class QuickReservationRepository {
     // Reservation-level, exactly as in [buildHotelBody].
     String paymentBy = '',
     String contactPerson = '',
+    String? masterId,
   }) async {
     final primary = members.first;
     final primaryMemberId = primary['memberId'];
@@ -314,7 +348,7 @@ class QuickReservationRepository {
     }
 
     return {
-      ...await _requestEnvelope(),
+      ...await _requestEnvelope(masterId: masterId),
         'marketing_code': await StorageUtil.getMarketingCode(),
       'bm_number': primaryMemberId,
       'guest_name': primaryGuestName,
@@ -340,6 +374,41 @@ class QuickReservationRepository {
       // time, so every ticket contributes — not just the one left in the form.
       'passport_images': buildPassportImages(ticketSources),
     };
+  }
+
+  /// The air ticket tab's rows for `Reservation_CheckDuplicate`, in the shape
+  /// the new reservation screen sends: one per BM number, with the from / to
+  /// airports and dates of each ticket booked for them, outbound and return. A
+  /// ticket counts for the guests ticked on it, or for the primary member — who
+  /// [buildAirBody] enters every ticket under — when it names no one.
+  List<Map<String, dynamic>> buildAirCheckGuests({
+    required List<Map<String, dynamic>> members,
+    required List<Map<String, dynamic>> tickets,
+    required List<Map<String, dynamic>> extraMembers,
+  }) {
+    final owner = _memberIdOf(members.first);
+    String code(Map<String, dynamic> t, String key) =>
+        (t[key] as Airport?)?.airportCode?.trim() ?? '';
+    return _checkGuestRows(
+      members: members,
+      extraMembers: extraMembers,
+      ticketsFor: (bm) => tickets
+          .where((t) => _isBookedFor(
+              bm,
+              (t['assignedGuests'] as List<AssignedGuest>?) ?? const [],
+              owner))
+          .map((t) => <String, dynamic>{
+                'arrival_date':
+                    (t['arrDateObj'] as DateTime?)?.toIso8601String(),
+                'departure_date':
+                    (t['depDateObj'] as DateTime?)?.toIso8601String(),
+                'departure_from': code(t, 'fromAirportData'),
+                'departure_to': code(t, 'toAirportData'),
+                'return_from': code(t, 'returnFromData'),
+                'return_to': code(t, 'returnToData'),
+              })
+          .toList(),
+    );
   }
 
   Map<String, dynamic> airTicketDetailOf(Map<String, dynamic> m) {
@@ -731,12 +800,44 @@ class QuickReservationRepository {
   // ── Shared ──────────────────────────────────────────────────────────────────
 
   /// The identity fields every quick reservation carries, read once per save.
-  Future<Map<String, dynamic>> _requestEnvelope() async => {
-        'master_id': DateTime.now().millisecondsSinceEpoch.toString(),
+  /// [masterId] is the caller's pick of id; a fresh timestamp otherwise.
+  Future<Map<String, dynamic>> _requestEnvelope({String? masterId}) async => {
+        'master_id':
+            masterId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         'sales_code': await StorageUtil.getSalesCode(),
         'user_name': await StorageUtil.getUserName(),
         'device_id': await DeviceId.get(),
       };
+
+  String _memberIdOf(Map<String, dynamic> m) =>
+      (m['memberId'] as String? ?? '').trim();
+
+  /// Whether a room or ticket ticked for [assigned] — or, when it names no
+  /// one, entered under [owner] — is booked for [bm].
+  bool _isBookedFor(String bm, List<AssignedGuest> assigned, String owner) =>
+      assigned.isEmpty ? owner == bm : assigned.any((g) => g.mid.trim() == bm);
+
+  /// One `Reservation_CheckDuplicate` row per BM number on the reservation —
+  /// every member, then the extra members sharing the booking — each with the
+  /// hotels and tickets booked for them.
+  List<Map<String, dynamic>> _checkGuestRows({
+    required List<Map<String, dynamic>> members,
+    required List<Map<String, dynamic>> extraMembers,
+    List<Map<String, dynamic>> Function(String bm)? hotelsFor,
+    List<Map<String, dynamic>> Function(String bm)? ticketsFor,
+  }) {
+    final rows = <String, Map<String, dynamic>>{};
+    for (final m in [...members, ...extraMembers]) {
+      final bm = _memberIdOf(m);
+      if (bm.isEmpty || rows.containsKey(bm)) continue;
+      rows[bm] = {
+        'bm_number': bm,
+        'hotels': hotelsFor?.call(bm) ?? const <Map<String, dynamic>>[],
+        'air_tickets': ticketsFor?.call(bm) ?? const <Map<String, dynamic>>[],
+      };
+    }
+    return rows.values.toList();
+  }
 
   QuickReservationResult _toResult(
       Map<String, dynamic> response, String fallbackError) {

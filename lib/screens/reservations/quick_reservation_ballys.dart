@@ -15,6 +15,7 @@ import 'package:ballys_reservation_app/components/air_ticket_class_count_selecto
 // import 'package:ballys_reservation_app/components/package_amount_field.dart';
 
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
+import 'package:ballys_reservation_app/components/duplicate_reservation_alert.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/location_search_field.dart';
 import 'package:ballys_reservation_app/data/repositories/quick_reservation_repository.dart';
@@ -32,6 +33,7 @@ import 'package:ballys_reservation_app/models/reservation/hotel_location.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_room_catalog_entry.dart';
 import 'package:ballys_reservation_app/models/reservation/hotel_response.dart';
 import 'package:ballys_reservation_app/models/reservation/quick_hotel_entry.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_duplicate_check.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
 import 'package:ballys_reservation_app/providers/hotel_catalog_provider.dart';
 import 'package:ballys_reservation_app/providers/airports_provider.dart';
@@ -3272,6 +3274,74 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
     ));
   }
 
+  /// The new reservation screen's pre-insert check, run before the hotel and
+  /// air ticket tabs save. A hotel clash, or a ticket on the same dates between
+  /// the same airports, stops the save; a ticket on the same dates between
+  /// other airports is only shown before saving. Returns those warnings, to be
+  /// filed against the reservation once it is saved, or null when the save
+  /// should stop.
+  Future<List<DuplicateMatch>?> _checkDuplicateReservations(
+      Future<ReservationDuplicateCheck> Function() runCheck) async {
+    final ReservationDuplicateCheck check;
+    try {
+      check = await runCheck();
+    } catch (e) {
+      if (mounted) _showSaveErrorSnack(e.toString());
+      return null;
+    }
+    if (!mounted) return null;
+    if (!check.status) {
+      _showSaveErrorSnack(check.message.isNotEmpty
+          ? check.message
+          : 'Could not check for duplicate reservations');
+      return null;
+    }
+    if (check.isBlocked) {
+      await showDuplicateReservationAlert(
+        context,
+        title: 'Reservation cannot be saved',
+        message: 'These guests already have a pending reservation for '
+            'the same dates.',
+        hotels: check.hotelDuplicates,
+        tickets: check.airTicketDuplicates,
+      );
+      return null;
+    }
+    if (check.airTicketWarnings.isNotEmpty) {
+      await showDuplicateReservationAlert(
+        context,
+        title: 'Air ticket on the same dates',
+        message: 'These guests already have an air ticket on another '
+            'sector in the same date range. The reservation will still be '
+            'saved.',
+        tickets: check.airTicketWarnings,
+      );
+      if (!mounted) return null;
+    }
+    return check.airTicketWarnings;
+  }
+
+  /// Files the warnings [_checkDuplicateReservations] let through against the
+  /// reservation just saved as [masterId]. The reservation is already saved,
+  /// so a failure here is reported but does not undo it.
+  Future<void> _recordAirTicketWarnings(
+      String masterId, List<DuplicateMatch> warnings) async {
+    if (warnings.isEmpty) return;
+    try {
+      await _quickNotifier.saveAirTicketWarnings(
+        masterId: masterId,
+        warnings: warnings,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Reservation saved, but the air ticket warning '
+            'could not be recorded: $e'),
+        backgroundColor: Colors.orange,
+      ));
+    }
+  }
+
   Future<void> _saveHotelSection() async {
     // Collect current form's hotel entries
     final currentHotels = List<QuickHotelEntry>.from(_pendingHotels);
@@ -3330,16 +3400,32 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
       return;
     }
 
+    final extraMembers = _captureExtraMembers(_h_extraMembers);
+    final airTicketWarnings = await _checkDuplicateReservations(
+      () => _quickNotifier.checkHotelDuplicates(
+        members: allMembers,
+        extraMembers: extraMembers,
+      ),
+    );
+    if (airTicketWarnings == null) return;
+
+    // Picked here rather than inside the insert so the air ticket warnings
+    // can be filed against the reservation once it is saved.
+    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
     final result = await _quickNotifier.saveHotelReservation(
       members: allMembers,
-      extraMembers: _captureExtraMembers(_h_extraMembers),
+      extraMembers: extraMembers,
       liveRemarks: _h_remarks.text,
       hasFamilyMembers: _sharedHasFamilyMembers,
       approver: _h_approver,
       paymentBy: _h_paymentBy.text.trim(),
       contactPerson: _h_hamoueContactPerson ?? '',
+      masterId: masterId,
       log: _logLong,
     );
+    if (result.success) {
+      await _recordAirTicketWarnings(masterId, airTicketWarnings);
+    }
     _handleSaveResult(
       result,
       onSuccess: _clearAllHotelForm,
@@ -3406,17 +3492,32 @@ Passport File/s: ${files.isEmpty ? 'None' : files}
         _captureCurrentAirTicket(),
     ];
 
+    final extraMembers = _captureExtraMembers(_a_extraMembers);
+    final airTicketWarnings = await _checkDuplicateReservations(
+      () => _quickNotifier.checkAirDuplicates(
+        members: allMembers,
+        tickets: tickets,
+        extraMembers: extraMembers,
+      ),
+    );
+    if (airTicketWarnings == null) return;
+
+    final masterId = DateTime.now().millisecondsSinceEpoch.toString();
     final result = await _quickNotifier.saveAirReservation(
       members: allMembers,
       tickets: tickets,
-      extraMembers: _captureExtraMembers(_a_extraMembers),
+      extraMembers: extraMembers,
       liveRemarks: _a_remarksCtrl.text,
       hasFamilyMembers: _sharedHasFamilyMembers,
       approver: _a_approver,
       contactPerson: _a_hamoueContactPerson ?? '',
       paymentBy: _a_paymentBy,
+      masterId: masterId,
       log: _logLong,
     );
+    if (result.success) {
+      await _recordAirTicketWarnings(masterId, airTicketWarnings);
+    }
     _handleSaveResult(
       result,
       onSuccess: _clearAllAirForm,

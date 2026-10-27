@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search-new_sheet.dart';
+import 'package:ballys_reservation_app/components/duplicate_reservation_alert.dart';
 import 'package:ballys_reservation_app/components/flight_card_ballys.dart';
 import 'package:ballys_reservation_app/components/guest_deatils_view_spGift.dart';
 import 'package:ballys_reservation_app/components/hotel_selection_ballys.dart';
@@ -1778,92 +1779,6 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
     return rows.values.toList();
   }
 
-  /// Lists the pending reservations a new one clashes with, guest by guest.
-  Future<void> _showDuplicateAlert({
-    required String title,
-    required String message,
-    List<DuplicateMatch> hotels = const [],
-    List<DuplicateMatch> tickets = const [],
-  }) {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    String dates(DuplicateMatch m, String from, String to) => [
-          m.date(from),
-          m.date(to),
-        ].whereType<DateTime>().map(dateFormat.format).join(' – ');
-    String route(DuplicateMatch m) => [
-          '${m.field('matched_df_airport_code')} → '
-              '${m.field('matched_dt_airport_code')}',
-          if (m.field('matched_rf_airport_code').isNotEmpty)
-            '${m.field('matched_rf_airport_code')} → '
-                '${m.field('matched_rt_airport_code')}',
-        ].join(', ');
-    String reservation(DuplicateMatch m) =>
-        '${m.field('reservation_status').isEmpty ? 'Reservation' : '${m.field('reservation_status')} reservation'} ${m.field('master_id')}'
-        '${m.field('main_guest_name').isEmpty ? '' : ' — ${m.field('main_guest_name')}'}';
-
-    Widget line(IconData icon, String bm, String text, String detail) =>
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 18, color: Colors.red),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('$bm — $text',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(detail,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black54)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(message),
-              for (final m in hotels)
-                line(
-                  Icons.hotel,
-                  m.bmNumber,
-                  '${m.field('matched_hotel_name')}, '
-                      '${dates(m, 'matched_arrival_date', 'matched_departure_date')}',
-                  reservation(m),
-                ),
-              for (final m in tickets)
-                line(
-                  Icons.flight,
-                  m.bmNumber,
-                  '${route(m)}, '
-                      '${dates(m, 'matched_arrival_date', 'matched_departure_date')}',
-                  reservation(m),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _confirmReservation() async {
     // The form-level validator on Member ID/Name only applies to whatever guest
     // is currently on screen. If guests have already been added and the current
@@ -2043,7 +1958,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         }
         if (check.isBlocked) {
           setState(() => _isLoading = false);
-          await _showDuplicateAlert(
+          await showDuplicateReservationAlert(
+            context,
             title: 'Reservation cannot be saved',
             message: 'These guests already have a pending reservation for '
                 'the same dates.',
@@ -2054,7 +1970,8 @@ class _NewReservationBallysScreenState extends ConsumerState<NewReservationBally
         }
         if (check.airTicketWarnings.isNotEmpty) {
           setState(() => _isLoading = false);
-          await _showDuplicateAlert(
+          await showDuplicateReservationAlert(
+            context,
             title: 'Air ticket on the same dates',
             message: 'These guests already have an air ticket on another '
                 'sector in the same date range. The reservation will still be '

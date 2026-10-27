@@ -6,10 +6,12 @@ import 'package:ballys_reservation_app/data/repositories/authorization_level_rep
 import 'package:ballys_reservation_app/data/repositories/contact_person_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/guest_repository.dart';
 import 'package:ballys_reservation_app/data/repositories/quick_reservation_repository.dart';
+import 'package:ballys_reservation_app/data/repositories/reservation_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/authorization_level.dart';
 import 'package:ballys_reservation_app/models/guest_search_response.dart';
 import 'package:ballys_reservation_app/models/reservation/airline_response.dart';
+import 'package:ballys_reservation_app/models/reservation/reservation_duplicate_check.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
@@ -96,12 +98,17 @@ class QuickReservationBallysNotifier
   final GuestRepository guestRepository;
   final AuthorizationLevelRepository authorizationLevelRepository;
 
+  /// The new reservation screen's repository, for the duplicate check it runs
+  /// before an insert and the air ticket warnings it files after one.
+  final ReservationRepository duplicateCheckRepository;
+
   QuickReservationBallysNotifier({
     required this.reservationRepository,
     required this.contactPersonRepository,
     required this.airportRepository,
     required this.guestRepository,
     required this.authorizationLevelRepository,
+    required this.duplicateCheckRepository,
   }) : super(const QuickReservationBallysState());
 
   /// The current state, for callers holding the notifier rather than watching
@@ -220,6 +227,51 @@ class QuickReservationBallysNotifier
     return ('BM', fullMemberId);
   }
 
+  // ── Duplicate check ─────────────────────────────────────────────────────────
+
+  /// Asks `Reservation_CheckDuplicate` whether the hotel tab's guests already
+  /// hold a pending stay at the same hotel on the same dates. Throws when the
+  /// check itself cannot be made.
+  Future<ReservationDuplicateCheck> checkHotelDuplicates({
+    required List<Map<String, dynamic>> members,
+    required List<Map<String, dynamic>> extraMembers,
+  }) {
+    return _busy(() => duplicateCheckRepository.checkReservationBallys(
+          guests: reservationRepository.buildHotelCheckGuests(
+            members: members,
+            extraMembers: extraMembers,
+          ),
+        ));
+  }
+
+  /// The air ticket tab's counterpart of [checkHotelDuplicates]: tickets on the
+  /// same dates, between the same airports or others.
+  Future<ReservationDuplicateCheck> checkAirDuplicates({
+    required List<Map<String, dynamic>> members,
+    required List<Map<String, dynamic>> tickets,
+    required List<Map<String, dynamic>> extraMembers,
+  }) {
+    return _busy(() => duplicateCheckRepository.checkReservationBallys(
+          guests: reservationRepository.buildAirCheckGuests(
+            members: members,
+            tickets: tickets,
+            extraMembers: extraMembers,
+          ),
+        ));
+  }
+
+  /// Records that reservation [masterId] was saved over [warnings] — tickets
+  /// its guests already hold on the same dates between other airports.
+  Future<void> saveAirTicketWarnings({
+    required String masterId,
+    required List<DuplicateMatch> warnings,
+  }) {
+    return _busy(() => duplicateCheckRepository.saveAirTicketDuplicateWarnings(
+          masterId: masterId,
+          warnings: warnings,
+        ));
+  }
+
   // ── Saving ──────────────────────────────────────────────────────────────────
 
   Future<QuickReservationResult> saveHotelReservation({
@@ -230,6 +282,7 @@ class QuickReservationBallysNotifier
     AuthorizationLevel? approver,
     String paymentBy = '',
     String contactPerson = '',
+    String? masterId,
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveHotelReservation(
@@ -240,6 +293,7 @@ class QuickReservationBallysNotifier
           approver: approver,
           paymentBy: paymentBy,
           contactPerson: contactPerson,
+          masterId: masterId,
           log: log,
         ));
   }
@@ -253,6 +307,7 @@ class QuickReservationBallysNotifier
     AuthorizationLevel? approver,
     String paymentBy = '',
     String contactPerson = '',
+    String? masterId,
     void Function(String label, Object? payload)? log,
   }) {
     return _guarded(() => reservationRepository.saveAirReservation(
@@ -264,6 +319,7 @@ class QuickReservationBallysNotifier
           approver: approver,
           paymentBy: paymentBy,
           contactPerson: contactPerson,
+          masterId: masterId,
           log: log,
         ));
   }
@@ -329,6 +385,17 @@ class QuickReservationBallysNotifier
       if (mounted) state = state.copyWith(isBusy: false);
     }
   }
+
+  /// [_guarded] for calls that are not a save: the busy flag is raised the
+  /// same way, but a thrown error reaches the caller.
+  Future<T> _busy<T>(Future<T> Function() request) async {
+    if (mounted) state = state.copyWith(isBusy: true);
+    try {
+      return await request();
+    } finally {
+      if (mounted) state = state.copyWith(isBusy: false);
+    }
+  }
 }
 
 final quickReservationBallysStorageProvider =
@@ -353,5 +420,6 @@ final quickReservationBallysProvider = StateNotifierProvider<
     airportRepository: AirportRepository(api),
     guestRepository: GuestRepository(api),
     authorizationLevelRepository: AuthorizationLevelRepository(api),
+    duplicateCheckRepository: ReservationRepository(api),
   );
 });

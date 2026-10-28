@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/group_reservation_repository.dart';
 import 'package:ballys_reservation_app/models/group_reservation.dart';
@@ -188,19 +189,9 @@ class _GroupReservationsBallysScreenState
               ],
             ),
           ),
-          if (_isSubmitting)
-            Positioned.fill(
-              child: Container(
-                color: const Color.fromARGB(135, 117, 115, 115),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // One overlay for the whole screen rather than one per tab.
+          if (_isSubmitting || reservationsAsync.isLoading)
+            const Positioned.fill(child: AppLoader()),
         ],
       ),
     );
@@ -244,7 +235,9 @@ class _GroupReservationsBallysScreenState
     String tabStatus,
   ) {
     return reservationsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      // A refresh keeps the old list, so this only fires on the first load;
+      // the AppLoader overlay in build() covers both.
+      loading: () => const SizedBox.shrink(),
       error: (error, _) => _placeholder(
         fontSettings,
         Icons.error_outline,

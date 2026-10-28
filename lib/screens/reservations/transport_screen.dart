@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:ballys_reservation_app/components/airport_pickup_status_badge.dart';
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/transport/transport_reservation.dart';
 import 'package:ballys_reservation_app/providers/font_settings_provider.dart';
@@ -391,19 +392,19 @@ class _TransportScreenState extends ConsumerState<TransportScreen>
                 ),
             ],
           ),
-          if (transportState.isLoading)
-            Positioned.fill(
-              child: Container(
-                color: const Color.fromARGB(135, 117, 115, 115),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          if (transportState.isLoading) const AppLoader(),
+            // Positioned.fill(
+            //   child: Container(
+            //     color: const Color.fromARGB(135, 117, 115, 115),
+            //     child: const Center(
+            //       child: RefreshProgressIndicator(
+            //         valueColor: AlwaysStoppedAnimation<Color>(
+            //           Constants.kSecondaryColor,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
         ],
       ),
     );

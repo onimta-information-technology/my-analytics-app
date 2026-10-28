@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/providers/academic_provider.dart';
 import 'package:flutter/material.dart';
@@ -80,19 +81,19 @@ class _AcademicScreenState extends ConsumerState<AcademicScreen> {
                 ],
               ),
             ),
-          if (_isLoading)
-            Positioned.fill(
-              child: Container(
-                color: const Color.fromARGB(135, 117, 115, 115),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          if (_isLoading) const AppLoader(),
+            // Positioned.fill(
+            //   child: Container(
+            //     color: const Color.fromARGB(135, 117, 115, 115),
+            //     child: const Center(
+            //       child: RefreshProgressIndicator(
+            //         valueColor: AlwaysStoppedAnimation<Color>(
+            //           Constants.kSecondaryColor,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
         ],
       ),
     );

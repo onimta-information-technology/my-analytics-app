@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/coordinator_request.dart';
 import 'package:ballys_reservation_app/providers/coordinators_provider.dart';
@@ -50,6 +51,7 @@ class _CoordinatorRequestsScreenState
   @override
   Widget build(BuildContext context) {
     final fontSettings = ref.watch(fontSettingsProvider);
+    final requestsAsync = ref.watch(myCoordinatorRequestsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -89,7 +91,12 @@ class _CoordinatorRequestsScreenState
               },
               child: const Icon(Icons.add, color: Colors.white),
             ),
-      body: SafeArea(child: _requestList(fontSettings)),
+      body: Stack(
+        children: [
+          SafeArea(child: _requestList(fontSettings)),
+          if (requestsAsync.isLoading) const AppLoader(),
+        ],
+      ),
     );
   }
 
@@ -110,7 +117,9 @@ class _CoordinatorRequestsScreenState
     final requestsAsync = ref.watch(myCoordinatorRequestsProvider);
 
     return requestsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      // A refresh keeps the old list, so this only fires on the first load;
+      // the AppLoader overlay in build() covers both.
+      loading: () => const SizedBox.shrink(),
       error: (error, _) => _placeholder(
         fontSettings,
         Icons.error_outline,

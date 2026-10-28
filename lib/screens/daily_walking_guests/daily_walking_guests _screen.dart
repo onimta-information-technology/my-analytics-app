@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/guest_modal.dart';
@@ -511,20 +512,9 @@ class _DailyWalkingGuestScreenState
                   ],
                 ),
           // if (showSpinner) const Center(child: CircularProgressIndicator()),
-          if (showSpinner)
-  Container(
-    decoration: const BoxDecoration(
-      color: Color.fromARGB(135, 117, 115, 115),
-    ),
-    child: Center(
-      child: RefreshProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(
-          Constants.kSecondaryColor,
-        ),
-      ),
-    ),
-  ),
           const Watermark(),
+          // After the watermark so the loader is drawn on top of it.
+          if (showSpinner) const AppLoader(),
         ],
       ),
     );

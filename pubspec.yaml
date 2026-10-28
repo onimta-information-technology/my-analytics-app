@@ -201,6 +201,7 @@ flutter:
     - assets/sounds/callRingback.wav
     - assets/sounds/callJoin.wav
     - assets/images/others/inactive_banner2.jpg
+    - assets/loders/card_suit_loader.json
  
 
   fonts:

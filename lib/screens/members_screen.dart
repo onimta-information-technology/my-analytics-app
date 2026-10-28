@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/components/bottom_sheets/member_search_by_mid_bottom_sheet.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
@@ -521,22 +522,23 @@ Future<void> _openMemberSearchBottomSheet(int iid) async {
                 ],
               ),
             ),
-            if (_isLoading)
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(135, 117, 115, 115),
-                  ),
-                  child: const Center(
-                    child: RefreshProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          
+              // Positioned.fill(
+              //   child: Container(
+              //     decoration: const BoxDecoration(
+              //       color: Color.fromARGB(135, 117, 115, 115),
+              //     ),
+              //     child: const Center(
+              //       child: RefreshProgressIndicator(
+              //         valueColor: AlwaysStoppedAnimation<Color>(
+              //           Constants.kSecondaryColor,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ),
             const Watermark(),
+              if (_isLoading) const AppLoader(),
           ],
         ),
       ),

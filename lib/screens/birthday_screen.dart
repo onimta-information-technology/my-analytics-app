@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/birthday.dart';
@@ -674,22 +675,23 @@ class _BirthdayScreenState extends ConsumerState<BirthdayScreen>
                 ],
               ),
             ),
-          if (_isLoading)
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115),
-                ),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+        
+            // Positioned.fill(
+            //   child: Container(
+            //     decoration: const BoxDecoration(
+            //       color: Color.fromARGB(135, 117, 115, 115),
+            //     ),
+            //     child: const Center(
+            //       child: RefreshProgressIndicator(
+            //         valueColor: AlwaysStoppedAnimation<Color>(
+            //           Constants.kSecondaryColor,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
           const Watermark(),
+            if (_isLoading) const AppLoader(),
         ],
       ),
     );

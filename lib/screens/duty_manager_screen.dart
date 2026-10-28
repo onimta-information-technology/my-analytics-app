@@ -1,4 +1,4 @@
-import 'package:ballys_reservation_app/core/constants.dart';
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/data/repositories/duty_manager_repository.dart';
 import 'package:ballys_reservation_app/data/services/api_service.dart';
 import 'package:ballys_reservation_app/models/duty_manager.dart';
@@ -94,19 +94,7 @@ class _DutyManagerScreenState extends ConsumerState<DutyManagerScreen> {
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              // Same loader as the Birthdays screen.
-              return Container(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115),
-                ),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
-                  ),
-                ),
-              );
+              return const AppLoader();
             }
             if (snapshot.hasError) {
               return _message('Failed to load duty managers');

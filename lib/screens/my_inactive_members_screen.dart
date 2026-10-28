@@ -1,5 +1,6 @@
 // lib/screens/my_inactive_members_screen.dart
 
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/my_inactive_member.dart';
 import 'package:ballys_reservation_app/providers/my_inactive_members_provider.dart';
@@ -361,19 +362,19 @@ class _MyInactiveMembersScreenState
                 ),
               ),
             ),
-            if (asyncItems.isLoading)
-              Positioned.fill(
-                child: Container(
-                  color: const Color.fromARGB(134, 0, 0, 0),
-                  child: const Center(
-                    child: RefreshProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            if (asyncItems.isLoading) const AppLoader(),
+              // Positioned.fill(
+              //   child: Container(
+              //     color: const Color.fromARGB(134, 0, 0, 0),
+              //     child: const Center(
+              //       child: RefreshProgressIndicator(
+              //         valueColor: AlwaysStoppedAnimation<Color>(
+              //           Constants.kSecondaryColor,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ),
           ],
         ),
       ),

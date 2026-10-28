@@ -1,3 +1,4 @@
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/components/watermark.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/repositories/gifts_repository.dart';
@@ -495,21 +496,21 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> with ConnectivityMixi
               ),
             ],
           ),
-          if (_isLoading)
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(135, 117, 115, 115),
-                ),
-                child: const Center(
-                  child: RefreshProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Constants.kSecondaryColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          if (_isLoading) const AppLoader(),
+            // Positioned.fill(
+            //   child: Container(
+            //     decoration: const BoxDecoration(
+            //       color: Color.fromARGB(135, 117, 115, 115),
+            //     ),
+            //     child: const Center(
+            //       child: RefreshProgressIndicator(
+            //         valueColor: AlwaysStoppedAnimation<Color>(
+            //           Constants.kSecondaryColor,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
           const Watermark(),
         ],
       ),

@@ -1,5 +1,6 @@
 // lib/screens/unfollowed_screen.dart
 
+import 'package:ballys_reservation_app/components/app_loader.dart';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/models/unfollow_item.dart';
 import 'package:ballys_reservation_app/providers/follow_up_provider.dart';
@@ -244,19 +245,19 @@ class _UnfollowedScreenState extends ConsumerState<UnfollowedScreen>
                 ),
               ),
             ),
-            if (asyncItems.isLoading)
-              Positioned.fill(
-                child: Container(
-                  color: const Color.fromARGB(134, 0, 0, 0),
-                  child: const Center(
-                    child: RefreshProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Constants.kSecondaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            if (asyncItems.isLoading) const AppLoader(),
+              // Positioned.fill(
+              //   child: Container(
+              //     color: const Color.fromARGB(134, 0, 0, 0),
+              //     child: const Center(
+              //       child: RefreshProgressIndicator(
+              //         valueColor: AlwaysStoppedAnimation<Color>(
+              //           Constants.kSecondaryColor,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ),
           ],
         ),
       ),

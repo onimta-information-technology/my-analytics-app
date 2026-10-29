@@ -15,6 +15,7 @@ import 'package:ballys_reservation_app/components/document_message_bubble.dart';
 import 'package:ballys_reservation_app/components/typing_indicator_bubble.dart';
 import 'package:ballys_reservation_app/components/voice_recorder_widgets.dart';
 import 'package:ballys_reservation_app/data/services/call_api_service.dart';
+import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:ballys_reservation_app/screens/call/join_call_screen.dart';
 import 'package:ballys_reservation_app/data/services/firebase_api_service.dart';
@@ -425,12 +426,16 @@ class _IndividualChatScreenState extends ConsumerState<IndividualChatScreen>
     _wasOnCall = CallManager.instance.current != null;
     CallManager.instance.active.addListener(_checkActiveCall);
     CallManager.instance.active.addListener(_onCallChanged);
+    // iOS rings through CallKit only, so declining there never touches
+    // CallManager — this is what clears the "Join" pill after it.
+    CallKitService.ringOver.addListener(_checkActiveCall);
   }
 
   @override
   void dispose() {
     CallManager.instance.active.removeListener(_checkActiveCall);
     CallManager.instance.active.removeListener(_onCallChanged);
+    CallKitService.ringOver.removeListener(_checkActiveCall);
     _readStatusPollTimer?.cancel();
     _highlightTimer?.cancel();
     _foregroundMessageSubscription?.cancel();

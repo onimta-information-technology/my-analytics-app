@@ -45,6 +45,12 @@ class CallKitService {
   /// (iOS gets no FCM push once killed).
   static final Map<String, Timer> _watchers = {};
 
+  /// Bumped once a system ring is gone — declined here (after the server has
+  /// been told) or taken down by the app. A call rung only through the system
+  /// UI never reaches [CallManager.active], so without this a chat showing
+  /// that call's "Join" pill would keep it until the screen is reopened.
+  static final ValueNotifier<int> ringOver = ValueNotifier(0);
+
   // ─── Ringing ──────────────────────────────────────────────────────────────
 
   /// Raises the system incoming-call UI. Safe from a background isolate.
@@ -130,6 +136,7 @@ class CallKitService {
     } catch (e) {
       debugPrint('callkit dismiss failed: $e');
     }
+    ringOver.value++;
   }
 
   // ─── Ongoing calls (Android) ──────────────────────────────────────────────
@@ -453,6 +460,7 @@ class CallKitService {
     } catch (e) {
       debugPrint('callkit decline failed: $e');
     }
+    ringOver.value++;
   }
 
   static Future<void> _markDismissed(String callId) async {

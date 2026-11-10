@@ -11,6 +11,7 @@ import 'package:ballys_reservation_app/data/services/call_kit_service.dart';
 import 'package:ballys_reservation_app/data/services/call_manager.dart';
 import 'package:ballys_reservation_app/data/services/device_config_service.dart';
 import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
+import 'package:ballys_reservation_app/data/services/forced_logout_push.dart';
 import 'package:ballys_reservation_app/data/services/notification_store.dart';
 import 'package:ballys_reservation_app/data/services/versioncehck_service.dart';
 import 'package:ballys_reservation_app/models/Guest/guest_booking.dart';
@@ -62,6 +63,18 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
 
   _logPushMessage('background', message);
+
+  // Account deleted (msg_type 40). iOS: the app logs out right here, in the
+  // background. Android: the session is wiped now and the app finishes the
+  // logout when it is next in the foreground.
+  if (ForcedLogoutPush.isForcedLogout(message.data)) {
+    try {
+      await ForcedLogoutPush.handleInBackground();
+    } catch (e) {
+      print('Forced logout in background failed: $e');
+    }
+    return;
+  }
 
   // Call pushes are data-only, so nothing rings unless this raises it: the
   // incoming ring goes to the OS call UI, and the rest take that ring down
@@ -227,6 +240,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ForcedLogoutPush.appHandler = _forceLogoutForDeletedAccount;
     _setupFirebaseListenersOnly();
 
     // A call answered from the lock screen / while the app was killed was
@@ -235,6 +249,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // instead of watching the app start up first. CallManager keeps the
     // screen there while the rest of the routing settles.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // An account deleted while the app was killed: the background isolate
+      // already wiped the session, this only clears its flag and tells the
+      // user why they are on the login screen.
+      unawaited(_forceLogoutForDeletedAccount(onlyIfPending: true));
+
       if (await StorageUtil.hasActiveSession()) {
         await CallKitService.resumeAcceptedCall();
       }
@@ -244,6 +263,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ForcedLogoutPush.appHandler = null;
     super.dispose();
   }
 
@@ -252,16 +272,105 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      // A startup sync that failed (no network yet, token not ready) otherwise
-      // stays broken until the app is killed and reopened.
-      unawaited(FcmTokenService.resync());
-      unawaited(CallKitService.syncVoipToken());
-      unawaited(CallKitService.resumeAcceptedCall());
-      _syncBadgeIfLoggedIn();
-      _reloadNotificationHistory();
+      unawaited(_onResumed());
     } else if (state == AppLifecycleState.paused) {
       _syncBadgeIfLoggedIn();
     }
+  }
+
+  Future<void> _onResumed() async {
+    // Checked first: an account deleted while the app was in the background
+    // left a wiped session, and the syncs below must not run on it.
+    if (await ForcedLogoutPush.takePending()) {
+      await _forceLogoutForDeletedAccount();
+      return;
+    }
+
+    // A startup sync that failed (no network yet, token not ready) otherwise
+    // stays broken until the app is killed and reopened.
+    unawaited(FcmTokenService.resync());
+    unawaited(CallKitService.syncVoipToken());
+    unawaited(CallKitService.resumeAcceptedCall());
+    _syncBadgeIfLoggedIn();
+    _reloadNotificationHistory();
+  }
+
+  bool _forcedLogoutRunning = false;
+
+  /// msg_type 40 — the account was deleted, so this device signs out and goes
+  /// back to the login screen.
+  ///
+  /// [onlyIfPending] is the launch check: it acts only when the background
+  /// isolate took the push while the app was not running. Overlapping calls
+  /// (a duplicate push, the launch check) are dropped.
+  Future<void> _forceLogoutForDeletedAccount({
+    bool onlyIfPending = false,
+  }) async {
+    if (_forcedLogoutRunning) return;
+    _forcedLogoutRunning = true;
+    try {
+      if (onlyIfPending) {
+        if (!await ForcedLogoutPush.takePending()) return;
+        print('PUSH forced logout -> account deleted (msg_type 40), at launch');
+        // Launch: the background isolate already wiped the session and this
+        // fresh run holds no signed-in state, so there is nothing left to log
+        // out. logout() here would only race the user: the splash sends them
+        // to /login on its own, and a logout finishing after they had signed
+        // in again would wipe the new session.
+      } else {
+        print('PUSH forced logout -> account deleted (msg_type 40)');
+        try {
+          await globalContainer.read(authProvider.notifier).logout();
+        } catch (e) {
+          print('Forced logout failed: $e');
+        }
+      }
+      _showLoginAfterForcedLogout();
+    } finally {
+      _forcedLogoutRunning = false;
+    }
+  }
+
+  void _showLoginAfterForcedLogout() {
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+
+    final location =
+        AppNavigation.router.routerDelegate.currentConfiguration.fullPath;
+    // Already signed out and looking at login — nothing to explain.
+    if (location == '/login') return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.person_off_outlined, color: Colors.white),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Your account has been deleted. You have been logged out.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red[700],
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+
+    // The splash routes on the stored session, which is gone now, so it
+    // reaches /login by itself; taking the route from under it would leave
+    // its pending timer navigating from a dead context.
+    if (location == AppNavigation.initialRoute) return;
+
+    NotificationService.popPagelessRoutes();
+    context.go('/login');
   }
 
   Future<void> _reloadGuestBookingsGlobally() async {
@@ -311,6 +420,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logPushMessage('foreground', message);
+
+      // Account deleted: sign out now. No banner, badge or history entry —
+      // the logout wipes those anyway and the snackbar says what happened.
+      if (ForcedLogoutPush.isForcedLogout(message.data)) {
+        _forceLogoutForDeletedAccount();
+        return;
+      }
 
       // Calls get their own full-screen UI instead of a banner, and never
       // count towards the badge or the notification history.
@@ -393,6 +509,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // already sitting on /login, so dropping the tap leaves the user there.
     if (!await StorageUtil.hasActiveSession()) {
       print('PUSH tap ignored — no active session, staying on login flow');
+      return;
+    }
+
+    // ─── Account Deleted (msg_type: 40) ─────────────────────────────────────
+    // Reached when the background isolate never saw the push (iOS delivers a
+    // plain notification push without waking the app), so the session is
+    // still here and is ended now.
+    if (ForcedLogoutPush.isForcedLogout(message.data)) {
+      await _forceLogoutForDeletedAccount();
       return;
     }
 

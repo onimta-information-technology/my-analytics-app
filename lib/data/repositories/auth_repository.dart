@@ -15,14 +15,19 @@ class AuthRepository {
 
   AuthRepository(this.apiService, this.storage);
 
+  /// How long a login request may take. The HTTP calls have no timeout of
+  /// their own, so a server that never answers left the login loader
+  /// spinning for good.
+  static const Duration _loginTimeout = Duration(seconds: 45);
+
   Future<String> authenticate() async {
-    
+
     try {
        await storage.delete(key: 'access_token');
       final response = await apiService.post('Login', {
         "UserName": "BaLlY\$#Crm619",
         "PassWord": "cRm_0987_@bL",
-      });
+      }).timeout(_loginTimeout);
 
       if (response['Token'] != null &&
           response['Token']['access_token'] != null) {
@@ -97,7 +102,12 @@ class AuthRepository {
       ],
       "SpName": spName,
       "con": "1",
-    });
+    }).timeout(
+      _loginTimeout,
+      onTimeout: () => throw Exception(
+        'The server did not respond. Please check your connection and try again.',
+      ),
+    );
 print("hellooo");
    print(response);
 

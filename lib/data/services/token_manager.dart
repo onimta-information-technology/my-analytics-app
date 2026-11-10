@@ -71,6 +71,7 @@ class TokenManager {
     } catch (e) {
       throw NetworkException('Could not refresh session: $e');
     }
+    print('API response for Login (token refresh): ${response.statusCode} ${response.body}');
 
     if (response.statusCode >= 500) {
       throw ServerException(

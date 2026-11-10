@@ -112,7 +112,10 @@ class FcmTokenService {
   static Future<void> clearOnLogout() async {
     await CallKitService.clearVoipToken();
     try {
-      await FirebaseApiService.removeFcmToken();
+      // Bounded: logout waits on this, and the request has no timeout of its
+      // own — a slow chat server otherwise held the user on the old screen.
+      await FirebaseApiService.removeFcmToken()
+          .timeout(const Duration(seconds: 10));
     } catch (e) {
       print('FCM token removal failed: $e');
     }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:ballys_reservation_app/core/constants.dart';
 import 'package:ballys_reservation_app/data/services/token_manager.dart';
+import 'package:ballys_reservation_app/utils/device_id.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 import 'package:ballys_reservation_app/utils/storage_util.dart';
 import 'package:http/http.dart' as http;
@@ -10,14 +11,18 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 class VersionCheckService {
 
-  /// Version-check endpoint for the currently selected property. Bellagio
-  /// logins (bty.world) hit the Bellagio endpoint; everything else — including
-  /// a fresh install with no property selected yet — hits Ballys.
-  static Future<String> _versionCheckUrl() async {
+  /// True for Bellagio logins (bty.world). Everything else — including a fresh
+  /// install with no property selected yet — is Ballys.
+  static Future<bool> _isBellagio() async {
     final apiUrl = await StorageUtil.getCurrentApiUrl() ?? '';
-    return apiUrl.contains('bty.world')
-        ? Constants.bellagioVersionCheckUrl
-        : Constants.versionCheckUrl;
+    return apiUrl.contains('bty.world');
+  }
+
+  /// The API sends booleans as JSON bools, but tolerate "true"/"1" too.
+  static bool _isTrue(Object? value) {
+    if (value is bool) return value;
+    final text = value?.toString().trim().toLowerCase();
+    return text == 'true' || text == '1';
   }
 
   /// POSTs [payload] to [url] with the stored access token. On a 401 it gets a
@@ -54,23 +59,31 @@ class VersionCheckService {
   }
 
   /// Check if app version is latest
-  /// Returns Map with keys: isLatest (bool), currentVersion (String)
+  /// Returns Map with keys: isLatest (bool), currentVersion (String),
+  /// forceLogout (bool — Bellagio only: the server returned IsActive true for
+  /// this device, so the app must sign the user out).
   static Future<Map<String, dynamic>> checkVersion() async {
     try {
       // Get current app version from package info
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      final platformId = Platform.isAndroid 
-          ? Constants.androidPlatformId.toString() 
+      final platformId = Platform.isAndroid
+          ? Constants.androidPlatformId.toString()
           : Constants.iosPlatformId.toString();
 
-      // Prepare request payload
+      final isBellagio = await _isBellagio();
+
+      // Prepare request payload. Bellagio also takes the device id, which its
+      // response answers with IsActive for this device.
       final payload = {
         "Iid": platformId,
         "Version": currentVersion,
+        if (isBellagio) "device_id": await DeviceId.get(),
       };
-      final url = await _versionCheckUrl();
+      final url = isBellagio
+          ? Constants.bellagioVersionCheckUrl
+          : Constants.versionCheckUrl;
 print("verstiocheck $url");
       print("object");
       print(currentVersion);
@@ -87,6 +100,7 @@ print('Version check url $url');
           'isLatest': responseData['isLatest'] ?? true,
           'currentVersion': currentVersion,
           'success': true,
+          'forceLogout': isBellagio && _isTrue(responseData['IsActive']),
         };
       } else {
         // If API fails, assume version is latest to not block user

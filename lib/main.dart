@@ -963,6 +963,45 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  /// Full logout (FCM token detached, stored session wiped, auth state reset)
+  /// after the Bellagio version check reported IsActive true.
+  Future<void> _logoutFromVersionCheck() async {
+    print('Version check forced logout -> Bellagio IsActive true');
+    try {
+      await globalContainer.read(authProvider.notifier).logout();
+    } catch (e) {
+      print('Version check forced logout failed: $e');
+      await StorageUtil.clearUserData();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', false);
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.logout, color: Colors.white),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'You have been logged out. Please log in again.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red[700],
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
   Future<void> _initializeSplash() async {
     setState(() {
       _hasInternet = true;
@@ -998,6 +1037,15 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     final versionCheck = await VersionCheckService.checkVersion();
+
+    // Bellagio only: the version check answered IsActive true for this device,
+    // so the session is ended here. With it gone, the routing below sends the
+    // user to /login by itself.
+    if (versionCheck['forceLogout'] == true &&
+        await StorageUtil.hasActiveSession()) {
+      await _logoutFromVersionCheck();
+    }
+
     if (!versionCheck['isLatest']) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showUpdateDialog();

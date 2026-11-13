@@ -28,9 +28,6 @@ class TokenManager {
   /// Clears the stored access token.
   Future<void> clearAccessToken() => _storage.delete(key: _accessTokenKey);
 
-  /// Clears all stored credentials (used on force logout).
-  Future<void> clearAll() => _storage.deleteAll();
-
   /// Returns a token to retry with after [failedToken] was rejected.
   ///
   /// If another request already replaced [failedToken] while this one was in

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/api_service.dart';
+import '../services/token_manager.dart';
 import '../../models/user_model.dart';
 
 class AuthRepository {
@@ -20,29 +21,22 @@ class AuthRepository {
   /// spinning for good.
   static const Duration _loginTimeout = Duration(seconds: 45);
 
+  /// Fetches and stores a fresh access token from the current property's API.
+  /// Returns an empty string when none could be had.
+  ///
+  /// Goes through [TokenManager]'s shared refresh rather than calling /Login
+  /// itself. The server invalidates the previous token on every /Login, so a
+  /// login running alongside a refresh some failing request had started could
+  /// leave the invalidated token in storage, and every request after it failed
+  /// with "session expired".
   Future<String> authenticate() async {
-
     try {
-       await storage.delete(key: 'access_token');
-      final response = await apiService.post('Login', {
-        "UserName": "BaLlY\$#Crm619",
-        "PassWord": "cRm_0987_@bL",
-      }).timeout(_loginTimeout);
-
-      if (response['Token'] != null &&
-          response['Token']['access_token'] != null) {
-        String accessToken = response['Token']['access_token'];
-     print('accessToken $accessToken');
-        await storage.write(key: 'access_token', value: accessToken);
-       
-        return accessToken;
-      } else {
-        throw Exception('Authentication failed: No token received');
-      }
-    } catch (e) {
-     
-      await storage.deleteAll();
-      return "";
+      final token = await TokenManager(storage)
+          .refreshToken()
+          .timeout(_loginTimeout);
+      return token ?? '';
+    } catch (_) {
+      return '';
     }
   }
 

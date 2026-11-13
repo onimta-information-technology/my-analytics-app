@@ -2,10 +2,10 @@ import 'package:ballys_reservation_app/data/services/fcm_token_service.dart';
 import 'package:ballys_reservation_app/models/auth_state.dart';
 import 'package:ballys_reservation_app/utils/token_refresh_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/services/api_service.dart';
+import '../data/services/token_manager.dart';
 import '../utils/storage_util.dart';
 import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
@@ -40,83 +40,45 @@ class AuthNotifier extends StateNotifier<AuthState?> {
   String? _currentSessionPassword;
   String? _currentSessionusername;
   // Biometric storage keys that should NOT be deleted
-  static const String _biometricEnabledKey = 'biometric_enabled';
-  static const String _usernameKey = 'biometric_username';
-  static const String _passwordKey = 'biometric_password';
+  static const Set<String> _biometricKeys = {
+    'biometric_enabled',
+    'biometric_username',
+    'biometric_password',
+  };
+
+  /// [_clearStaleCredentials], started when the notifier is built. A login
+  /// waits for it, so the cleanup can never land on top of the new session.
+  late final Future<void> _staleCredentialsCleanup;
+
   AuthNotifier(this.authRepository)
     : super(AuthState(user: null, isLoading: false)) {
-    _checkAppVersion();
+    _staleCredentialsCleanup = _clearStaleCredentials();
   }
 
-  // Future<void> _checkAppVersion() async {
-  //     try {
-  //       final packageInfo = await PackageInfo.fromPlatform();
-  //       final currentVersion = packageInfo.version;
-
-  //       final savedVersion = await StorageUtil.getAppVersion();
-
-  //       if (savedVersion == null || savedVersion != currentVersion) {
-  //         // App is either newly installed OR updated
-  //         await StorageUtil.clearUserData();
-  //         await StorageUtil.saveAppVersion(currentVersion);
-
-  //         // Reset auth state
-  //         state = AuthState(user: null, isLoading: false, error: null);
-
-  //         print('App version changed. Cleared old data.');
-  //       }
-  //     } catch (e) {
-  //       print('Version check failed: $e');
-  //     }
-  //   }
-
-  Future<void> _checkAppVersion() async {
+  /// Clears credentials an earlier install left behind, keeping the biometric
+  /// login. Runs only while nobody is signed in: SharedPreferences goes with
+  /// the app on uninstall but the iOS keychain does not, so a reinstall can
+  /// find an old access token in secure storage with no session beside it.
+  ///
+  /// A signed-in session is left alone, app updates included. This used to
+  /// wipe it whenever the app version changed, and since this notifier is
+  /// built lazily (login screen, Settings, a logout, a 401) rather than by the
+  /// splash, the wipe hit after the user was already on home: screens lost
+  /// their sales code and stopped loading, and the next launch went to /login.
+  Future<void> _clearStaleCredentials() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version;
+      if (await StorageUtil.hasUserData()) return;
 
-      final savedVersion = await StorageUtil.getAppVersion();
-      final hasUser = await StorageUtil.hasUserData();
-
-      if (savedVersion == null || savedVersion != currentVersion || !hasUser) {
-        // Save biometric data before clearing storage
-        final biometricEnabled = await authRepository.storage.read(
-          key: _biometricEnabledKey,
-        );
-        final biometricUsername = await authRepository.storage.read(
-          key: _usernameKey,
-        );
-        final biometricPassword = await authRepository.storage.read(
-          key: _passwordKey,
-        );
-
-        await authRepository.storage.deleteAll();
-        await StorageUtil.clearUserData();
-
-        // Restore biometric data
-        if (biometricEnabled != null) {
-          await authRepository.storage.write(
-            key: _biometricEnabledKey,
-            value: biometricEnabled,
-          );
-        }
-        if (biometricUsername != null) {
-          await authRepository.storage.write(
-            key: _usernameKey,
-            value: biometricUsername,
-          );
-        }
-        if (biometricPassword != null) {
-          await authRepository.storage.write(
-            key: _passwordKey,
-            value: biometricPassword,
-          );
-        }
-        await StorageUtil.saveAppVersion(currentVersion);
-
-        state = AuthState(user: null, isLoading: false, error: null);
+      // Deleted key by key rather than deleteAll-then-restore, so the
+      // biometric login is never briefly missing while the login screen
+      // checks for it.
+      final stored = await authRepository.storage.readAll();
+      for (final key in stored.keys) {
+        if (_biometricKeys.contains(key)) continue;
+        await authRepository.storage.delete(key: key);
       }
-    } catch (e) {}
+      await StorageUtil.clearUserData();
+    } catch (_) {}
   }
 
   Future<void> authenticateAndLogin(String username, String password) async {
@@ -124,6 +86,8 @@ class AuthNotifier extends StateNotifier<AuthState?> {
     state = AuthState(user: null, isLoading: true);
 
     try {
+      await _staleCredentialsCleanup;
+
       String accessToken = await authRepository.authenticate();
       if (accessToken.isEmpty) {
         throw Exception('Authentication failed');
@@ -248,6 +212,10 @@ class AuthNotifier extends StateNotifier<AuthState?> {
       // Detaches the token on the backend. Must run before clearUserData() —
       // it needs the auth token and property url that call wipes.
       await FcmTokenService.clearOnLogout();
+
+      // The access token belongs to this property's API. Left behind, the next
+      // login — possibly to the other property — starts out sending it there.
+      await TokenManager(authRepository.storage).clearAccessToken();
 
       // Clear user data
       await StorageUtil.clearUserData();

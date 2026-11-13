@@ -6,7 +6,6 @@ import 'package:ballys_reservation_app/utils/secure_storage.dart';
 
 class StorageUtil {
   static const _storage = SecureStorage.instance;
-  static const _keyAppVersion = 'app_version';
  static const _keyCurrentApiUrl = 'current_api_url';
   static const _keyCurrentLocation = 'current_location';
   static const _keyIsAdmin = 'is_admin';
@@ -223,14 +222,6 @@ class StorageUtil {
   static Future<bool> getAccessStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('accessStatus') ?? false;
-  }
-
-  static Future<void> saveAppVersion(String version) async {
-    await _storage.write(key: _keyAppVersion, value: version);
-  }
-
-  static Future<String?> getAppVersion() async {
-    return await _storage.read(key: _keyAppVersion);
   }
 
   static Future<bool> hasUserData() async {

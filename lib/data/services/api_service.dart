@@ -36,6 +36,9 @@ void registerLogoutCallback(void Function() callback) {
 class ApiService {
   final TokenManager _tokenManager;
 
+  /// The one endpoint called without a token: it is what issues them.
+  static const _loginEndpoint = 'Login';
+
   /// Accepts [FlutterSecureStorage] directly — matches all existing call sites,
   /// which pass the app-wide instance:
   ///   ApiService(SecureStorage.instance)
@@ -65,6 +68,7 @@ class ApiService {
     try {
       final response = await _sendWithAuthRetry(
         (token) => _execute(endpoint, body, token),
+        endpoint: endpoint,
       );
 print('API response for $endpoint: ${response.body}');
       // ── Success ───────────────────────────────────────────────────────────
@@ -118,6 +122,7 @@ print('API response for $endpoint: ${response.body}');
     try {
       final response = await _sendWithAuthRetry(
         (token) => _executeGet(endpoint, token),
+        endpoint: endpoint,
       );
       print('API response for $endpoint: ${response.body}');
 
@@ -161,15 +166,20 @@ print('API response for $endpoint: ${response.body}');
   /// Authenticated GET that returns the raw response, for endpoints whose body
   /// isn't a JSON object (e.g. a top-level list). Gets the same token
   /// refresh/retry as [get]; status and body parsing are left to the caller.
-  Future<http.Response> getResponse(String endpoint) =>
-      _sendWithAuthRetry((token) => _executeGet(endpoint, token));
+  Future<http.Response> getResponse(String endpoint) => _sendWithAuthRetry(
+        (token) => _executeGet(endpoint, token),
+        endpoint: endpoint,
+      );
 
   /// Authenticated POST that returns the raw response. See [getResponse].
   Future<http.Response> postResponse(
     String endpoint,
     Map<String, Object?> body,
   ) =>
-      _sendWithAuthRetry((token) => _execute(endpoint, body, token));
+      _sendWithAuthRetry(
+        (token) => _execute(endpoint, body, token),
+        endpoint: endpoint,
+      );
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
@@ -178,9 +188,21 @@ print('API response for $endpoint: ${response.body}');
   /// Logs out only when the server refuses to issue a token, or rejects the
   /// fresh one — a network or server failure during refresh just throws.
   Future<http.Response> _sendWithAuthRetry(
-    Future<http.Response> Function(String? token) send,
-  ) async {
-    final token = await _tokenManager.getAccessToken();
+    Future<http.Response> Function(String? token) send, {
+    required String endpoint,
+  }) async {
+    var token = await _tokenManager.getAccessToken();
+
+    // No token at all — on Android secure storage can come back empty after an
+    // app update (see SecureStorage) while the session in SharedPreferences
+    // survives, so the app opens on home. The refresh below only runs on a 401
+    // or a 406 "invalid token", and nothing guarantees a request carrying no
+    // token is answered with either; when it isn't, every screen stays empty
+    // until the user logs out and back in. Fetch a token before sending.
+    if ((token == null || token.isEmpty) && endpoint != _loginEndpoint) {
+      token = await _tokenManager.refreshToken();
+    }
+
     final response = await send(token);
     if (!_isAuthFailure(response)) return response;
 
@@ -192,7 +214,7 @@ print('API response for $endpoint: ${response.body}');
 
     final retried = await send(newToken);
     if (_isAuthFailure(retried)) {
-      await _forceLogout();
+      await _forceLogout(rejectedToken: newToken);
       throw UnauthorizedException();
     }
     return retried;
@@ -257,10 +279,24 @@ bool _isAuthFailure(http.Response response) {
   return false;
 }
 
-  /// Clears all stored credentials and triggers the app-wide logout callback.
-  Future<void> _forceLogout() async {
+  /// Clears the access token and triggers the app-wide logout callback.
+  ///
+  /// [rejectedToken] is the token the server just refused on the retry. When
+  /// storage already holds a different one, a newer login or refresh replaced
+  /// it while this request was in flight — say a request from the session
+  /// that was logged out, finishing after the user signed in to the other
+  /// property — so this failure says nothing about the current session and
+  /// must not end it.
+  ///
+  /// Only the access token is cleared: deleteAll() also took the saved
+  /// biometric login with it.
+  Future<void> _forceLogout({String? rejectedToken}) async {
     try {
-      await _tokenManager.clearAll();
+      if (rejectedToken != null &&
+          await _tokenManager.getAccessToken() != rejectedToken) {
+        return;
+      }
+      await _tokenManager.clearAccessToken();
       _onForceLogout();
     } catch (_) {}
   }

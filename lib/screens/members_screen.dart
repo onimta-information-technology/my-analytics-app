@@ -87,6 +87,11 @@ bool _isNumericOnlyLocation = false;
       return true;
     }
 
+    
+    if ((mGroup ?? '').trim().toUpperCase() == 'W') {
+      return true;
+    }
+
     // if (_memProfSH == null || _memProfSH == true) {
     //   return true;
     // }

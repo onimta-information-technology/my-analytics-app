@@ -181,42 +181,53 @@ void main() async {
   globalContainer = ProviderContainer();
 
   // ── Wire up the 401 auto-logout ───────────────────────────────────────────
+  // A screen fires several requests at once (home: three guest counts), and
+  // each one that fails calls this. Only the first acts; the rest used to stack
+  // up the same snackbar and a /login hop each.
+  var sessionExpiryHandling = false;
   registerLogoutCallback(() {
+    if (sessionExpiryHandling) return;
+    sessionExpiryHandling = true;
     try {
       globalContainer.read(authProvider.notifier).logout().then((_) {
         final context = navigatorKey.currentContext;
-        if (context != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.lock_outline, color: Colors.white),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Your session has expired. Please log in again.',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.red[700],
-              duration: const Duration(seconds: 3),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-
-          // Navigate after snackbar is visible
-          Future.delayed(const Duration(seconds: 3), () {
-            GoRouter.of(context).go('/login');
-          });
+        if (context == null || !context.mounted) {
+          sessionExpiryHandling = false;
+          return;
         }
-      });
-    } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.lock_outline, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Your session has expired. Please log in again.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red[700],
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+
+        // Navigate after snackbar is visible
+        Future.delayed(const Duration(seconds: 3), () {
+          sessionExpiryHandling = false;
+          if (context.mounted) GoRouter.of(context).go('/login');
+        });
+      }, onError: (_) => sessionExpiryHandling = false);
+    } catch (_) {
+      sessionExpiryHandling = false;
+    }
   });
 
   runApp(ProviderScope(
